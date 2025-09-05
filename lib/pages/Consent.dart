@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:surveyflow/fields/drawer.dart';
-import 'package:surveyflow/fields/timepicker.dart';
-import 'package:surveyflow/pages/cover.dart';
-import 'package:surveyflow/pages/endcollection.dart';
-import 'package:surveyflow/pages/farmerident.dart';
-import 'package:surveyflow/fields/datepickerfield.dart';
 import 'package:surveyflow/fields/dropdown.dart';
 import 'package:surveyflow/fields/gpsfield.dart';
 import 'package:surveyflow/fields/radiobuttons.dart';
-import 'package:surveyflow/pages/remediation.dart';
-import 'package:surveyflow/pages/sensitization.dart';
+import 'package:surveyflow/fields/timepicker.dart';
+import 'package:surveyflow/pages/cover.dart';
+import 'package:surveyflow/pages/farmerident.dart';
 
-class Consent extends StatelessWidget {
-  const Consent({super.key});
+class Consent extends StatefulWidget {
+  final Map<String, dynamic> survey;
+
+  const Consent({super.key, required this.survey});
+
+  @override
+  State<Consent> createState() => _ConsentState();
+}
+
+class _ConsentState extends State<Consent> {
+  // State variables for radio buttons
+  String? _communityType;
+  String? _residesInCommunity;
+  String? _farmerAvailable;
 
   @override
   Widget build(BuildContext context) {
@@ -50,29 +58,6 @@ class Consent extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.construction, color: Colors.orange),
-                    const SizedBox(width: 8),
-                    Text(
-                      'This app is still in development.',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.orange[800],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 10),
               Expanded(
                 child: SingleChildScrollView(
@@ -98,27 +83,43 @@ class Consent extends StatelessWidget {
                         RadioButtonField(
                           question: 'Select the type of community',
                           options: ['Town', 'Village', 'Camp'],
-                          onChanged: (String) {},
+                          value: _communityType,
+                          onChanged: (value) {
+                            setState(() {
+                              _communityType = value;
+                            });
+                          },
                         ),
                         RadioButtonField(
                           question:
                               'Does the farmer reside in the community stated on the cover?',
                           options: ['Yes', 'No'],
-                          onChanged: (String) {},
+                          value: _residesInCommunity,
+                          onChanged: (value) {
+                            setState(() {
+                              _residesInCommunity = value;
+                            });
+                          },
                         ),
-                        _buildQuestionField(
-                            'If No, provide the name of the community the farmer resides in'),
+                        if (_residesInCommunity == 'No')
+                          _buildQuestionField(
+                              'If No, provide the name of the community the farmer resides in'),
                         RadioButtonField(
                           question: 'Is the farmer available?',
                           options: ['Yes', 'No'],
-                          onChanged: (String) {},
+                          value: _farmerAvailable,
+                          onChanged: (value) {
+                            setState(() {
+                              _farmerAvailable = value;
+                            });
+                          },
                         ),
                         DropdownField(
                           question: 'Farmer status',
                           options: [
                             'Non-Resident',
                             'Deceased',
-                            'Doesn’t work with Touton anymore',
+                            'Doesn\'t work with Touton anymore',
                             'Other',
                           ],
                         ),
@@ -208,11 +209,13 @@ class Consent extends StatelessWidget {
           TextField(
             decoration: InputDecoration(
               filled: true,
+              fillColor: Colors.white,
               border: OutlineInputBorder(
                 borderSide: BorderSide.none,
                 borderRadius: BorderRadius.circular(10.0),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
             ),
           ),
         ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:surveyflow/fields/checkbox.dart';
 import 'package:surveyflow/fields/image_picker.dart';
 import 'package:surveyflow/fields/radiobuttons.dart';
 import 'package:surveyflow/pages/Consent.dart';
@@ -84,7 +83,10 @@ class Sensitization extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => Consent()),
+                  MaterialPageRoute(
+                      builder: (context) => Consent(
+                            survey: {},
+                          )),
                 );
               },
             ),

@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:surveyflow/fields/drawer.dart';
 import 'package:surveyflow/home/home.dart';
 import 'package:surveyflow/pages/Consent.dart';
-import 'package:surveyflow/pages/childrenquestions.dart';
 
 class Questionnaire extends StatefulWidget {
   const Questionnaire({super.key});
@@ -62,9 +61,7 @@ class _QuestionnaireState extends State<Questionnaire> {
         title: Text(
           'Cover',
           style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
+              fontSize: 16, fontWeight: FontWeight.w500, color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFF006A4E),
@@ -76,14 +73,6 @@ class _QuestionnaireState extends State<Questionnaire> {
             },
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sync, color: Colors.white),
-            onPressed: () {
-              // Sync functionality here
-            },
-          ),
-        ],
       ),
       backgroundColor: Colors.grey[100],
       drawer: CustomDrawer(currentPage: 'COVER'),
@@ -192,9 +181,8 @@ class _QuestionnaireState extends State<Questionnaire> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const ChildQuestionsPage(
-                                    childNumber: null,
-                                    totalChildren: null,
+                              builder: (context) => const Consent(
+                                    survey: {},
                                   )),
                         );
                       }

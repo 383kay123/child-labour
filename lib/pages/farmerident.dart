@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:surveyflow/fields/checkbox.dart';
-import 'package:surveyflow/fields/datepickerfield.dart';
 import 'package:surveyflow/fields/dropdown.dart';
-import 'package:surveyflow/fields/gpsfield.dart';
 import 'package:surveyflow/fields/image_picker.dart';
 import 'package:surveyflow/fields/radiobuttons.dart';
 import 'package:surveyflow/pages/Consent.dart';
@@ -86,7 +84,10 @@ class Farmerident extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => Consent()),
+                  MaterialPageRoute(
+                      builder: (context) => Consent(
+                            survey: {},
+                          )),
                 );
               },
             ),
@@ -1616,7 +1617,9 @@ class Farmerident extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const Consent()),
+                            builder: (context) => const Consent(
+                                  survey: {},
+                                )),
                       );
                     },
                     style: ElevatedButton.styleFrom(

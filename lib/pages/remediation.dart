@@ -83,7 +83,10 @@ class Remediation extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => Consent()),
+                  MaterialPageRoute(
+                      builder: (context) => Consent(
+                            survey: {},
+                          )),
                 );
               },
             ),

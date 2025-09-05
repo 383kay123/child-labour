@@ -60,8 +60,12 @@ class CustomDrawer extends StatelessWidget {
                 currentPage == 'CONSENT AND LOCATION' ? Colors.grey[300] : null,
             onTap: () {
               if (currentPage != 'CONSENT') {
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => Consent()));
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => Consent(
+                              survey: {},
+                            )));
               } else {
                 Navigator.pop(context);
               }

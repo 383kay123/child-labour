@@ -73,9 +73,9 @@ class _ChildQuestionsPageState extends State<ChildQuestionsPage> {
                 options: ["Yes", "No"],
                 value: surveyLogic
                     .formState['isChildDeclared_${widget.childNumber}'],
-                onChanged: (value) {
+                onChanged: (String? newValue) {
                   onFieldChanged(
-                      'isChildDeclared_${widget.childNumber}', value);
+                      'isChildDeclared_${widget.childNumber}', newValue);
                 },
               ),
               // Show "Enter the number..." only if "Yes" is selected

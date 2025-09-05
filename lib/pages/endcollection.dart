@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:surveyflow/fields/datepickerfield.dart';
 import 'package:surveyflow/fields/gpsfield.dart';
 import 'package:surveyflow/fields/image_picker.dart';
-import 'package:surveyflow/fields/datepickerfield.dart';
 import 'package:surveyflow/pages/Consent.dart';
 import 'package:surveyflow/pages/cover.dart';
 import 'package:surveyflow/pages/farmerident.dart';
@@ -100,7 +100,12 @@ class Endcollection extends StatelessWidget {
             ),
           ),
           _buildDrawerItem(context, 'COVER', const Questionnaire()),
-          _buildDrawerItem(context, 'CONSENT AND LOCATION', const Consent()),
+          _buildDrawerItem(
+              context,
+              'CONSENT AND LOCATION',
+              const Consent(
+                survey: {},
+              )),
           _buildDrawerItem(context, 'FARMER IDENTIFICATION', Farmerident()),
           _buildDrawerItem(context, 'REMEDIATION', const Remediation()),
           _buildDrawerItem(context, 'SENSITIZATION', const Sensitization()),
