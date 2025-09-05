@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:surveyflow/pages/Startsurvey.dart';
+import 'package:surveyflow/home/Startsurvey.dart';
 import 'package:surveyflow/pages/cover.dart';
 
 class Homepage extends StatelessWidget {
@@ -156,47 +156,63 @@ class Homepage extends StatelessWidget {
             //   child: Column(
             //     crossAxisAlignment: CrossAxisAlignment.start,
             //     children: [
-            //       // // Image placeholder - would be replaced with actual image
-            // Container(
-            //   height: 160,
-            //   width: double.infinity,
-            //   decoration: const BoxDecoration(
-            //     borderRadius: BorderRadius.only(
-            //       topLeft: Radius.circular(12),
-            //       topRight: Radius.circular(12),
-            //     ),
-            //     color: Color(0xFFE3F2FD),
-            //   ),
-            //   child: const Icon(
-            //     Icons.child_care,
-            //     size: 60,
-            //     color: Color(0xFF1976D2),
-            //   ),
-            // ),
-            // Padding(
-            //   padding: const EdgeInsets.all(16.0),
-            // child: Column(
-            //   crossAxisAlignment: CrossAxisAlignment.start,
-            //   children: [
-            //     Text(
-            //       'End Child Labour',
-            //       style: GoogleFonts.poppins(
-            //         fontSize: 18,
-            //         fontWeight: FontWeight.w700,
-            //         color: const Color(0xFF1976D2),
+            //       // Image placeholder - would be replaced with actual image
+            //       Container(
+            //         height: 160,
+            //         width: double.infinity,
+            //         decoration: const BoxDecoration(
+            //           borderRadius: BorderRadius.only(
+            //             topLeft: Radius.circular(12),
+            //             topRight: Radius.circular(12),
+            //           ),
+            //           color: Color(0xFFE3F2FD),
+            //         ),
+            //         child: const Icon(
+            //           Icons.child_care,
+            //           size: 60,
+            //           color: Color(0xFF1976D2),
+            //         ),
             //       ),
-            //     ),
-            //     const SizedBox(height: 8),
-            //     Text(
-            //       'Child labor deprives children of their childhood, potential, and dignity. It harms their physical and mental development and interferes with their schooling.',
-            //       style: GoogleFonts.poppins(
-            //         fontSize: 13,
-            //         fontWeight: FontWeight.w400,
-            //         color: const Color(0xFF666666),
-            //       ),
-            //     ),
-            //         //   ],
-            //         // ),
+            //       Padding(
+            //         padding: const EdgeInsets.all(16.0),
+            //         child: Column(
+            //           crossAxisAlignment: CrossAxisAlignment.start,
+            //           children: [
+            //             Text(
+            //               'End Child Labour',
+            //               style: GoogleFonts.poppins(
+            //                 fontSize: 18,
+            //                 fontWeight: FontWeight.w700,
+            //                 color: const Color(0xFF1976D2),
+            //               ),
+            //             ),
+            //             const SizedBox(height: 8),
+            //             Text(
+            //               'Child labor deprives children of their childhood, potential, and dignity. It harms their physical and mental development and interferes with their schooling.',
+            //               style: GoogleFonts.poppins(
+            //                 fontSize: 13,
+            //                 fontWeight: FontWeight.w400,
+            //                 color: const Color(0xFF666666),
+            //               ),
+            //             ),
+            //             const SizedBox(height: 12),
+            //             Text(
+            //               'Key Facts:',
+            //               style: GoogleFonts.poppins(
+            //                 fontSize: 14,
+            //                 fontWeight: FontWeight.w600,
+            //                 color: const Color(0xFF333333),
+            //               ),
+            //             ),
+            //             const SizedBox(height: 6),
+            //             _buildFactItem(
+            //                 '160 million children are engaged in child labor globally'),
+            //             _buildFactItem(
+            //                 'Almost half of child laborers (79 million) work in hazardous conditions'),
+            //             _buildFactItem(
+            //                 'Sub-Saharan Africa has the highest prevalence of child labor'),
+            //           ],
+            //         ),
             //       ),
             //     ],
             //   ),
