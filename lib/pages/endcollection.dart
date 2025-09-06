@@ -8,7 +8,8 @@ import 'package:surveyflow/pages/cover.dart';
 import 'package:surveyflow/pages/farmerident.dart';
 import 'package:surveyflow/pages/remediation.dart';
 import 'package:surveyflow/pages/sensitization.dart';
-import 'package:surveyflow/pages/success.dart';
+
+import 'Success page/success.dart';
 
 class Endcollection extends StatelessWidget {
   const Endcollection({super.key});
