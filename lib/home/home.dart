@@ -15,10 +15,10 @@ class Homepage extends StatelessWidget {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.child_care, color: Colors.white, size: 20),
+            // const Icon(Icons.child_care, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Text(
-              'ChildSafe Guardian',
+              'Human Rights Monitoring',
               style: GoogleFonts.comicNeue(
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
@@ -43,11 +43,7 @@ class Homepage extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFE8F5E8),
-                Color(0xFFF3E5F5),
-                Color(0xFFFFF3E0)
-              ],
+              colors: [Color(0xFFE8F5E8), Color(0xFFF3E5F5), Color(0xFFFFF3E0)],
             ),
           ),
           child: Column(
@@ -109,9 +105,10 @@ class Homepage extends StatelessWidget {
                       Icons.home_rounded,
                       'HOME',
                       Colors.orange,
-                          () => Navigator.push(
+                      () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const Homepage()),
+                        MaterialPageRoute(
+                            builder: (context) => const Homepage()),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -119,9 +116,10 @@ class Homepage extends StatelessWidget {
                       Icons.assignment_rounded,
                       'SURVEYS',
                       Colors.blue,
-                          () => Navigator.push(
+                      () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const SurveyListPage()),
+                        MaterialPageRoute(
+                            builder: (context) => const SurveyListPage()),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -129,14 +127,14 @@ class Homepage extends StatelessWidget {
                       Icons.analytics_rounded,
                       'ANALYTICS',
                       Colors.purple,
-                          () {},
+                      () {},
                     ),
                     const SizedBox(height: 8),
                     _buildDrawerItem(
                       Icons.info_rounded,
                       'ABOUT',
                       Colors.teal,
-                          () {},
+                      () {},
                     ),
                   ],
                 ),
@@ -169,37 +167,44 @@ class Homepage extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text('👶', style: TextStyle(fontSize: 30)),
-                            Text('🧒', style: TextStyle(fontSize: 30)),
-                            Text('👧', style: TextStyle(fontSize: 30)),
-                            Text('👦', style: TextStyle(fontSize: 30)),
-                          ],
-                        ),
+                        // Row(
+                        //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        //   children: const [
+                        //     Text('🕊️',
+                        //         style: TextStyle(fontSize: 30)), // Peace
+                        //     Text('⚖️',
+                        //         style: TextStyle(fontSize: 30)), // Justice
+                        //     Text('🌍',
+                        //         style:
+                        //             TextStyle(fontSize: 30)), // Global rights
+                        //     Text('🤝',
+                        //         style: TextStyle(fontSize: 30)), // Solidarity
+                        //   ],
+                        // ),
                         const SizedBox(height: 16),
                         Text(
-                          'Every Child Deserves a Safe Future',
+                          'Human Rights for All',
                           style: GoogleFonts.comicNeue(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF2E7D32),
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(
+                                0xFF1B5E20), // Dark green tone for dignity
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Help us protect children by sharing important information',
+                          'Stand for dignity, equality, and justice.\nTogether we can protect the rights of every person.',
                           style: GoogleFonts.nunito(
-                            fontSize: 14,
-                            color: Colors.grey[600],
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[700],
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ],
                     ),
-                  ),
+                  )
                 ],
               ),
             ),
@@ -272,152 +277,152 @@ class Homepage extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Recent Activity
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFE8F5E8), Color(0xFFF1F8E9)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('📋 ', style: TextStyle(fontSize: 18)),
-                            Text(
-                              'Recent Activities',
-                              style: GoogleFonts.comicNeue(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF2E7D32),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildChildActivityItem(
-                          '✅ New safety report submitted',
-                          '2 hours ago',
-                          Colors.green,
-                        ),
-                        _buildChildActivityItem(
-                          '📊 Monthly analysis completed',
-                          'Yesterday',
-                          Colors.blue,
-                        ),
-                        _buildChildActivityItem(
-                          '📝 Community report uploaded',
-                          '2 days ago',
-                          Colors.orange,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Call to Action
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF9C27B0), Color(0xFFE1BEE7)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.purple.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text('🛡️', style: TextStyle(fontSize: 32)),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Be a Child Hero Today!',
-                          style: GoogleFonts.comicNeue(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Your voice can protect children and create safer communities for everyone',
-                          style: GoogleFonts.nunito(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SurveyListPage(),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF9C27B0),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            elevation: 8,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('🌟 ', style: TextStyle(fontSize: 16)),
-                              Text(
-                                'Start Helping Now',
-                                style: GoogleFonts.comicNeue(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
+                  // // Recent Activity
+                  // Container(
+                  //   width: double.infinity,
+                  //   padding: const EdgeInsets.all(20),
+                  //   decoration: BoxDecoration(
+                  //     borderRadius: BorderRadius.circular(25),
+                  //     gradient: const LinearGradient(
+                  //       begin: Alignment.topLeft,
+                  //       end: Alignment.bottomRight,
+                  //       colors: [Color(0xFFE8F5E8), Color(0xFFF1F8E9)],
+                  //     ),
+                  //     boxShadow: [
+                  //       BoxShadow(
+                  //         color: Colors.black.withOpacity(0.05),
+                  //         blurRadius: 15,
+                  //         offset: const Offset(0, 5),
+                  //       ),
+                  //     ],
+                  //   ),
+                  //   child: Column(
+                  //     children: [
+                  //       Row(
+                  //         mainAxisAlignment: MainAxisAlignment.center,
+                  //         children: [
+                  //           Text('📋 ', style: TextStyle(fontSize: 18)),
+                  //           Text(
+                  //             'Recent Activities',
+                  //             style: GoogleFonts.comicNeue(
+                  //               fontSize: 16,
+                  //               fontWeight: FontWeight.w700,
+                  //               color: const Color(0xFF2E7D32),
+                  //             ),
+                  //           ),
+                  //         ],
+                  //       ),
+                  //       const SizedBox(height: 16),
+                  //       _buildChildActivityItem(
+                  //         '✅ New report submitted',
+                  //         '2 hours ago',
+                  //         Colors.green,
+                  //       ),
+                  //       _buildChildActivityItem(
+                  //         '📊 Monthly analysis completed',
+                  //         'Yesterday',
+                  //         Colors.blue,
+                  //       ),
+                  //       _buildChildActivityItem(
+                  //         '📝 Community report uploaded',
+                  //         '2 days ago',
+                  //         Colors.orange,
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  //
+                  // const SizedBox(height: 24),
+                  //
+                  // // Call to Action
+                  // Container(
+                  //   width: double.infinity,
+                  //   padding: const EdgeInsets.all(24),
+                  //   decoration: BoxDecoration(
+                  //     borderRadius: BorderRadius.circular(25),
+                  //     gradient: const LinearGradient(
+                  //       begin: Alignment.topLeft,
+                  //       end: Alignment.bottomRight,
+                  //       colors: [Color(0xFF9C27B0), Color(0xFFE1BEE7)],
+                  //     ),
+                  //     boxShadow: [
+                  //       BoxShadow(
+                  //         color: Colors.purple.withOpacity(0.3),
+                  //         blurRadius: 20,
+                  //         offset: const Offset(0, 10),
+                  //       ),
+                  //     ],
+                  //   ),
+                  //   child: Column(
+                  //     children: [
+                  //       Container(
+                  //         padding: const EdgeInsets.all(16),
+                  //         decoration: BoxDecoration(
+                  //           color: Colors.white.withOpacity(0.2),
+                  //           shape: BoxShape.circle,
+                  //         ),
+                  //         child: Text('🛡️', style: TextStyle(fontSize: 32)),
+                  //       ),
+                  //       const SizedBox(height: 16),
+                  //       Text(
+                  //         'Be a Child Hero Today!',
+                  //         style: GoogleFonts.comicNeue(
+                  //           fontSize: 20,
+                  //           fontWeight: FontWeight.w800,
+                  //           color: Colors.white,
+                  //         ),
+                  //         textAlign: TextAlign.center,
+                  //       ),
+                  //       const SizedBox(height: 8),
+                  //       Text(
+                  //         'Your voice can protect children and create safer communities for everyone',
+                  //         style: GoogleFonts.nunito(
+                  //           fontSize: 14,
+                  //           color: Colors.white.withOpacity(0.9),
+                  //         ),
+                  //         textAlign: TextAlign.center,
+                  //       ),
+                  //       const SizedBox(height: 20),
+                  //       ElevatedButton(
+                  //         onPressed: () {
+                  //           Navigator.push(
+                  //             context,
+                  //             MaterialPageRoute(
+                  //               builder: (context) => const SurveyListPage(),
+                  //             ),
+                  //           );
+                  //         },
+                  //         style: ElevatedButton.styleFrom(
+                  //           backgroundColor: Colors.white,
+                  //           foregroundColor: const Color(0xFF9C27B0),
+                  //           padding: const EdgeInsets.symmetric(
+                  //             horizontal: 32,
+                  //             vertical: 16,
+                  //           ),
+                  //           shape: RoundedRectangleBorder(
+                  //             borderRadius: BorderRadius.circular(25),
+                  //           ),
+                  //           elevation: 8,
+                  //         ),
+                  //         child: Row(
+                  //           mainAxisSize: MainAxisSize.min,
+                  //           children: [
+                  //             Text('🌟 ', style: TextStyle(fontSize: 16)),
+                  //             Text(
+                  //               'Start Helping Now',
+                  //               style: GoogleFonts.comicNeue(
+                  //                 fontWeight: FontWeight.w700,
+                  //                 fontSize: 16,
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  //
+                  // const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -427,7 +432,8 @@ class Homepage extends StatelessWidget {
     );
   }
 
-  Widget _buildDrawerItem(IconData icon, String title, Color color, VoidCallback onTap) {
+  Widget _buildDrawerItem(
+      IconData icon, String title, Color color, VoidCallback onTap) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -462,7 +468,8 @@ class Homepage extends StatelessWidget {
     );
   }
 
-  Widget _buildChildFriendlyStatCard(String value, String title, String emoji, Color primaryColor, Color backgroundColor) {
+  Widget _buildChildFriendlyStatCard(String value, String title, String emoji,
+      Color primaryColor, Color backgroundColor) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -542,7 +549,7 @@ class Homepage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Start a Safety Survey',
+              'Start a Survey',
               style: GoogleFonts.comicNeue(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -551,7 +558,7 @@ class Homepage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Help us understand and improve child safety in your community',
+              'Help us collect survey data on house hold and community',
               style: GoogleFonts.nunito(
                 fontSize: 13,
                 color: Colors.white.withOpacity(0.9),

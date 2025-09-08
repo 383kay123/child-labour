@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:surveyflow/screens/login_screen.dart';
-import 'package:surveyflow/theme/app_theme.dart';
-
-import '../home/home.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
@@ -19,22 +16,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, String>> _onboardingPages = [
     {
-      'title': 'Welcome to ChildSafe',
+      'title': 'Welcome to Human Rights Monitoring',
       'description':
-          'Your trusted partner in protecting children and ensuring their rights are upheld.',
-      'image': 'assets/images/onboarding1.png', // Replace with actual assets
+      'Empowering you to protect human dignity and ensure that rights are respected in every community.',
+      'image': 'assets/images/onboarding1.png',
     },
     {
-      'title': 'Easy Reporting',
+      'title': 'Report and Monitor',
       'description':
-          'Quickly report and track child labor cases in your community with just a few taps.',
-      'image': 'assets/images/onboarding2.png', // Replace with actual assets
+      'Easily report human rights violations and track cases with transparency and accountability.',
+      'image': 'assets/images/onboarding2.png',
     },
     {
-      'title': 'Make a Difference',
+      'title': 'Be a Human Rights Champion',
       'description':
-          'Join us in creating a safer environment for children everywhere.',
-      'image': 'assets/images/onboarding3.png', // Replace with actual assets
+      'Join the movement to build safer, fairer, and more just communities worldwide.',
+      'image': 'assets/images/onboarding3.png',
     },
   ];
 
@@ -51,9 +48,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.ease,
       );
     } else {
-      // Navigate to home screen when onboarding is complete
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (context) => const LoginScreen()));
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     }
   }
 
@@ -65,13 +62,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-
             Align(
               alignment: Alignment.topRight,
               child: TextButton(
                 onPressed: () {
-                  Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (context) => const LoginScreen()));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  );
                 },
                 child: Text(
                   'Skip',
@@ -83,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // PageView for onboarding slides
+            // PageView
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -99,43 +96,44 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Page indicator and next button
+            // Indicators + Next Button
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Page indicator
+                  // Indicator
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List<Widget>.generate(
+                    children: List.generate(
                       _numPages,
-                      (index) => AnimatedContainer(
+                          (index) => AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                        height: 8.0,
-                        width: _currentPage == index ? 24.0 : 8.0,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        height: 8,
+                        width: _currentPage == index ? 24 : 8,
                         decoration: BoxDecoration(
                           color: _currentPage == index
                               ? theme.primaryColor
                               : theme.primaryColor.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(4.0),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
                     ),
                   ),
 
-                  // Next/Get Started button
+                  // Next / Get Started
                   ElevatedButton(
                     onPressed: _onNextButtonPressed,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.primaryColor,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.0),
+                        borderRadius: BorderRadius.circular(30),
                       ),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
                     child: Text(
                       _currentPage == _numPages - 1 ? 'Get Started' : 'Next',
@@ -158,11 +156,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Image placeholder (replace with actual image)
+          // Image Placeholder (icon if no asset)
           Container(
             width: 250,
             height: 250,
@@ -203,15 +201,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   IconData _getPageIcon(String title) {
-    switch (title) {
-      case 'Welcome to ChildSafe':
-        return Icons.self_improvement;
-      case 'Easy Reporting':
-        return Icons.report_problem;
-      case 'Make a Difference':
-        return Icons.volunteer_activism;
-      default:
-        return Icons.child_care;
-    }
+    if (title.contains('Welcome')) return Icons.public;
+    if (title.contains('Report')) return Icons.report_gmailerrorred;
+    if (title.contains('Champion')) return Icons.handshake;
+    return Icons.gavel;
   }
 }

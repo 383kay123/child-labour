@@ -16,9 +16,9 @@ class SurveyListPage extends StatelessWidget {
     // Child-friendly survey data with emojis and better descriptions
     final List<Map<String, dynamic>> surveys = [
       {
-        'title': 'Family Safety Survey',
+        'title': 'House Hold Survey',
         'subtitle': 'REVIEW GHA - CLMRS Household Profiling - 24/25',
-        'description': 'Help us understand how families keep children safe at home',
+        'description': 'Help us gather information about household',
         'emoji': '🏠',
         'color': const Color(0xFF4CAF50),
         'lightColor': const Color(0xFFE8F5E8),
@@ -27,9 +27,9 @@ class SurveyListPage extends StatelessWidget {
         'icon': Icons.home_rounded,
       },
       {
-        'title': 'Community Safety Check',
+        'title': 'Community Assessment',
         'subtitle': 'Community Assessment Survey',
-        'description': 'Tell us about child safety in your neighborhood',
+        'description': 'Help us gather information about community',
         'emoji': '🌍',
         'color': const Color(0xFF2196F3),
         'lightColor': const Color(0xFFE3F2FD),
@@ -46,7 +46,7 @@ class SurveyListPage extends StatelessWidget {
           children: [
             Text('📋 ', style: TextStyle(fontSize: 20)),
             Text(
-              'Safety Surveys',
+              'Available Surveys',
               style: GoogleFonts.comicNeue(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -145,7 +145,7 @@ class SurveyListPage extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Every survey helps protect a child. Thank you for caring!',
+                    'Thank you for your help in this exercise',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -265,7 +265,7 @@ class SurveyListPage extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Tap to Start Helping',
+                      'Tap to Start Survey',
                       style: GoogleFonts.nunito(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -339,7 +339,7 @@ class SurveyListPage extends StatelessWidget {
                 _buildOptionItem(
                   context,
                   '🆕 Start New Survey',
-                  'Begin collecting important safety information',
+                  'Begin collecting important information',
                   Icons.add_circle_rounded,
                   const Color(0xFF4CAF50),
                   const Color(0xFFE8F5E8),
