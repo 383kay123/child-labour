@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:surveyflow/home/home.dart';
+
+import 'home/home.dart';
 
 void main() {
   runApp(const Surveyflow());

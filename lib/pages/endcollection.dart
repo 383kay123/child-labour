@@ -4,11 +4,11 @@ import 'package:surveyflow/fields/datepickerfield.dart';
 import 'package:surveyflow/fields/gpsfield.dart';
 import 'package:surveyflow/fields/image_picker.dart';
 import 'package:surveyflow/pages/Consent.dart';
+import 'package:surveyflow/pages/Success%20page/success.dart';
 import 'package:surveyflow/pages/cover.dart';
 import 'package:surveyflow/pages/farmerident.dart';
 import 'package:surveyflow/pages/remediation.dart';
 import 'package:surveyflow/pages/sensitization.dart';
-import 'package:surveyflow/pages/success.dart';
 
 class Endcollection extends StatelessWidget {
   const Endcollection({super.key});
