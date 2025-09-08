@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:surveyflow/home/home.dart';
+import 'package:surveyflow/pages/Monitoring/dashboard_screen.dart';
 import 'package:surveyflow/pages/house-hold/house_hold_survey_provider.dart';
 // import 'package:surveyflow/pages/survey_form_page.dart';
 import 'package:surveyflow/providers/survey_provider.dart';
@@ -35,6 +36,7 @@ class Surveyflow extends StatelessWidget {
         routes: {
           '/': (context) => const SplashScreen(),
           '/home': (context) => const Homepage(),
+          '/monitoring': (context) => const DashboardScreen(),
         },
       ),
     );
