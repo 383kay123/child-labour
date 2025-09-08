@@ -4,16 +4,17 @@ import 'package:google_fonts/google_fonts.dart';
 class DropdownField extends StatefulWidget {
   final String question;
   final List<String> options;
+  final Function(String?)? onChanged;
 
   const DropdownField(
-      {super.key, required this.question, required this.options});
+      {super.key, required this.question, required this.options, this.onChanged});
 
   @override
   _DropdownFieldState createState() => _DropdownFieldState();
 }
 
 class _DropdownFieldState extends State<DropdownField> {
-  String? selectedOption; // Stores the selected dropdown value
+  String? selectedOption;
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +51,7 @@ class _DropdownFieldState extends State<DropdownField> {
                 setState(() {
                   selectedOption = newValue;
                 });
+                widget.onChanged?.call(newValue);
               },
             ),
           ),

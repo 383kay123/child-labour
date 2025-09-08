@@ -1,6 +1,78 @@
- build/
- .dart_tool/
- .flutter-plugins
- .flutter-plugins-dependencies
- .idea/
- android/
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+generated_plugin_registrant.dart
+
+# iOS
+ios/Flutter/.last_build_id
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Android
+android/.gradle/
+android/app/build/
+android/local.properties
+android/key.properties
+
+# Windows
+windows/Flutter/ephemeral/
+windows/build/
+
+# macOS
+macos/Flutter/ephemeral/
+macos/Pods/
+macos/build/
+
+# Linux
+linux/Flutter/ephemeral/
+linux/build/
+
+# Web
+web/.dart_tool/
+web/.flutter-plugins
+
+# VS Code
+.vscode/
+.history/
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+# Flutter build
+
+*.apk
+*.aab
+*.ipa
+
+*.so
+
+
+# Xcode
+*.xcworkspace
+*.xcuserstate
+*.xcuserdata/
+DerivedData/
+*.lock
+
+# Other
+*.log
+*.tmp
+*.swp
+*.DS_Store
+*.class
+*.jar
+*.war
+*.ear
+
+# Coverage
+coverage/

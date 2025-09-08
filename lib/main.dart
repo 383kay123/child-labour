@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
-import 'home/home.dart';
+import 'package:surveyflow/screens/splash_screen.dart';
+import 'package:surveyflow/theme/app_theme.dart';
 
 void main() {
   runApp(const Surveyflow());
@@ -12,8 +12,10 @@ class Surveyflow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'ChildSafe',
       debugShowCheckedModeBanner: false,
-      home: Homepage(),
+      theme: AppTheme.lightTheme,
+      home: const SplashScreen(),
     );
   }
 }
