@@ -1,26 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:surveyflow/home/Startsurvey.dart';
-import 'package:surveyflow/pages/cover.dart';
 
 class Homepage extends StatelessWidget {
   const Homepage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1976D2),
-        title: Text(
-          'Child Labour Data Collection',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            fontSize: 16,
-          ),
+        backgroundColor: const Color(0xFF4CAF50), // Child-friendly green
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.child_care, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'ChildSafe Guardian',
+              style: GoogleFonts.comicNeue(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                fontSize: 18,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
-        elevation: 2,
+        elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: Drawer(
@@ -29,102 +43,100 @@ class Homepage extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+              colors: [
+                Color(0xFFE8F5E8),
+                Color(0xFFF3E5F5),
+                Color(0xFFFFF3E0)
+              ],
             ),
           ),
           child: Column(
             children: [
-              SizedBox(
-                height: 180,
-                child: DrawerHeader(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF1976D2),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
+              Container(
+                height: 200,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF4CAF50), Color(0xFF81C784)],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.child_care,
+                        size: 40,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Text(
-                        'SURVEYFLOW',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'ChildSafe',
+                      style: GoogleFonts.comicNeue(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Child Labour Initiative',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.white70,
-                        ),
+                    ),
+                    Text(
+                      'Protecting Every Child 🌟',
+                      style: GoogleFonts.comicNeue(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.9),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    ListTile(
-                      leading: const Icon(Icons.home, color: Color(0xFF1976D2)),
-                      title: Text(
-                        'HOME',
-                        style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w500, fontSize: 14),
+                    _buildDrawerItem(
+                      Icons.home_rounded,
+                      'HOME',
+                      Colors.orange,
+                          () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const Homepage()),
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const Homepage()),
-                        );
-                      },
                     ),
-                    const Divider(height: 1, color: Color(0xFF90CAF9)),
-                    ListTile(
-                      leading: const Icon(Icons.assignment,
-                          color: Color(0xFF1976D2)),
-                      title: Text(
-                        'SURVEYS',
-                        style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w500, fontSize: 14),
+                    const SizedBox(height: 8),
+                    _buildDrawerItem(
+                      Icons.assignment_rounded,
+                      'SURVEYS',
+                      Colors.blue,
+                          () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SurveyListPage()),
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SurveyListPage()),
-                        );
-                      },
                     ),
-                    const Divider(height: 1, color: Color(0xFF90CAF9)),
-                    ListTile(
-                      leading:
-                          const Icon(Icons.analytics, color: Color(0xFF1976D2)),
-                      title: Text(
-                        'ANALYTICS',
-                        style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w500, fontSize: 14),
-                      ),
-                      onTap: () {},
+                    const SizedBox(height: 8),
+                    _buildDrawerItem(
+                      Icons.analytics_rounded,
+                      'ANALYTICS',
+                      Colors.purple,
+                          () {},
                     ),
-                    const Divider(height: 1, color: Color(0xFF90CAF9)),
-                    ListTile(
-                      leading: const Icon(Icons.info, color: Color(0xFF1976D2)),
-                      title: Text(
-                        'ABOUT',
-                        style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w500, fontSize: 14),
-                      ),
-                      onTap: () {},
+                    const SizedBox(height: 8),
+                    _buildDrawerItem(
+                      Icons.info_rounded,
+                      'ABOUT',
+                      Colors.teal,
+                          () {},
                     ),
                   ],
                 ),
@@ -133,295 +145,279 @@ class Homepage extends StatelessWidget {
           ),
         ),
       ),
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFFAFAFA),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // // Header Section with Image
-            // Container(
-            //   width: double.infinity,
-            //   decoration: BoxDecoration(
-            //     borderRadius: BorderRadius.circular(12),
-            //     color: Colors.white,
-            //     boxShadow: [
-            //       BoxShadow(
-            //         color: Colors.black.withOpacity(0.1),
-            //         blurRadius: 6,
-            //         offset: const Offset(0, 3),
-            //       ),
-            //     ],
-            //   ),
-            //   child: Column(
-            //     crossAxisAlignment: CrossAxisAlignment.start,
-            //     children: [
-            //       // Image placeholder - would be replaced with actual image
-            //       Container(
-            //         height: 160,
-            //         width: double.infinity,
-            //         decoration: const BoxDecoration(
-            //           borderRadius: BorderRadius.only(
-            //             topLeft: Radius.circular(12),
-            //             topRight: Radius.circular(12),
-            //           ),
-            //           color: Color(0xFFE3F2FD),
-            //         ),
-            //         child: const Icon(
-            //           Icons.child_care,
-            //           size: 60,
-            //           color: Color(0xFF1976D2),
-            //         ),
-            //       ),
-            //       Padding(
-            //         padding: const EdgeInsets.all(16.0),
-            //         child: Column(
-            //           crossAxisAlignment: CrossAxisAlignment.start,
-            //           children: [
-            //             Text(
-            //               'End Child Labour',
-            //               style: GoogleFonts.poppins(
-            //                 fontSize: 18,
-            //                 fontWeight: FontWeight.w700,
-            //                 color: const Color(0xFF1976D2),
-            //               ),
-            //             ),
-            //             const SizedBox(height: 8),
-            //             Text(
-            //               'Child labor deprives children of their childhood, potential, and dignity. It harms their physical and mental development and interferes with their schooling.',
-            //               style: GoogleFonts.poppins(
-            //                 fontSize: 13,
-            //                 fontWeight: FontWeight.w400,
-            //                 color: const Color(0xFF666666),
-            //               ),
-            //             ),
-            //             const SizedBox(height: 12),
-            //             Text(
-            //               'Key Facts:',
-            //               style: GoogleFonts.poppins(
-            //                 fontSize: 14,
-            //                 fontWeight: FontWeight.w600,
-            //                 color: const Color(0xFF333333),
-            //               ),
-            //             ),
-            //             const SizedBox(height: 6),
-            //             _buildFactItem(
-            //                 '160 million children are engaged in child labor globally'),
-            //             _buildFactItem(
-            //                 'Almost half of child laborers (79 million) work in hazardous conditions'),
-            //             _buildFactItem(
-            //                 'Sub-Saharan Africa has the highest prevalence of child labor'),
-            //           ],
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
-
-            const SizedBox(height: 24),
-
-            // Stats Overview
-            Text(
-              'Overview',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF333333),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard1(
-                    'Surveys Completed',
-                    '24',
-                    Icons.check_circle,
-                    const [Color(0xFF1976D2), Color(0xFF0D47A1)],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard2(
-                    'Pending',
-                    '8',
-                    Icons.pending_actions,
-                    [const Color(0xFFFF9800), const Color(0xFFF57C00)],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Quick Actions
-            Text(
-              'Quick Actions',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF333333),
-              ),
-            ),
-            const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.1,
-              ),
-              itemCount: 2,
-              itemBuilder: (context, index) {
-                final List<Map<String, dynamic>> cardData = [
-                  {
-                    'title': 'Start Survey',
-                    'subtitle': 'Begin data collection',
-                    'icon': Icons.assignment,
-                    'colors': [
-                      const Color(0xFF1976D2),
-                      const Color(0xFF0D47A1)
-                    ],
-                    'page': const SurveyListPage(),
-                  },
-                  {
-                    'title': 'View Data',
-                    'subtitle': 'Check survey results',
-                    'icon': Icons.bar_chart,
-                    'colors': [
-                      const Color(0xFF4CAF50),
-                      const Color(0xFF2E7D32)
-                    ],
-                    'page': const Questionnaire(),
-                  },
-                ];
-
-                return _buildActionCard(
-                  context,
-                  cardData[index]['title']!,
-                  cardData[index]['subtitle']!,
-                  cardData[index]['icon'] as IconData,
-                  cardData[index]['colors'] as List<Color>,
-                  cardData[index]['page'] as Widget,
-                );
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            // Recent Activity
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
+            // Hero Section
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Text('👶', style: TextStyle(fontSize: 30)),
+                            Text('🧒', style: TextStyle(fontSize: 30)),
+                            Text('👧', style: TextStyle(fontSize: 30)),
+                            Text('👦', style: TextStyle(fontSize: 30)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Every Child Deserves a Safe Future',
+                          style: GoogleFonts.comicNeue(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF2E7D32),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Help us protect children by sharing important information',
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Recent Activity',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1976D2),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActivityItem('New survey submitted', '2 hours ago',
-                      Icons.assignment_turned_in),
-                  _buildActivityItem(
-                      'Data analysis completed', 'Yesterday', Icons.analytics),
-                  _buildActivityItem(
-                      'Field report uploaded', '2 days ago', Icons.description),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Call to Action
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.child_care, size: 36, color: Colors.white),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Make a Difference Today',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your participation helps protect children from labor exploitation',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white70,
-                    ),
-                    textAlign: TextAlign.center,
+                  // Stats Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('📊 ', style: TextStyle(fontSize: 20)),
+                      Text(
+                        'Our Impact',
+                        style: GoogleFonts.comicNeue(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF2E7D32),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const SurveyListPage()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF1976D2),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildChildFriendlyStatCard(
+                          '24',
+                          'Children Helped',
+                          '🌟',
+                          const Color(0xFFFF9800),
+                          const Color(0xFFFFF3E0),
+                        ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildChildFriendlyStatCard(
+                          '8',
+                          'Reports Pending',
+                          '⏰',
+                          const Color(0xFF2196F3),
+                          const Color(0xFFE3F2FD),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Quick Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('🚀 ', style: TextStyle(fontSize: 20)),
+                      Text(
+                        'Take Action',
+                        style: GoogleFonts.comicNeue(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF2E7D32),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildMainActionCard(context),
+
+                  const SizedBox(height: 24),
+
+                  // Recent Activity
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFE8F5E8), Color(0xFFF1F8E9)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      'Start Survey Now',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('📋 ', style: TextStyle(fontSize: 18)),
+                            Text(
+                              'Recent Activities',
+                              style: GoogleFonts.comicNeue(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF2E7D32),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildChildActivityItem(
+                          '✅ New safety report submitted',
+                          '2 hours ago',
+                          Colors.green,
+                        ),
+                        _buildChildActivityItem(
+                          '📊 Monthly analysis completed',
+                          'Yesterday',
+                          Colors.blue,
+                        ),
+                        _buildChildActivityItem(
+                          '📝 Community report uploaded',
+                          '2 days ago',
+                          Colors.orange,
+                        ),
+                      ],
                     ),
                   ),
+
+                  const SizedBox(height: 24),
+
+                  // Call to Action
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF9C27B0), Color(0xFFE1BEE7)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.purple.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text('🛡️', style: TextStyle(fontSize: 32)),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Be a Child Hero Today!',
+                          style: GoogleFonts.comicNeue(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your voice can protect children and create safer communities for everyone',
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SurveyListPage(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF9C27B0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            elevation: 8,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('🌟 ', style: TextStyle(fontSize: 16)),
+                              Text(
+                                'Start Helping Now',
+                                style: GoogleFonts.comicNeue(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -431,244 +427,187 @@ class Homepage extends StatelessWidget {
     );
   }
 
-  Widget _buildFactItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.fiber_manual_record,
-              size: 8, color: Color(0xFF1976D2)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFF666666),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard1(
-      String title, String value, IconData icon, List<Color> colors) {
+  Widget _buildDrawerItem(IconData icon, String title, Color color, VoidCallback onTap) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.white, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Colors.white70,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard2(
-      String title, String value, IconData icon, List<Color> colors) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
         color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.comicNeue(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: const Color(0xFF2E7D32),
+          ),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildChildFriendlyStatCard(String value, String title, String emoji, Color primaryColor, Color backgroundColor) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: primaryColor.withOpacity(0.2), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: colors,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: Colors.white, size: 18),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: colors[0].withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Pending',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: colors[0],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          Text(emoji, style: TextStyle(fontSize: 24)),
+          const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: colors[0],
+            style: GoogleFonts.comicNeue(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: primaryColor,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.nunito(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF666666),
+              fontWeight: FontWeight.w600,
+              color: primaryColor,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionCard(BuildContext context, String title, String subtitle,
-      IconData icon, List<Color> colors, Widget destination) {
+  Widget _buildMainActionCard(BuildContext context) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => destination),
+          MaterialPageRoute(builder: (context) => const SurveyListPage()),
         );
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: colors,
+            colors: [Color(0xFF4CAF50), Color(0xFF81C784)],
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+              color: Colors.green.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: Colors.white,
-                ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 12),
-              Text(title,
-                  style: GoogleFonts.poppins(
-                      fontSize: 14.0,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white)),
-              const SizedBox(height: 4),
-              Text(subtitle,
-                  style: GoogleFonts.poppins(
-                      fontSize: 11.0, color: Colors.white70)),
-            ],
-          ),
+              child: Text('📝', style: TextStyle(fontSize: 28)),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Start a Safety Survey',
+              style: GoogleFonts.comicNeue(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Help us understand and improve child safety in your community',
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                color: Colors.white.withOpacity(0.9),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildActivityItem(String activity, String time, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+  Widget _buildChildActivityItem(String activity, String time, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
+      ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1976D2).withOpacity(0.1),
+              color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 16, color: const Color(0xFF1976D2)),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(activity,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: const Color(0xFF333333),
-                )),
+            child: Text(
+              activity,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF2E7D32),
+              ),
+            ),
           ),
-          Text(time,
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                color: const Color(0xFF666666),
-              )),
+          Text(
+            time,
+            style: GoogleFonts.nunito(
+              fontSize: 11,
+              color: Colors.grey[600],
+            ),
+          ),
         ],
       ),
     );
