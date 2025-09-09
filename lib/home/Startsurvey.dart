@@ -36,6 +36,17 @@ class SurveyListPage extends StatelessWidget {
         'page': const CommunityAssessmentForm(),
         'historyPage': const CommunityAssessmentHistory(),
         'icon': Icons.people_rounded,
+      },
+      {
+        'title': 'Child Labor Monitoring',
+        'subtitle': 'Farm and Community Monitoring',
+        'description': 'Monitor and track child labor risks in farming communities',
+        'emoji': '👨‍🌾',
+        'color': const Color(0xFF9C27B0),
+        'lightColor': const Color(0xFFF3E5F5),
+        'page': null, // Will be handled specially in onTap
+        'isMonitoring': true, // Special flag for monitoring
+        'icon': Icons.monitor_heart_rounded,
       }
     ];
 
@@ -163,7 +174,17 @@ class SurveyListPage extends StatelessWidget {
 
   Widget _buildSurveyCard(BuildContext context, Map<String, dynamic> survey, int index) {
     return GestureDetector(
-      onTap: () => _showSurveyOptions(context, survey),
+      onTap: () {
+        if (survey['isMonitoring'] == true) {
+          // Navigate to monitoring dashboard
+          Navigator.pushNamed(context, '/monitoring');
+        } else if (survey['page'] != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => survey['page']),
+          );
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
