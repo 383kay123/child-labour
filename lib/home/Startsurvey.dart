@@ -20,8 +20,8 @@ class SurveyListPage extends StatelessWidget {
         'subtitle': 'REVIEW GHA - CLMRS Household Profiling - 24/25',
         'description': 'Help us gather information about household',
         'emoji': '🏠',
-        'color': const Color(0xFF4CAF50),
-        'lightColor': const Color(0xFFE8F5E8),
+        'color': Theme.of(context).primaryColor,
+        'lightColor': Theme.of(context).primaryColor.withOpacity(0.2),
         'page': const HouseHoldSurveyScreen(),
         'historyPage': const HouseHoldHistory(),
         'icon': Icons.home_rounded,
@@ -37,16 +37,17 @@ class SurveyListPage extends StatelessWidget {
         'historyPage': const CommunityAssessmentHistory(),
         'icon': Icons.people_rounded,
       },
+
       {
-        'title': 'Child Labor Monitoring',
-        'subtitle': 'Farm and Community Monitoring',
-        'description': 'Monitor and track child labor risks in farming communities',
-        'emoji': '👨‍🌾',
-        'color': const Color(0xFF9C27B0),
-        'lightColor': const Color(0xFFF3E5F5),
-        'page': null, // Will be handled specially in onTap
-        'isMonitoring': true, // Special flag for monitoring
-        'icon': Icons.monitor_heart_rounded,
+        'title': 'Monitoring',
+        'subtitle': 'Community monitoring',
+        'description': 'Help us monitor community',
+        'emoji': '📊',
+        'color': Theme.of(context).primaryColor,
+        'lightColor': Theme.of(context).primaryColor.withOpacity(0.2),
+        'page': (),
+        'historyPage': const CommunityAssessmentHistory(),
+        'icon': Icons.people_rounded,
       }
     ];
 
@@ -174,17 +175,7 @@ class SurveyListPage extends StatelessWidget {
 
   Widget _buildSurveyCard(BuildContext context, Map<String, dynamic> survey, int index) {
     return GestureDetector(
-      onTap: () {
-        if (survey['isMonitoring'] == true) {
-          // Navigate to monitoring dashboard
-          Navigator.pushNamed(context, '/monitoring');
-        } else if (survey['page'] != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => survey['page']),
-          );
-        }
-      },
+      onTap: () => _showSurveyOptions(context, survey),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,

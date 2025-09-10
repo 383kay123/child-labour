@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               const SizedBox(height: 30),
               // App Name
               const Text(
-                'ChildSafe',
+                'Human Right Monitor',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -91,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               const SizedBox(height: 10),
               // Tagline
               const Text(
-                'Protecting Childhood, Building Futures',
+                'Protecting the rights of individuals, Building Futures',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white70,

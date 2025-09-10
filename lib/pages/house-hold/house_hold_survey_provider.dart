@@ -374,12 +374,12 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     // },
     // {
     //   'question':
-    //       'Tableau: PRODUCERS/MANAGERS HOUSEHOLD INFRORMATION - %ROSTERTITLE%',
+    //       'Tableau: PRODUCERS/MANAGERS HOUSEHOLD INFRORMATION - ',
     //   'type': 'instruction',
     // },
     {
       'question':
-          'Relationship of %rostertitle% to the respondent (Farmer/Manager/CareTaker)',
+          'Relationship of to the respondent (Farmer/Manager/CareTaker)',
       'type': 'multiple_choice',
       'options': [
         'Husband/wife',
@@ -405,12 +405,12 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     //   'type': 'instruction',
     // },
     {
-      'question': 'Gender of %rostertitle%',
+      'question': 'Gender of ',
       'type': 'multiple_choice',
       'options': ['Male', 'Female'],
     },
     {
-      'question': 'Nationality of %rostertitle%',
+      'question': 'Nationality of ',
       'type': 'multiple_choice',
       'options': ['Ghanaian', 'Non Ghanaian'],
     },
@@ -435,15 +435,15 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Year of birth of %rostertitle%',
+      'question': 'Year of birth of ',
       'type': 'text',
     },
     {
-      'question': 'Does %rostertitle% have a birth certificate?',
+      'question': 'Does have a birth certificate?',
       'type': 'yes_no',
     },
     {
-      'question': 'Work/ main  occupation of %rostertitle%',
+      'question': 'Work/ main  occupation of ',
       'type': 'multiple_choice',
       'options': [
         'Farmer (cocoa)',
@@ -477,7 +477,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     //   'type': 'instruction',
     // },
     // {
-    //   'question': 'Tableau: CHILDREN OF THE HOUSEHOLD - %ROSTERTITLE%',
+    //   'question': 'Tableau: CHILDREN OF THE HOUSEHOLD - ',
     //   'type': 'instruction',
     // },
     {
@@ -536,16 +536,16 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Gender of the child %rostertitle%',
+      'question': 'Gender of the child ',
       'type': 'multiple_choice',
-      'options': ['Boy', 'Girl'],
+      'options': ['Male', 'Female'],
     },
     {
-      'question': 'Year of birth of the child %rostertitle%',
+      'question': 'Year of birth of the child ',
       'type': 'text',
     },
     {
-      'question': 'Does the child %rostertitle% have a birth certificate?',
+      'question': 'Does the child have a birth certificate?',
       'type': 'yes_no',
     },
     {
@@ -553,7 +553,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Is the child %rostertitle% born in this community?',
+      'question': 'Is the child born in this community?',
       'type': 'multiple_choice',
       'options': [
         'Yes',
@@ -564,7 +564,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       ],
     },
     {
-      'question': 'In which country is the child %rostertitle% born?',
+      'question': 'In which country is the child born?',
       'type': 'multiple_choice',
       'options': [
         'Benin',
@@ -578,7 +578,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       ],
     },
     {
-      'question': 'Relationship of %rostertitle% to the head of the  household',
+      'question': 'Relationship of to the head of the  household',
       'type': 'multiple_choice',
       'options': [
         'Son/daughter',
@@ -597,7 +597,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Why does the %rostertitle% not live with his/her family?',
+      'question': 'Why does the not live with his/her family?',
       'type': 'multiple_choice',
       'options': [
         'Parents deceased',
@@ -616,7 +616,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'Who decided that the child %rostertitle% to come into the household?',
+          'Who decided that the child to come into the household?',
       'type': 'multiple_choice',
       'options': [
         'Myself',
@@ -632,12 +632,12 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Did the %rostertitle% child agree with this decision?',
+      'question': 'Did the child agree with this decision?',
       'type': 'yes_no',
     },
     {
       'question':
-          'Has the %rostertitle% child seen and/or spoken with his/her parents in the past year?',
+          'Has the child seen and/or spoken with his/her parents in the past year?',
       'type': 'yes_no',
     },
     {
@@ -654,7 +654,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'For how long has the %rostertitle% child been livng in the household?',
+          'For how long has the child been livng in the household?',
       'type': 'multiple_choice',
       'options': [
         'Born in the household',
@@ -668,7 +668,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       ],
     },
     {
-      'question': 'Who accompanied the child %rostertitle% to come here',
+      'question': 'Who accompanied the child to come here',
       'type': 'multiple_choice',
       'options': [
         'Came alone',
@@ -684,7 +684,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Where does the childs father live %rostertitle%?',
+      'question': 'Where does the childs father live ?',
       'type': 'multiple_choice',
       'options': [
         'In the same household',
@@ -722,7 +722,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Where does the childs mother live %rostertitle%?',
+      'question': 'Where does the childs mother live ?',
       'type': 'multiple_choice',
       'options': [
         'In the same household',
@@ -760,7 +760,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Is the child %rostertitle% currently enrolled in school?',
+      'question': 'Is the child currently enrolled in school?',
       'type': 'yes_no',
     },
     {
@@ -773,7 +773,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'options': ['Public', 'Private'],
     },
     {
-      'question': 'What grade is the child %rostertitle% enrolled in?',
+      'question': 'What grade is the child enrolled in?',
       'type': 'multiple_choice',
       'options': [
         'Kindergarten 1',
@@ -799,7 +799,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'Select the basic school needs that are available to the child %rostertitle%',
+          'Select the basic school needs that are available to the child ',
       'type': 'checkbox',
       'options': [
         'Books',
@@ -811,7 +811,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       ],
     },
     {
-      'question': 'Has the child %rostertitle% ever been to school?',
+      'question': 'Has the child ever been to school?',
       'type': 'multiple_choice',
       'options': [
         'Yes, they went to school but stopped',
@@ -819,7 +819,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       ],
     },
     {
-      'question': 'Which year did the child %rostertitle% leave school?',
+      'question': 'Which year did the child leave school?',
       'type': 'text',
     },
     {
@@ -853,7 +853,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       ],
     },
     {
-      'question': 'What is the education level of %rostertitle%',
+      'question': 'What is the education level of ',
       'type': 'multiple_choice',
       'options': [
         'Pre-school (Kindergarten)',
@@ -866,7 +866,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'What is the main reason for the child %rostertitle% leaving school?',
+          'What is the main reason for the child leaving school?',
       'type': 'multiple_choice',
       'options': [
         'The school is too far away',
@@ -887,7 +887,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'Why has the child %rostertitle% never been to school before?',
+          'Why has the child never been to school before?',
       'type': 'multiple_choice',
       'options': [
         'The school is too far away',
@@ -910,7 +910,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'Why has the child %rostertitle% never been to school before?',
+          'Why has the child never been to school before?',
       'type': 'multiple_choice',
       'options': [
         'It was the holidays.',
@@ -926,12 +926,12 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'Has the child %rostertitle% missed school days the past 7 days?',
+          'Has the child missed school days the past 7 days?',
       'type': 'yes_no',
     },
     {
       'question':
-          'Why has the child %rostertitle% never been to school before?',
+          'Why has the child never been to school before?',
       'type': 'multiple_choice',
       'options': [
         'He/she was sick',
@@ -946,12 +946,12 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'In the past 7 days, has the child %rostertitle% worked in the house?',
+          'In the past 7 days, has the child worked in the house?',
       'type': 'yes_no',
     },
     {
       'question':
-          'In the past 7 days, has the child %rostertitle% been working on the cocoa farm?',
+          'In the past 7 days, has the child been working on the cocoa farm?',
       'type': 'yes_no',
     },
     {
@@ -961,7 +961,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'Which of these tasks has child %rostertitle% performed in the last 7 days?',
+          'Which of these tasks has child performed in the last 7 days?',
       'type':
           'yes_no', // Note: This seems like a checkbox question but is implemented as a yes/no radio in your code.
     },
@@ -988,21 +988,21 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     // {
     //   'question':
-    //       'CHILDREN OF THE HOUSEHOLD/ CHILDREN OF THE HOUSEHOLD - %ROSTERTITLE%',
+    //       'CHILDREN OF THE HOUSEHOLD/ CHILDREN OF THE HOUSEHOLD - ',
     //   'type': 'instruction',
     // },
     // {
-    //   'question': 'Tableau: LIGHT TASKS - %ROSTERTITLE%',
+    //   'question': 'Tableau: LIGHT TASKS - ',
     //   'type': 'instruction',
     // },
     {
       'question':
-          'Did the child receive renumeration for the activity %rostertitle%?',
+          'Did the child receive renumeration for the activity ?',
       'type': 'yes_no',
     },
     {
       'question':
-          'What was the longest time spent on light duty %rostertitle% during a SCHOOL DAY in the last 7 days?',
+          'What was the longest time spent on light duty during a SCHOOL DAY in the last 7 days?',
       'type': 'multiple_choice',
       'options': [
         'Less than 1 hour',
@@ -1017,7 +1017,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'What was the longest time spent on light duty %rostertitle% during a NON SCHOOL DAY in the last 7 days?',
+          'What was the longest time spent on light duty during a NON SCHOOL DAY in the last 7 days?',
       'type': 'multiple_choice',
       'options': [
         'Less than 1 hour',
@@ -1048,7 +1048,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'How many hours in total did the child spend on light duty %rostertitle% during NON-SCHOOL DAYS in the last 7 days?',
+          'How many hours in total did the child spend on light duty during NON-SCHOOL DAYS in the last 7 days?',
       'type': 'text',
     },
     {
@@ -1058,7 +1058,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     },
     {
       'question':
-          'Which of these tasks has child %rostertitle% performed in the last 12 months?',
+          'Which of these tasks has child performed in the last 12 months?',
       'type': 'checkbox',
       'options': [
         'Collect and gather fruits, pods, seeds after harvesting',
@@ -1081,7 +1081,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     // ... The pattern continues for the remaining DANGEROUS TASKS sections. The structure would be identical to the LIGHT TASKS sections above.
     // ... (Questions for "Q40 DANGEROUS TASKS" and the second "LIGHT TASKS" table would be added here following the same format)
     {
-      'question': 'For whom does the child %rostertitle% work?',
+      'question': 'For whom does the child work?',
       'type': 'multiple_choice',
       'options': [
         'For his/her parents',
@@ -1095,7 +1095,7 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
       'type': 'text',
     },
     {
-      'question': 'Why does the child %rostertitle% work?',
+      'question': 'Why does the child work?',
       'type': 'multiple_choice',
       'options': [
         'To have his/her own money',
