@@ -1,0 +1,2 @@
+C:/Users/hp/child-labour/android/app/.cxx/Debug/6k6i4558/x86/CMakeFiles/edit_cache.dir
+C:/Users/hp/child-labour/android/app/.cxx/Debug/6k6i4558/x86/CMakeFiles/rebuild_cache.dir

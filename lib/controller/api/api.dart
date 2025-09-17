@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../view/models/monitoring_model.dart';
 import '../db/db.dart';
 import '../models/community-assessment-model.dart';
 import '../utils/urls.dart';
@@ -22,7 +23,7 @@ class ApiService {
 
   Future<bool> submitCommunityAssessment(CommunityAssessmentModel model,
       {bool isEdit = false}) async {
-    final String endpoint = URLS.communityAssessment;
+    final String endpoint = URLS.communityAssessmentENDPOINT;
 
     try {
       final response = await _dio.post(
@@ -33,11 +34,11 @@ class ApiService {
       if (response.statusCode == 200) {
         if (isEdit) {
           await LocalDBHelper.instance
-              .updateResponse(model.copyWith(status: 1));
+              .updateCommunityAssessment(model.copyWith(status: 1));
         } else {
           // if submission is successful, save offline
           await LocalDBHelper.instance
-              .insertResponse(model.copyWith(status: 1));
+              .insertCommunityAssessment(model.copyWith(status: 1));
         }
         return true;
       } else {
@@ -55,9 +56,21 @@ class ApiService {
         throw Exception("Network error, please check your connection");
       }
     } catch (_) {
-      await LocalDBHelper.instance.insertResponse(model.copyWith(status: 0));
+      await LocalDBHelper.instance.insertCommunityAssessment(model.copyWith(status: 0));
       throw Exception("Unexpected error occurred, please try again later");
     }
+  }
+  
+  // submit monitoring
+  Future<bool> submitMonitoring (MonitoringModel model, {bool isEdit = false}) async {
+    final String endpoint = URLS.monitoringENDPOINT;
+    try {
+      
+    } catch(e){
+      
+    }
+    // remove this
+    return false;
   }
 
   String _mapError(int? statusCode, dynamic data) {
