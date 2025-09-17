@@ -99,7 +99,8 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
   // Legal Documentation section state
   String? _hasBirthCertificate;
   String? _ongoingBirthCertProcess;
-  final TextEditingController _noBirthCertReasonController = TextEditingController();
+  final TextEditingController _noBirthCertReasonController =
+      TextEditingController();
 
   // List of all classes/grades for dropdown
   final List<String> _classLevels = [
@@ -151,6 +152,77 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
       question: '25. Has the child advanced to the next grade level?',
     ),
   ];
+
+  // Family & Caregiver Engagement Questions
+  final List<YesNoQuestion> _familyEngagementQuestions = [
+    YesNoQuestion(
+      id: 'awareness_sessions',
+      question:
+          '29. Has the household received awareness-raising sessions on child labour risks?',
+    ),
+    YesNoQuestion(
+      id: 'caregiver_understanding',
+      question:
+          '30. Do caregivers demonstrate improved understanding of child protection?',
+    ),
+    YesNoQuestion(
+      id: 'school_support',
+      question:
+          '31. Have caregivers taken steps to keep the child in school (e.g., paying fees, providing materials)?',
+    ),
+  ];
+
+  // Additional Support Provided Questions
+  final List<YesNoQuestion> _additionalSupportQuestions = [
+    YesNoQuestion(
+      id: 'received_support',
+      question:
+          '32. Has the child or household received financial or material support (cash transfer, farm input, etc.)?',
+    ),
+    YesNoQuestion(
+      id: 'referrals_made',
+      question:
+          '33. Were referrals made to other services (health, legal, social)?',
+    ),
+    YesNoQuestion(
+      id: 'follow_up_planned',
+      question: '34. Are there ongoing follow-up visits planned?',
+    ),
+  ];
+
+  // Overall Assessment Questions
+  final List<YesNoQuestion> _overallAssessmentQuestions = [
+    YesNoQuestion(
+      id: 'remediated_status',
+      question:
+          '35. Based on progress, is the child considered remediated (no longer in child labour)?',
+    ),
+  ];
+
+  // Follow-up Cycle Questions
+  final List<YesNoQuestion> _followUpCycleQuestions = [
+    YesNoQuestion(
+      id: 'visits_spaced_correctly',
+      question: '38. Were the visits spaced between 3-6 months apart?',
+    ),
+    YesNoQuestion(
+      id: 'no_child_labour_last_two_visits',
+      question:
+          '39. At the last two consecutive visits, was the child confirmed '
+          'not to be in child labour?',
+    ),
+    YesNoQuestion(
+      id: 'follow_up_cycle_complete',
+      question:
+          '40.	Based on this, can the follow-up cycle for this child be considered complete? ',
+    ),
+  ];
+
+  // Controllers for additional fields
+  final TextEditingController _additionalCommentsController =
+      TextEditingController();
+  final TextEditingController _followUpVisitsCountController =
+      TextEditingController();
 
   @override
   void dispose() {
@@ -255,7 +327,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Child ID/Code
                 _buildFormField(
                   context: context,
-                  label: 'Child ID/Code',
+                  label: '1. Child ID/Code',
                   controller: _childIdController,
                   hintText: 'Enter child ID/code',
                   isRequired: true,
@@ -264,7 +336,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Child Name (auto-populated)
                 _buildFormField(
                   context: context,
-                  label: 'Child Name',
+                  label: '2. Child Name',
                   controller: _childNameController,
                   hintText: 'Auto-populated',
                   enabled: false,
@@ -278,7 +350,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                       flex: 2,
                       child: _buildFormField(
                         context: context,
-                        label: 'Age',
+                        label: '3. Age',
                         controller: _ageController,
                         hintText: 'Age',
                         keyboardType: TextInputType.number,
@@ -352,7 +424,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Community
                 _buildFormField(
                   context: context,
-                  label: 'Community',
+                  label: '4. Community',
                   controller: _communityController,
                   hintText: 'Enter community name',
                   isRequired: true,
@@ -361,7 +433,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Farmer ID/Code
                 _buildFormField(
                   context: context,
-                  label: 'Farmer ID/Code',
+                  label: '5. Farmer ID/Code',
                   controller: _farmerIdController,
                   hintText: 'Enter farmer ID/code',
                   isRequired: true,
@@ -370,7 +442,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Date of first remediation intervention
                 _buildDateField(
                   context: context,
-                  label: 'Date of first remediation intervention',
+                  label: '6. Date of first remediation intervention',
                   controller: _interventionDateController,
                   onTap: () => _selectDate(context),
                 ),
@@ -378,7 +450,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Form of remediation provided
                 _buildFormField(
                   context: context,
-                  label: 'What form of remediation was provided?',
+                  label: '7. What form of remediation was provided?',
                   controller: _remediationTypeController,
                   hintText: 'Describe the remediation provided',
                   maxLines: 2,
@@ -387,8 +459,8 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Follow up visits
                 _buildFormField(
                   context: context,
-                  label:
-                      'How many follow up visits have been conducted so far?',
+                  label: '8. How many follow up visits have been conducted so '
+                      'far?',
                   controller: _followUpVisitsController,
                   hintText: 'Enter number of visits',
                   keyboardType: TextInputType.number,
@@ -411,31 +483,217 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Education Progress Questions
                 _buildQuestionCard(
                   context,
-                  '1. Is the child currently enrolled in school?',
+                  '9. Is the child currently enrolled in school?',
                   'enrolled_in_school',
                 ),
                 const SizedBox(height: 12),
                 _buildQuestionCard(
                   context,
-                  '2. Has school attendance improved since remediation?',
+                  '10. Has school attendance improved since remediation?',
                   'attendance_improved',
                 ),
                 const SizedBox(height: 12),
                 _buildQuestionCard(
                   context,
-                  '3. Has the child received any school materials (uniforms, books, etc.)?',
+                  '11. Has the child received any school materials (uniforms, '
+                      'books, etc.)?',
+                  'received_materials',
+                ),
+                const SizedBox(height: 12),
+
+                // Numeracy Assessment
+                Text(
+                  'Ask the child to perform these calculations based on their age:',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 4),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 1 + 2? (Right answer: 3) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≤ 7]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 2 + 3? (Right answer: 5) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≤ 7]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 5 - 3? (Right answer: 2) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[8 ≤ Age ≤ 13]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 9 - 4? (Right answer: 5) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[8 ≤ Age ≤ 13]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 9 + 7? (Right answer: 16) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≥ 14]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 3 × 7? (Right answer: 21) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≥ 14]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Literacy Assessment
+                Text(
+                  'Ask the child to read and write the following text:',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 4),
+                Text.rich(
+                  TextSpan(
+                    text: '• "This is Ama" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≤ 7]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "It is water" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≤ 7]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "I like to play with my friends" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[8 ≤ Age ≤ 13]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "I am going to school" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[8 ≤ Age ≤ 13]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "Kofi is crying loudly" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≥ 14]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text:
+                        '• "I am good at playing both Basketball and football" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≥ 14]',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                _buildQuestionCard(
+                  context,
+                  '12. Can the child now read basic text? ',
                   'received_materials',
                 ),
                 const SizedBox(height: 12),
                 _buildQuestionCard(
                   context,
-                  '4. Can the child now read and write basic text? ',
+                  '13. Can the child now write basic text? ',
+                  'received_materials',
+                ),
+                _buildQuestionCard(
+                  context,
+                  '14. Can the child now perform basic calculations? ',
                   'received_materials',
                 ),
                 const SizedBox(height: 12),
                 _buildQuestionCard(
                   context,
-                  '5.Has the child advanced to the next grade level?  ',
+                  '15. Has the child advanced to the next grade level?  ',
                   'received_materials',
                 ),
                 // 1. Class at time of remediation
@@ -443,7 +701,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '14. At the time of remediation, what class was the '
+                      '16. At the time of remediation, what class was the '
                       'child enrolled in?',
                       style: theme.textTheme.bodyLarge,
                     ),
@@ -483,7 +741,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Academic year ended question
                 _buildQuestionCard(
                   context,
-                  '5.15.\tHas the academic year ended?',
+                  '17. \tHas the academic year ended?',
                   'academic_year_ended',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -502,7 +760,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 if (_academicYearEnded == 'Yes')
                   _buildQuestionCard(
                     context,
-                    'Has the child been promoted?',
+                    '18. Has the child been promoted?',
                     'child_promoted',
                     onAnswerChanged: (answer) {
                       setState(() {
@@ -524,7 +782,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '4. What is the new grade?',
+                        '19. What is the new grade?',
                         style: theme.textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 8),
@@ -564,7 +822,8 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 if (_promoted == false)
                   _buildQuestionCard(
                     context,
-                    'Has there been an improvement in reading, writing and calculations?',
+                    '20. Has there been an improvement in reading, writing and '
+                        'calculations?',
                     'academic_improvement',
                     onAnswerChanged: (answer) {
                       setState(() {
@@ -578,7 +837,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                   const SizedBox(height: 20),
                   _buildFormField(
                     context: context,
-                    label: 'Recommendations',
+                    label: '21. What are the recommendations?',
                     controller: _recommendationsController,
                     hintText: 'Enter recommendations for improvement...',
                     maxLines: 3,
@@ -600,7 +859,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // 1. Hazardous work question
                 _buildQuestionCard(
                   context,
-                  '1. Is the child currently engaged in any hazardous work?',
+                  '22. Is the child currently engaged in any hazardous work?',
                   'hazardous_work',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -612,7 +871,8 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // 2. Reduced work hours question
                 _buildQuestionCard(
                   context,
-                  '2. Has the child reduced hours spent on farm or work-related tasks?',
+                  '23. Has the child reduced hours spent on farm or '
+                      'work-related tasks?',
                   'reduced_work_hours',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -624,7 +884,8 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // 3. Light work question
                 _buildQuestionCard(
                   context,
-                  '3. Is the child involved in any permitted light work within acceptable limits?',
+                  '24. Is the child involved in any permitted light work '
+                      'within acceptable limits?',
                   'light_work_in_limits',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -636,7 +897,8 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // 4. Hazardous work free period question
                 _buildQuestionCard(
                   context,
-                  '4. Has the child remained out of hazardous work for at least two consecutive visits?',
+                  '25. Has the child remained out of hazardous work for at '
+                      'least two consecutive visits?',
                   'hazardous_work_free_period',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -659,7 +921,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // 1. Birth certificate question
                 _buildQuestionCard(
                   context,
-                  '1. Does the child now have a birth certificate?',
+                  '26. Does the child now have a birth certificate?',
                   'has_birth_certificate',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -680,7 +942,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                     children: [
                       _buildQuestionCard(
                         context,
-                        'Is there an ongoing process to obtain one?',
+                        '27. Is there an ongoing process to obtain one?',
                         'ongoing_birth_cert_process',
                         onAnswerChanged: (answer) {
                           setState(() {
@@ -697,7 +959,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                       if (_ongoingBirthCertProcess == 'No')
                         _buildFormField(
                           context: context,
-                          label: 'If no, why?',
+                          label: '28. If no, why?',
                           controller: _noBirthCertReasonController,
                           hintText: 'Enter the reason...',
                           maxLines: 2,
@@ -706,6 +968,99 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                       const SizedBox(height: 16),
                     ],
                   ),
+                const SizedBox(height: 24),
+
+                // Section 5: Family & Caregiver Engagement
+                Text(
+                  'Section 5: Family & Caregiver Engagement',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Family & Caregiver Engagement Questions
+                ..._familyEngagementQuestions.map((q) => _buildQuestionCard(
+                      context,
+                      q.question,
+                      q.id,
+                    )),
+                const SizedBox(height: 24),
+
+                // Section 6: Additional Support Provided
+                Text(
+                  'Section 6: Additional Support Provided',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Additional Support Questions
+                ..._additionalSupportQuestions.map((q) => _buildQuestionCard(
+                      context,
+                      q.question,
+                      q.id,
+                    )),
+                const SizedBox(height: 24),
+
+                // Section 7: Overall Assessment
+                Text(
+                  'Section 7: Overall Assessment',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Overall Assessment Questions
+                ..._overallAssessmentQuestions.map((q) => _buildQuestionCard(
+                      context,
+                      q.question,
+                      q.id,
+                    )),
+                const SizedBox(height: 16),
+
+                // Additional comments field
+                _buildFormField(
+                  context: context,
+                  label: 'Additional comments or observations',
+                  controller: _additionalCommentsController,
+                  hintText: 'Enter any additional comments or observations...',
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 24),
+
+                // Section 8: Follow-up Cycle Completion
+                Text(
+                  'Section 8: Follow-up Cycle Completion',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Follow-up visits count
+                _buildFormField(
+                  context: context,
+                  label: '37. How many follow-up visits have been conducted '
+                      'since the child was first identified?',
+                  controller: _followUpVisitsCountController,
+                  hintText: 'Enter number of visits',
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+
+                // Follow-up Cycle Questions
+                ..._followUpCycleQuestions.map((q) => _buildQuestionCard(
+                      context,
+                      q.question,
+                      q.id,
+                    )),
                 const SizedBox(height: 24),
 
                 // Submit Buttons
