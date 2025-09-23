@@ -1,5 +1,5 @@
-import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:surveyflow/controller/db/table_names.dart';
 
 import '../../view/models/monitoring_model.dart';
@@ -31,7 +31,7 @@ class LocalDBHelper {
         communityName TEXT,
         communityScore INTEGER,
         q1 TEXT, q2 TEXT, q3 TEXT, q4 TEXT, q5 TEXT,
-        q6 TEXT, q7 TEXT, q8 TEXT, q9 TEXT, q10 TEXT, status INTEGER
+        q6 TEXT, q7a INTEGER, q7b TEXT, q7c TEXT, q8 TEXT, q9 TEXT, q10 TEXT, status INTEGER
       )
     ''');
 
