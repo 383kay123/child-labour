@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'form_fields.dart';
+import 'identification_of_owner.dart'; // Import the workers page
 
 class VisitInformationPage extends StatefulWidget {
   const VisitInformationPage({super.key});
@@ -16,6 +17,8 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
   String? _respondentNationality;
   String? _countryOfOrigin;
   String? _isFarmOwner;
+  String? _farmOwnershipType;
+
   final List<Map<String, String>> _countries = [
     {'value': 'Burkina Faso', 'display': 'Burkina Faso'},
     {'value': 'Mali', 'display': 'Mali'},
@@ -33,6 +36,17 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
       TextEditingController();
   final TextEditingController _otherSpecController = TextEditingController();
 
+  bool get _isFormComplete {
+    return _respondentNameCorrect != null &&
+        _respondentNationality != null &&
+        (_respondentNationality != 'Non-Ghanaian' ||
+            (_countryOfOrigin != null &&
+                (_countryOfOrigin != 'Other' ||
+                    _otherCountryController.text.isNotEmpty))) &&
+        _isFarmOwner != null &&
+        (_isFarmOwner != 'Yes' || _farmOwnershipType != null);
+  }
+
   @override
   void dispose() {
     _respondentNameController.dispose();
@@ -49,6 +63,13 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Information on the Visit'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context)
+                .pushReplacementNamed('/farmer-identification');
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -61,7 +82,7 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '1. Is the name of the respondent correct?',
+                    'Is the name of the respondent correct?',
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -102,18 +123,11 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '2. Please enter the correct name of the respondent',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? Colors.white70 : Colors.black87,
-                      ),
-                    ),
                     const SizedBox(height: 12),
                     FormFields.buildTextField(
                       context: context,
-                      label: 'Full name of respondent',
+                      label: 'If No, fill in the exact name and surname of the '
+                          'producer',
                       controller: _respondentNameController,
                       hintText: 'Enter full name',
                       isRequired: true,
@@ -136,7 +150,7 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '3. What is the nationality of the respondent?',
+                      'What is the nationality of the respondent?',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -179,7 +193,7 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '4. Please specify the country of origin',
+                      'If Non-Ghanaian, specify the country of origin',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -225,14 +239,15 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                 ),
               ),
 
-            // Card 5: Other Country Specification (only shown when 'Other' is selected)
-            if (_countryOfOrigin == 'Other')
+            // Card 5: Other Country Specification (only shown when 'Other' is selected and respondent is Non-Ghanaian)
+            if (_respondentNationality == 'Non-Ghanaian' &&
+                _countryOfOrigin == 'Other')
               _buildQuestionCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '5. Please specify the country',
+                      'Other to specify',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -253,11 +268,17 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                         ),
                       ),
                       validator: (value) {
-                        if (_countryOfOrigin == 'Other' &&
+                        if (_respondentNationality == 'Non-Ghanaian' &&
+                            _countryOfOrigin == 'Other' &&
                             (value == null || value.isEmpty)) {
-                          return 'Other to specify';
+                          return 'Please specify the country name';
                         }
                         return null;
+                      },
+                      onChanged: (value) {
+                        setState(() {
+                          // Update the UI when the text changes
+                        });
                       },
                     ),
                   ],
@@ -266,15 +287,17 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
 
             // Card 6: Farm Ownership Question (shown after nationality is provided)
             if (_respondentNationality != null &&
-                (_respondentNationality == 'Ghanaian' || 
-                (_respondentNationality == 'Non-Ghanaian' && 
-                (_countryOfOrigin != null && (_countryOfOrigin != 'Other' || _otherCountryController.text.isNotEmpty)))))
+                (_respondentNationality == 'Ghanaian' ||
+                    (_respondentNationality == 'Non-Ghanaian' &&
+                        (_countryOfOrigin != null &&
+                            (_countryOfOrigin != 'Other' ||
+                                _otherCountryController.text.isNotEmpty)))))
               _buildQuestionCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '6. Is the respondent the owner of the farm?',
+                      'Is the respondent the owner of the farm?',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -301,6 +324,101 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                       onChanged: (value) {
                         setState(() {
                           _isFarmOwner = value;
+                          _farmOwnershipType =
+                              null; // Reset ownership type if No is selected
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+            // Card 7: Farm Ownership Type (shown when respondent is the farm owner)
+            if (_isFarmOwner == 'Yes')
+              _buildQuestionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Which of these best describes you?',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildRadioOption(
+                      context: context,
+                      value: '1',
+                      groupValue: _farmOwnershipType,
+                      label: 'Complete Owner',
+                      onChanged: (value) {
+                        setState(() {
+                          _farmOwnershipType = value;
+                        });
+                      },
+                    ),
+                    _buildRadioOption(
+                      context: context,
+                      value: '2',
+                      groupValue: _farmOwnershipType,
+                      label: 'Sharecropper',
+                      onChanged: (value) {
+                        setState(() {
+                          _farmOwnershipType = value;
+                        });
+                      },
+                    ),
+                    _buildRadioOption(
+                      context: context,
+                      value: '3',
+                      groupValue: _farmOwnershipType,
+                      label: 'Owner/Sharecropper',
+                      onChanged: (value) {
+                        setState(() {
+                          _farmOwnershipType = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+            // Card 8: Non-owner Farm Role (shown when respondent is not the farm owner)
+            if (_isFarmOwner == 'No')
+              _buildQuestionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Which of these best describes you?',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildRadioOption(
+                      context: context,
+                      value: '0',
+                      groupValue: _farmOwnershipType,
+                      label: 'Caretaker/Manager of the Farm',
+                      onChanged: (value) {
+                        setState(() {
+                          _farmOwnershipType = value;
+                        });
+                      },
+                    ),
+                    _buildRadioOption(
+                      context: context,
+                      value: '1',
+                      groupValue: _farmOwnershipType,
+                      label: 'Sharecropper',
+                      onChanged: (value) {
+                        setState(() {
+                          _farmOwnershipType = value;
                         });
                       },
                     ),
@@ -308,6 +426,44 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                 ),
               ),
           ],
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: () {
+            if (_isFormComplete) {
+              // Navigate to the WorkersInFarmPage directly
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const IdentificationOfOwnerPage()),
+              );
+            } else {
+              // Show error message if form is not complete
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please complete all required fields'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).primaryColor,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+          ),
+          child: const Text(
+            'Next: Workers in the Farm',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
         ),
       ),
     );

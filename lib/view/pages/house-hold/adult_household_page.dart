@@ -1,29 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'adults_information_page.dart';
 
-import 'identification_of_owner.dart';
-import 'visit_information_page.dart';
-
-class FarmerIdentificationPage extends StatefulWidget {
-  const FarmerIdentificationPage({super.key});
+class AdultHouseholdPage extends StatefulWidget {
+  const AdultHouseholdPage({super.key});
 
   @override
-  State<FarmerIdentificationPage> createState() =>
-      _FarmerIdentificationPageState();
+  State<AdultHouseholdPage> createState() => _AdultHouseholdPageState();
 }
 
-class _FarmerIdentificationPageState extends State<FarmerIdentificationPage> {
-  // Track completion status for each section
-  bool isVisitInfoComplete = false;
-  bool isOwnerIdentificationComplete = false;
-  bool isWorkersComplete =
-      false; // Will be used when implementing Workers section
-  bool isAdultHouseholdComplete =
-      false; // Will be used when implementing Adult Household section
+class _AdultHouseholdPageState extends State<AdultHouseholdPage> {
+  bool isAdultsComplete = false;
+  bool isChildrenComplete = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Household Information'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -31,19 +26,19 @@ class _FarmerIdentificationPageState extends State<FarmerIdentificationPage> {
           children: [
             _buildSectionCard(
               context: context,
-              title: '1. Information on the visit',
-              isComplete: isVisitInfoComplete,
+              title: 'Information on adults living in the household',
+              isComplete: isAdultsComplete,
               onTap: () async {
-                final result = await Navigator.push<bool>(
+                final result = await Navigator.push<int>(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const VisitInformationPage(),
+                    builder: (context) => const AdultsInformationPage(),
                   ),
                 );
 
                 if (result != null) {
                   setState(() {
-                    isVisitInfoComplete = result;
+                    isAdultsComplete = true;
                   });
                 }
               },
@@ -51,41 +46,10 @@ class _FarmerIdentificationPageState extends State<FarmerIdentificationPage> {
             const SizedBox(height: 16),
             _buildSectionCard(
               context: context,
-              title: '2. Identification of the Owner',
-              isComplete: isOwnerIdentificationComplete,
-              onTap: () async {
-                final result = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const IdentificationOfOwnerPage(),
-                  ),
-                );
-
-                if (result != null) {
-                  setState(() {
-                    isOwnerIdentificationComplete = result;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildSectionCard(
-              context: context,
-              title: '3. Workers in the farm',
-              isComplete: isWorkersComplete,
+              title: '2. Children in the Household',
+              isComplete: isChildrenComplete,
               onTap: () {
-                // Navigate to workers in farm page
-                // Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkersInFarmPage()));
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildSectionCard(
-              context: context,
-              title: '3. Adult of the respondent\'s household',
-              isComplete: isAdultHouseholdComplete,
-              onTap: () {
-                // Navigate to adult household page
-                // Navigator.push(context, MaterialPageRoute(builder: (context) => const AdultHouseholdPage()));
+                // TODO: Navigate to Children form
               },
             ),
           ],
