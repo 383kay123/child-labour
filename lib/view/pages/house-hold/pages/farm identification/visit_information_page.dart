@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'form_fields.dart';
+import '../../form_fields.dart';
 import 'identification_of_owner.dart'; // Import the workers page
 
 class VisitInformationPage extends StatefulWidget {

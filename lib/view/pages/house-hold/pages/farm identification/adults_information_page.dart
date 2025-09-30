@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../producer_details_page.dart';
+
 class AdultsInformationPage extends StatefulWidget {
   const AdultsInformationPage({super.key});
 
@@ -291,13 +293,6 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Household Member ${index + 1}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: index < _nameControllers.length
@@ -331,86 +326,48 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                         ),
                       ),
 
-                      // PRODUCER'S/MANAGER'S HOUSEHOLD INFORMATION Card
-                      Card(
-                        elevation: 2,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'PRODUCER\'S/MANAGER\'S HOUSEHOLD INFORMATION - $personName',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      // Tappable card for producer's information
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProducerDetailsPage(
+                                personName: _nameControllers[index].text,
+                                onSave: (details) {
+                                  // Handle saving the details
+                                  print(
+                                      'Saved details for ${_nameControllers[index].text}: $details');
+                                },
                               ),
-                              const SizedBox(height: 16),
-
-                              // Ghana Card Question
-                              Text(
-                                'Does $personName have a Ghana Card?',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Radio<bool?>(
-                                    value: true,
-                                    groupValue: _hasGhanaCard[index],
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _hasGhanaCard[index] = value;
-                                      });
-                                    },
-                                  ),
-                                  const Text('Yes'),
-                                  const SizedBox(width: 20),
-                                  Radio<bool?>(
-                                    value: false,
-                                    groupValue: _hasGhanaCard[index],
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _hasGhanaCard[index] = value;
-                                        _ghanaCardIdControllers[index].clear();
-                                      });
-                                    },
-                                  ),
-                                  const Text('No'),
-                                ],
-                              ),
-
-                              // Ghana Card ID Number (if Yes is selected)
-                              if (_hasGhanaCard[index] == true) ...[
-                                const SizedBox(height: 16),
-                                TextFormField(
-                                  controller:
-                                      index < _ghanaCardIdControllers.length
-                                          ? _ghanaCardIdControllers[index]
-                                          : TextEditingController(),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Ghana Card ID Number',
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 14,
+                            ),
+                          );
+                        },
+                        child: Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          color: Colors.blue.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'PRODUCER/MANAGER INFO - ${_nameControllers[index].text.isNotEmpty ? _nameControllers[index].text.toUpperCase() : 'UNNAMED MEMBER'}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                      fontSize: 14,
                                     ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
-                                  validator: (value) {
-                                    if (_hasGhanaCard[index] == true &&
-                                        (value == null || value.isEmpty)) {
-                                      return 'Please enter Ghana Card ID number';
-                                    }
-                                    return null;
-                                  },
                                 ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.arrow_forward_ios,
+                                    size: 16, color: Colors.blue),
                               ],
-                            ],
+                            ),
                           ),
                         ),
                       ),
