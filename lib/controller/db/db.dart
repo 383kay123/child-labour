@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:surveyflow/controller/db/table_names.dart';
@@ -85,39 +86,47 @@ class LocalDBHelper {
 
   Future<int> insertCommunityAssessment(CommunityAssessmentModel model) async {
     final db = await instance.database;
-    return await db.insert('responses', model.toMap());
+    return await db.insert(TableNames.communityAssessmentTBL, model.toMap());
   }
 
   Future<int> updateCommunityAssessment(CommunityAssessmentModel model) async {
     final db = await instance.database;
-    return await db.update('responses', model.toMap(),
+    return await db.update(TableNames.communityAssessmentTBL, model.toMap(),
         where: 'id = ?', whereArgs: [model.id]);
   }
 
   Future<List<CommunityAssessmentModel>> getCommunityAssessment() async {
     final db = await instance.database;
-    final result = await db.query('responses');
+    final result = await db.query(TableNames.communityAssessmentTBL);
     return result
-        .map((json) =>
-            CommunityAssessmentModel.fromMap(Map<String, String>.from(json)))
+        .map((json) => CommunityAssessmentModel.fromMap(Map<String, dynamic>.from(json)))
         .toList();
   }
 
   // get response by status
-  Future<List<CommunityAssessmentModel>> getCommunityAssessmentByStatus(
+  Future<List<Map<String, dynamic>>> getCommunityAssessmentByStatus(
       {int status = 0}) async {
     final db = await instance.database;
     final result =
-        await db.query('responses', where: 'status = ?', whereArgs: [status]);
-    return result
-        .map((json) =>
-            CommunityAssessmentModel.fromMap(Map<String, String>.from(json)))
-        .toList();
+        await db.query(TableNames.communityAssessmentTBL, where: 'status = ?', whereArgs: [status]);
+    debugPrint('Assessments loaded from Db: $result');
+    return result;
+        // .map((json) => CommunityAssessmentModel.fromMap(json))
+        // .toList();
+  }
+
+  Future<int> deleteCommunityAssessment(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      TableNames.communityAssessmentTBL,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<int> deleteAllCommunityAssessment() async {
     final db = await instance.database;
-    return await db.delete('responses');
+    return await db.delete(TableNames.communityAssessmentTBL);
   }
 
   // ========================================================================================

@@ -24,16 +24,19 @@ class CommunityAssessmentController {
   final ApiService _api = ApiService();
 
   var communityName = ''.obs;
-  var communityScore = 0.obs;  // Changed to int for score calculation
+  var communityScore = 0.obs;
   
   // Method to update score based on answer
   void updateScore(String questionKey, String answer) {
     if (answer == 'Yes') {
       communityScore++;
     } else if (answer == 'No' && communityScore > 0) {
-      // // If changing from Yes to No, decrement if score is above 0
-      // communityScore--;
+      // If changing from Yes to No, decrement if score is above 0
+      communityScore--;
     }
+    // else {
+    //   communityScore.value = score;
+    // }
   }
   var q1 = ''.obs;
   var q2 = ''.obs;
@@ -47,7 +50,7 @@ class CommunityAssessmentController {
   var q10 = ''.obs;
 
   /// Submit form online, fallback to offline if network fails
-  Future<bool> submit(Map<String, String> answers) async {
+  Future<bool> submit(Map<String, dynamic> answers) async {
     var response = CommunityAssessmentModel.fromMap(answers).copyWith(
       communityScore: communityScore.value,
       communityName: communityName.value,
@@ -80,12 +83,20 @@ class CommunityAssessmentController {
       return false;
     }
   }
+  
 
   /// Save form only offline
-  Future<bool> saveFormOffline(Map<String, String> answers) async {
+  Future<bool> saveFormOffline(Map<String, dynamic> answers) async {
+
+    // print the runtime type of all the answers
+    // answers.forEach((key, value) {
+    //   debugPrint("Key: $key, Value: $value, Type: ${value.runtimeType}");
+    // });
+
     var response = CommunityAssessmentModel.fromMap(answers).copyWith(
       communityScore: communityScore.value,
       communityName: communityName.value,
+      q7a: int.tryParse(answers["q7a"]),
     );
 
     debugPrint("Form saved offline: ${response.toMap()}");
@@ -93,6 +104,7 @@ class CommunityAssessmentController {
     try {
       final int id = await LocalDBHelper.instance.insertCommunityAssessment(response);
       if (id > 0) {
+        Navigator.pop(communityAssessmentContext!);
         ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
           SnackBar(content: Text("Form saved offline")));
         return true;
@@ -102,6 +114,7 @@ class CommunityAssessmentController {
         return false;
       }
     } catch (e) {
+      debugPrint("DB error: ${e.toString()}");
       ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
         SnackBar(content: Text("DB error: ${e.toString()}")));
       return false;

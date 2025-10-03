@@ -2,34 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../fields/dropdown.dart';
-import 'community-assessment-controller.dart';
+import '../../../../controller/models/community-assessment-model.dart';
+import '../../../fields/dropdown.dart';
+import '../community-assessment-controller.dart';
 
-class CommunityAssessmentForm extends StatefulWidget {
-  const CommunityAssessmentForm({super.key});
+class CommunityAssessmentEdit extends StatefulWidget {
+  final CommunityAssessmentModel? assessment;
+  final VoidCallback? onUpdate;
+
+  const CommunityAssessmentEdit({
+    super.key,
+    this.assessment,
+    this.onUpdate,
+  });
 
   @override
-  State<CommunityAssessmentForm> createState() =>
-      _CommunityAssessmentFormState();
+  State<CommunityAssessmentEdit> createState() =>
+      _CommunityAssessmentEditState();
 }
 
-class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
+class _CommunityAssessmentEditState extends State<CommunityAssessmentEdit> {
   final Map<String, dynamic> _answers = {};
   bool get _hasPrimarySchools => _answers["q6"] == "Yes";
   final CommunityAssessmentController _controller =
       CommunityAssessmentController();
+  final q7aController = TextEditingController();
+
+
+  late final List<TextEditingController> _schoolControllers = [];
+  final List<String> _schools = [];
+  final Map<String, bool> _schoolToilets = {};
+  final Map<String, bool> _schoolFood = {};
+  final Map<String, bool> _schoolNoCorporalPunishment = {};
   final List<String> _communities = [
     "Community A",
     "Community B",
     "Community C",
     "Community D"
   ];
-  final List<String> _schools = [];
-  final List<TextEditingController> _schoolControllers = [];
-  final Map<String, bool> _schoolToilets = {};
-  final Map<String, bool> _schoolFood = {};
-  final Map<String, bool> _schoolNoCorporalPunishment = {};
+
   String? _selectedCommunity;
+
+  @override
+  void initState() {
+
+    super.initState();
+    _initializeFormData();
+  }
 
   @override
   void dispose() {
@@ -39,12 +58,68 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
     super.dispose();
   }
 
+  void _initializeFormData() {
+    if (widget.assessment != null) {
+      final assessment = widget.assessment!;
+      q7aController.text = assessment.q7a.toString();
+
+      _controller.communityScore.value = assessment.communityScore!;
+
+      // Initialize basic answers
+      _answers.addAll({
+        'community': assessment.communityName ?? '',
+        'q1': assessment.q1,
+        'q2': assessment.q2,
+        'q3': assessment.q3,
+        'q4': assessment.q4,
+        'q5': assessment.q5,
+        'q6': assessment.q6,
+        'q7a': assessment.q7a.toString(),
+        'q7b': assessment.q7b,
+        'q7c': assessment.q7c,
+        'q8': assessment.q8,
+        'q9': assessment.q9,
+        'q10': assessment.q10,
+      });
+
+      // Initialize school data if exists
+      if (assessment.q7b.isNotEmpty) {
+        final schoolNames = assessment.q7b
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        for (var school in schoolNames) {
+          _schools.add(school);
+          _schoolControllers.add(TextEditingController(text: school));
+          _schoolToilets[school] = assessment.q7c.contains(school);
+          _schoolFood[school] = assessment.q8.contains(school);
+          _schoolNoCorporalPunishment[school] = assessment.q10.contains(school);
+        }
+      }
+    } else {
+      // Initialize with default values for new assessment
+      _answers.addAll({
+        'q1': 'No',
+        'q2': 'No',
+        'q3': 'No',
+        'q4': 'No',
+        'q5': 'No',
+        'q6': 'No',
+        'q7a': '0',
+        'q7b': '',
+        'q7c': '',
+        'q8': '',
+        'q9': 'No',
+        'q10': '',
+      });
+    }
+  }
+
   void _updateSchoolCount(String value) {
     final count = int.tryParse(value) ?? 0;
     _answers["q7a"] = value;
-    _controller.q7.value = value;
 
-    // Update controllers list
     while (_schoolControllers.length > count) {
       final removedController = _schoolControllers.removeLast();
       final removedSchool = removedController.text.trim();
@@ -61,27 +136,23 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
       _schoolControllers.add(TextEditingController());
     }
 
-    // Update schools list with current controller values
     final newSchools = <String>[];
     for (int i = 0; i < _schoolControllers.length; i++) {
       final school = _schoolControllers[i].text.trim();
       if (school.isNotEmpty) {
         newSchools.add(school);
-        // Initialize checkbox states for new schools
         _schoolToilets.putIfAbsent(school, () => false);
         _schoolFood.putIfAbsent(school, () => false);
         _schoolNoCorporalPunishment.putIfAbsent(school, () => false);
       }
     }
 
-    // Update state
     setState(() {
       _schools
         ..clear()
         ..addAll(newSchools);
     });
 
-    // Update answers
     _answers["q7b"] = _schools.join(', ');
     _updateCheckboxAnswers();
   }
@@ -90,16 +161,13 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
     final newSchool = value.trim();
     final oldSchool = index < _schools.length ? _schools[index] : null;
 
-    // Update the school name in the list
     if (index < _schools.length) {
       _schools[index] = newSchool;
     } else if (newSchool.isNotEmpty) {
       _schools.add(newSchool);
     }
 
-    // Update the checkbox states if the school name changed
     if (oldSchool != null && oldSchool != newSchool && oldSchool.isNotEmpty) {
-      // If school name was changed, update the maps with the new name
       final toiletValue = _schoolToilets[oldSchool] ?? false;
       final foodValue = _schoolFood[oldSchool] ?? false;
       final punishmentValue = _schoolNoCorporalPunishment[oldSchool] ?? false;
@@ -114,13 +182,11 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
         _schoolNoCorporalPunishment[newSchool] = punishmentValue;
       }
     } else if (newSchool.isNotEmpty) {
-      // For new schools, initialize the checkbox states
       _schoolToilets.putIfAbsent(newSchool, () => false);
       _schoolFood.putIfAbsent(newSchool, () => false);
       _schoolNoCorporalPunishment.putIfAbsent(newSchool, () => false);
     }
 
-    // Update the answers and trigger UI update
     setState(() {
       _answers["q7b"] = _schools.where((s) => s.isNotEmpty).join(', ');
     });
@@ -128,20 +194,22 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
   }
 
   void _updateCheckboxAnswers() {
-    _answers["q7c"] = _schoolToilets.entries
-        .where((e) => e.value && _schools.contains(e.key))
-        .map((e) => e.key)
-        .join(', ');
+    setState(() {
+      _answers["q7c"] = _schoolToilets.entries
+          .where((e) => e.value && _schools.contains(e.key))
+          .map((e) => e.key)
+          .join(',');
 
-    _answers["q8"] = _schoolFood.entries
-        .where((e) => e.value && _schools.contains(e.key))
-        .map((e) => e.key)
-        .join(', ');
+      _answers["q8"] = _schoolFood.entries
+          .where((e) => e.value && _schools.contains(e.key))
+          .map((e) => e.key)
+          .join(',');
 
-    _answers["q10"] = _schoolNoCorporalPunishment.entries
-        .where((e) => e.value && _schools.contains(e.key))
-        .map((e) => e.key)
-        .join(', ');
+      _answers["q10"] = _schoolNoCorporalPunishment.entries
+          .where((e) => e.value && _schools.contains(e.key))
+          .map((e) => e.key)
+          .join(',');
+    });
   }
 
   @override
@@ -149,18 +217,19 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
     _controller.communityAssessmentContext = context;
     final theme = Theme.of(context);
 
+    debugPrint("${widget.assessment!.toMap()}");
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Community Assessment",
+          "Edit Community Assessment",
           style: theme.textTheme.titleLarge?.copyWith(
-              fontFamily: GoogleFonts.poppins().fontFamily,
+              fontFamily: GoogleFonts.comicNeue().fontFamily,
               color: theme.colorScheme.onPrimary,
               fontSize: 18),
         ),
         backgroundColor: theme.primaryColor,
         actions: [
-          // Display current score in the app bar
           Padding(
             padding: const EdgeInsets.only(right: 16.0, top: 16.0),
             child: Obx(() => Text(
@@ -179,10 +248,10 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            /// Community Name Dropdown
             DropdownField(
               question: "Select Community",
               options: _communities,
+              defaultValue: widget.assessment?.communityName,
               onChanged: (val) {
                 setState(() {
                   _controller.communityName.value = val ?? "";
@@ -190,8 +259,6 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                 });
               },
             ),
-
-            /// Questions
             _buildQuestionCard(
                 context,
                 "1. Do most households in this community have access to a "
@@ -233,11 +300,12 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                       Text(
                         "7a. How many primary schools are in the community?",
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              // fontFamily: GoogleFonts.poppins().fontFamily,
+                              fontFamily: GoogleFonts.comicNeue().fontFamily,
                             ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
+                        controller: q7aController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           hintText: "Enter number of primary schools",
@@ -260,7 +328,6 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
               ),
             ],
             if (_hasPrimarySchools) ...[
-              // School names list field
               Card(
                 margin: const EdgeInsets.symmetric(vertical: 8),
                 elevation: 0,
@@ -275,7 +342,7 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                       Text(
                         "7b. List the names of the schools",
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              // fontFamily: GoogleFonts.poppins().fontFamily,
+                              fontFamily: GoogleFonts.comicNeue().fontFamily,
                             ),
                       ),
                       const SizedBox(height: 12),
@@ -301,12 +368,11 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                                 _updateSchoolName(index, value),
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),
               ),
-              // School toilets checkboxes
               if (_schools.any((s) => s.isNotEmpty))
                 Card(
                   margin: const EdgeInsets.symmetric(vertical: 8),
@@ -326,7 +392,7 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                               .textTheme
                               .bodyLarge
                               ?.copyWith(
-                                // fontFamily: GoogleFonts.poppins().fontFamily,
+                                fontFamily: GoogleFonts.comicNeue().fontFamily,
                               ),
                         ),
                         const SizedBox(height: 12),
@@ -349,7 +415,6 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                     ),
                   ),
                 ),
-              // School food checkboxes
               Card(
                 margin: const EdgeInsets.symmetric(vertical: 8),
                 elevation: 0,
@@ -365,7 +430,7 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                       Text(
                         "8a. Which of the schools provide food?",
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              // fontFamily: GoogleFonts.poppins().fontFamily,
+                              fontFamily: GoogleFonts.comicNeue().fontFamily,
                             ),
                       ),
                       const SizedBox(height: 12),
@@ -394,7 +459,6 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                 "9. Do some children in the community access scholarships to "
                     "attend high school?",
                 "q9"),
-            // School corporal punishment checkboxes
             if (_hasPrimarySchools && _schools.any((s) => s.isNotEmpty))
               Card(
                 margin: const EdgeInsets.symmetric(vertical: 8),
@@ -411,7 +475,7 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                       Text(
                         "10. Which of the schools has an absence of corporal punishment?",
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              // fontFamily: GoogleFonts.poppins().fontFamily,
+                              fontFamily: GoogleFonts.comicNeue().fontFamily,
                             ),
                       ),
                       const SizedBox(height: 12),
@@ -434,8 +498,6 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                 ),
               ),
             const SizedBox(height: 30),
-
-            /// Action Buttons
             Row(
               children: [
                 Expanded(
@@ -450,10 +512,36 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                     icon: const Icon(Icons.save),
                     label: const Text("Save"),
                     onPressed: () async {
-                      // Convert all values to strings before saving
                       final stringAnswers = _answers.map((key, value) =>
                           MapEntry(key, value?.toString() ?? ''));
-                      await _controller.saveFormOffline(stringAnswers);
+
+                      final assessment = CommunityAssessmentModel(
+                        id: widget.assessment?.id,
+                        communityName: _answers['community'] ?? '',
+                        q1: _answers['q1'] ?? 'No',
+                        q2: _answers['q2'] ?? 'No',
+                        q3: _answers['q3'] ?? 'No',
+                        q4: _answers['q4'] ?? 'No',
+                        q5: _answers['q5'] ?? 'No',
+                        q6: _answers['q6'] ?? 'No',
+                        q7a: int.tryParse(_answers['q7a'] ?? '0') ?? 0,
+                        q7b: _answers['q7b'] ?? '',
+                        q7c: _answers['q7c'] ?? '',
+                        q8: _answers['q8'] ?? '',
+                        q9: _answers['q9'] ?? 'No',
+                        q10: _answers['q10'] ?? '',
+                        status: 1, // Mark as saved
+                      );
+
+                      await _controller.saveFormOffline(assessment.toMap());
+
+                      if (widget.onUpdate != null) {
+                        widget.onUpdate!();
+                      }
+
+                      if (mounted) {
+                        Navigator.of(context).pop();
+                      }
                     },
                   ),
                 ),
@@ -470,11 +558,34 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                     icon: const Icon(Icons.send),
                     label: const Text("Submit"),
                     onPressed: () async {
-                      debugPrint(_answers.toString());
-                      // Convert all values to strings before submitting
-                      final stringAnswers = _answers.map((key, value) =>
-                          MapEntry(key, value?.toString() ?? ''));
-                      await _controller.submit(stringAnswers);
+                      final assessment = CommunityAssessmentModel(
+                        id: widget.assessment?.id,
+                        communityName: _answers['community'] ?? '',
+                        q1: _answers['q1'] ?? '',
+                        q2: _answers['q2'] ?? '',
+                        q3: _answers['q3'] ?? '',
+                        q4: _answers['q4'] ?? '',
+                        q5: _answers['q5'] ?? '',
+                        q6: _answers['q6'] ?? '',
+                        q7a: int.tryParse(_answers['q7a'] ?? '0') ?? 0,
+                        q7b: _answers['q7b'] ?? '',
+                        q7c: _answers['q7c'] ?? '',
+                        q8: _answers['q8'] ?? '',
+                        q9: _answers['q9'] ?? '',
+                        q10: _answers['q10'] ?? '',
+                        status:
+                            widget.assessment?.status ?? 0, // Mark as submitted
+                      );
+
+                      await _controller.submit(assessment.toMap());
+
+                      if (widget.onUpdate != null) {
+                        widget.onUpdate!();
+                      }
+
+                      if (mounted) {
+                        Navigator.of(context).pop();
+                      }
                     },
                   ),
                 ),
@@ -486,7 +597,6 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
     );
   }
 
-  /// Builds each question card with Yes/No full-width buttons
   Widget _buildQuestionCard(BuildContext context, String question, String key) {
     final theme = Theme.of(context);
 
@@ -502,9 +612,10 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
           children: [
             Text(
               question,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                // fontFamily: GoogleFonts.poppins().fontFamily,
-              ),
+              style: theme.textTheme.bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.w600
+                      // fontFamily: GoogleFonts.comicNeue().fontFamily,
+                      ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -515,7 +626,6 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                       setState(() {
                         final previousAnswer = _answers[key];
                         _answers[key] = "Yes";
-                        // Update score only if answer changed
                         if (previousAnswer != "Yes") {
                           _controller.updateScore(key, "Yes");
                         }
@@ -550,7 +660,6 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                       setState(() {
                         final previousAnswer = _answers[key];
                         _answers[key] = "No";
-                        // Update score only if answer changed from Yes to No
                         if (previousAnswer == "Yes") {
                           _controller.updateScore(key, "No");
                         }

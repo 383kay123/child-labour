@@ -5,6 +5,7 @@ import '../pages/community-assessment/assessment-form.dart';
 import '../pages/community-assessment/history/community-assessment-history.dart';
 
 import '../pages/house-hold/history/house_hold_history.dart';
+import '../pages/house-hold/house_hold.dart';
 import '../pages/house-hold/house_hold_survey.dart';
 
 class SurveyListPage extends StatelessWidget {
@@ -21,7 +22,7 @@ class SurveyListPage extends StatelessWidget {
         'emoji': '🏠',
         'color': Theme.of(context).primaryColor,
         'lightColor': Theme.of(context).primaryColor.withOpacity(0.2),
-        'page': const HouseHoldSurveyScreen(),
+        'page': const HouseHold(),
         'historyPage': const HouseHoldHistory(),
         'icon': Icons.home_rounded,
       },

@@ -181,7 +181,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.primaryColor,
-              fontFamily: GoogleFonts.poppins().fontFamily,
+              // fontFamily: GoogleFonts.poppins().fontFamily,
             ),
             textAlign: TextAlign.center,
           ),

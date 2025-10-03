@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
+import 'edit_community_assessment.dart';
 import '../../../../controller/db/db.dart';
 import '../../../../controller/models/community-assessment-model.dart';
 import '../../../theme/app_theme.dart';
@@ -11,10 +10,12 @@ class CommunityAssessmentHistory extends StatefulWidget {
   const CommunityAssessmentHistory({super.key});
 
   @override
-  _CommunityAssessmentHistoryState createState() => _CommunityAssessmentHistoryState();
+  _CommunityAssessmentHistoryState createState() =>
+      _CommunityAssessmentHistoryState();
 }
 
-class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory> with SingleTickerProviderStateMixin {
+class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final LocalDBHelper _dbHelper = LocalDBHelper.instance;
   List<CommunityAssessmentModel> _pendingAssessments = [];
@@ -31,19 +32,31 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
   Future<void> _loadAssessments() async {
     setState(() => _isLoading = true);
     try {
-      final allAssessments = await _dbHelper.getCommunityAssessmentByStatus();
+      List<Map<String, dynamic>> allAssessments =
+          await _dbHelper.getCommunityAssessmentByStatus();
+      debugPrint('Assessments loaded: ${allAssessments.length}');
+
+      // Convert each map to CommunityAssessmentModel
+      final communityAssessments = allAssessments
+          .map((map) => CommunityAssessmentModel.fromMap(map)
+          .copyWith(
+      //   q7a: int.parse(map['q7a'] ?? '0'),
+      // )
+      ))
+          .toList();
+
       setState(() {
-        _pendingAssessments = allAssessments.where((a) => (a.status ?? 0) == 0).toList();
-        _submittedAssessments = allAssessments.where((a) => (a.status ?? 0) == 1).toList();
+        _pendingAssessments =
+            communityAssessments.where((a) => a.status == 0).toList();
+        _submittedAssessments =
+            communityAssessments.where((a) => a.status == 1).toList();
         _isLoading = false;
       });
-    } catch (e) {
-      debugPrint('Error loading assessments: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load assessments',
-        backgroundColor: AppTheme.errorColor,
-        colorText: Colors.white,
+
+    } catch (e, stackTrace) {
+      debugPrint('Error loading assessments: $stackTrace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading assessments: $e')),
       );
       setState(() => _isLoading = false);
     }
@@ -86,7 +99,8 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
     );
   }
 
-  Widget _buildAssessmentList(List<CommunityAssessmentModel> assessments, bool isSubmitted, BuildContext context) {
+  Widget _buildAssessmentList(List<CommunityAssessmentModel> assessments,
+      bool isSubmitted, BuildContext context) {
     if (assessments.isEmpty) {
       return Center(
         child: Text(
@@ -108,28 +122,90 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
     );
   }
 
-  Widget _buildAssessmentCard(CommunityAssessmentModel assessment, BuildContext context) {
-    final date = DateTime.fromMillisecondsSinceEpoch(assessment.id! * 1000);
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+  Future<void> _deleteAssessment(CommunityAssessmentModel assessment) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Assessment'),
+        content: Text(
+            'Are you sure you want to delete the assessment for ${assessment.communityName ?? 'this community'}\nThis action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('DELETE'),
+          ),
+        ],
       ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _dbHelper.deleteCommunityAssessment(assessment.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Assessment deleted successfully')),
+          );
+          _loadAssessments(); // Refresh the list
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting assessment: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildAssessmentCard(
+      CommunityAssessmentModel assessment, BuildContext context) {
+    return Card(
+      shadowColor: Colors.transparent,
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: ListTile(
         title: Text(
           assessment.communityName ?? 'Unnamed Assessment',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
-          'Score: ${assessment.communityScore ?? 'N/A'} • ${DateFormat('MMM d, y - h:mm a').format(date)}',
-          style: GoogleFonts.poppins(fontSize: 12),
+          'Score: ${assessment.communityScore ?? 'N/A'}\n'
+          'Date: ${DateFormat('MMM d, y').format(DateTime.now())}',
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, size: 20.0),
+              onPressed: () => _navigateToEdit(assessment),
+              tooltip: 'Edit Assessment',
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.delete, size: 20.0, color: Colors.red),
+              onPressed: () => _deleteAssessment(assessment),
+              tooltip: 'Delete Assessment',
+            ),
+            // const Icon(Icons.arrow_forward_ios, size: 16.0),
+          ],
+        ),
         onTap: () {
-          // TODO: Navigate to assessment detail view
+          // Handle assessment tap (view details)
         },
+      ),
+    );
+  }
+
+  void _navigateToEdit(CommunityAssessmentModel assessment) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CommunityAssessmentEdit(
+          assessment: assessment,
+        ),
       ),
     );
   }

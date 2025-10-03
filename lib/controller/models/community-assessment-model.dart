@@ -8,7 +8,9 @@ class CommunityAssessmentModel {
   String q4;
   String q5;
   String q6;
-  String q7;
+  int q7a;
+  String q7b;
+  String q7c;
   String q8;
   String q9;
   String q10;
@@ -24,7 +26,9 @@ class CommunityAssessmentModel {
     required this.q4,
     required this.q5,
     required this.q6,
-    required this.q7,
+    required this.q7a,
+    required this.q7b,
+    required this.q7c,
     required this.q8,
     required this.q9,
     required this.q10,
@@ -42,7 +46,9 @@ class CommunityAssessmentModel {
       q4: map["q4"] ?? "",
       q5: map["q5"] ?? "",
       q6: map["q6"] ?? "",
-      q7: map["q7"] ?? "",
+      q7a: map["q7a"] ?? "",
+      q7b: map["q7b"] ?? "",
+      q7c: map["q7c"] ?? "",
       q8: map["q8"] ?? "",
       q9: map["q9"] ?? "",
       q10: map["q10"] ?? "",
@@ -61,7 +67,9 @@ class CommunityAssessmentModel {
       "q4": q4,
       "q5": q5,
       "q6": q6,
-      "q7": q7,
+      "q7a": q7a,
+      "q7b": q7b,
+      "q7c": q7c,
       "q8": q8,
       "q9": q9,
       "q10": q10,
@@ -79,7 +87,9 @@ class CommunityAssessmentModel {
     String? q4,
     String? q5,
     String? q6,
-    String? q7,
+    int? q7a,
+    String? q7b,
+    String? q7c,
     String? q8,
     String? q9,
     String? q10,
@@ -95,7 +105,9 @@ class CommunityAssessmentModel {
       q4: q4 ?? this.q4,
       q5: q5 ?? this.q5,
       q6: q6 ?? this.q6,
-      q7: q7 ?? this.q7,
+      q7a: q7a ?? this.q7a,
+      q7b: q7b ?? this.q7b,
+      q7c: q7c ?? this.q7c,
       q8: q8 ?? this.q8,
       q9: q9 ?? this.q9,
       q10: q10 ?? this.q10,
