@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'form_fields.dart';
+import '../../form_fields.dart';
 
 class ConsentPage extends StatefulWidget {
   final DateTime? interviewStartTime;
@@ -587,7 +587,8 @@ class _ConsentPageState extends State<ConsentPage> {
                   onPressed: () {
                     // Handle survey refusal submission
                     // You might want to add your submission logic here
-                    Navigator.of(context).pop(); // Or navigate to a thank you screen
+                    Navigator.of(context)
+                        .pop(); // Or navigate to a thank you screen
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),

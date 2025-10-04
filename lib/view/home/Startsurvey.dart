@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:surveyflow/view/pages/house-hold/house_hold.dart';
+
 import '../pages/Monitoring/monitoring_assessment_form.dart';
 import '../pages/community-assessment/assessment-form.dart';
 import '../pages/community-assessment/history/community-assessment-history.dart';
-
 import '../pages/house-hold/history/house_hold_history.dart';
-import '../pages/house-hold/house_hold_survey.dart';
 
 class SurveyListPage extends StatelessWidget {
   const SurveyListPage({super.key});
@@ -14,17 +14,6 @@ class SurveyListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // Child-friendly survey data with emojis and better descriptions
     final List<Map<String, dynamic>> surveys = [
-      {
-        'title': 'House Hold Survey',
-        'subtitle': 'REVIEW GHA - CLMRS Household Profiling - 24/25',
-        'description': 'Help us gather information about household',
-        'emoji': '🏠',
-        'color': Theme.of(context).primaryColor,
-        'lightColor': Theme.of(context).primaryColor.withOpacity(0.2),
-        'page': const HouseHoldSurveyScreen(),
-        'historyPage': const HouseHoldHistory(),
-        'icon': Icons.home_rounded,
-      },
       {
         'title': 'Community Assessment',
         'subtitle': 'Community Assessment Survey',
@@ -36,7 +25,17 @@ class SurveyListPage extends StatelessWidget {
         'historyPage': const CommunityAssessmentHistory(),
         'icon': Icons.people_rounded,
       },
-
+      {
+        'title': 'House Hold Survey',
+        'subtitle': 'REVIEW GHA - CLMRS Household Profiling - 24/25',
+        'description': 'Help us gather information about household',
+        'emoji': '🏠',
+        'color': Theme.of(context).primaryColor,
+        'lightColor': Theme.of(context).primaryColor.withOpacity(0.2),
+        'page': const HouseHold(),
+        'historyPage': const HouseHoldHistory(),
+        'icon': Icons.home_rounded,
+      },
       {
         'title': 'Monitoring',
         'subtitle': 'Community monitoring',
@@ -172,7 +171,8 @@ class SurveyListPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSurveyCard(BuildContext context, Map<String, dynamic> survey, int index) {
+  Widget _buildSurveyCard(
+      BuildContext context, Map<String, dynamic> survey, int index) {
     return GestureDetector(
       onTap: () => _showSurveyOptions(context, survey),
       child: Container(
@@ -328,7 +328,8 @@ class SurveyListPage extends StatelessWidget {
                         color: survey['lightColor'],
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(survey['emoji'], style: TextStyle(fontSize: 20)),
+                      child:
+                          Text(survey['emoji'], style: TextStyle(fontSize: 20)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -354,7 +355,7 @@ class SurveyListPage extends StatelessWidget {
                   Icons.add_circle_rounded,
                   const Color(0xFF4CAF50),
                   const Color(0xFFE8F5E8),
-                      () {
+                  () {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
@@ -372,11 +373,12 @@ class SurveyListPage extends StatelessWidget {
                   Icons.history_rounded,
                   const Color(0xFF2196F3),
                   const Color(0xFFE3F2FD),
-                      () {
+                  () {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => survey['historyPage']),
+                      MaterialPageRoute(
+                          builder: (context) => survey['historyPage']),
                     );
                   },
                 ),
@@ -391,14 +393,14 @@ class SurveyListPage extends StatelessWidget {
   }
 
   Widget _buildOptionItem(
-      BuildContext context,
-      String title,
-      String subtitle,
-      IconData icon,
-      Color color,
-      Color lightColor,
-      VoidCallback onTap,
-      ) {
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    Color lightColor,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

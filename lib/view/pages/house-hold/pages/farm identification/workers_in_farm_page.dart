@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'adult_household_page.dart';
+import '../../adult_household_page.dart';
 
 class WorkersInFarmPage extends StatefulWidget {
   const WorkersInFarmPage({super.key});

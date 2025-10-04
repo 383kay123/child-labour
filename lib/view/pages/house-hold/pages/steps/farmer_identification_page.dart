@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/workers_in_farm_page.dart';
 
-import 'identification_of_owner.dart';
-import 'visit_information_page.dart';
+import '../farm identification/adults_information_page.dart';
+import '../farm identification/identification_of_owner.dart';
+import '../farm identification/visit_information_page.dart';
 
 class FarmerIdentificationPage extends StatefulWidget {
   const FarmerIdentificationPage({super.key});
@@ -73,7 +75,14 @@ class _FarmerIdentificationPageState extends State<FarmerIdentificationPage> {
               context: context,
               title: '3. Workers in the farm',
               isComplete: isWorkersComplete,
-              onTap: () {
+              onTap: () async {
+                final result = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WorkersInFarmPage(),
+                  ),
+                );
+
                 // Navigate to workers in farm page
                 // Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkersInFarmPage()));
               },
@@ -81,9 +90,15 @@ class _FarmerIdentificationPageState extends State<FarmerIdentificationPage> {
             const SizedBox(height: 16),
             _buildSectionCard(
               context: context,
-              title: '3. Adult of the respondent\'s household',
+              title: '4. Adult of the respondent\'s household',
               isComplete: isAdultHouseholdComplete,
-              onTap: () {
+              onTap: () async {
+                final result = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdultsInformationPage(),
+                  ),
+                );
                 // Navigate to adult household page
                 // Navigator.push(context, MaterialPageRoute(builder: (context) => const AdultHouseholdPage()));
               },
