@@ -109,6 +109,12 @@ class _FarmerIdentificationPageState extends State<FarmerIdentificationPage> {
     );
   }
 
+  bool _isSectionComplete(Map<String, dynamic> data, String section) {
+    // Add your validation logic for each section here
+    // For now, just check if the data map is not empty
+    return data.isNotEmpty;
+  }
+
   Widget _buildSectionCard({
     required BuildContext context,
     required String title,
@@ -131,25 +137,35 @@ class _FarmerIdentificationPageState extends State<FarmerIdentificationPage> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              if (isComplete)
-                const Padding(
-                  padding: EdgeInsets.only(right: 12.0),
-                  child:
-                      Icon(Icons.check_circle, color: Colors.green, size: 24),
+              Container(
+                width: 24,
+                height: 24,
+                margin: const EdgeInsets.only(right: 12.0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isComplete ? Colors.green : Colors.grey.shade200,
                 ),
+                child: isComplete 
+                  ? const Icon(Icons.check, color: Colors.white, size: 16)
+                  : null,
+              ),
               Expanded(
                 child: Text(
                   title,
                   style: GoogleFonts.inter(
                     fontSize: 16,
-                    fontWeight: isComplete ? FontWeight.w700 : FontWeight.w600,
+                    fontWeight: isComplete ? FontWeight.w700 : FontWeight.w500,
                     color: isComplete
                         ? Colors.green[800]
-                        : Theme.of(context).primaryColor,
+                        : Theme.of(context).textTheme.titleMedium?.color,
                   ),
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              Icon(
+                Icons.arrow_forward_ios, 
+                size: 16, 
+                color: isComplete ? Colors.green : Colors.grey,
+              ),
             ],
           ),
         ),

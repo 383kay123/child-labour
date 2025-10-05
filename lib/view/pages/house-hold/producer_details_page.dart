@@ -1,10 +1,18 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
 import 'form_fields.dart';
 import 'pages/farm identification/children_household_page.dart';
+import 'package:surveyflow/view/theme/app_theme.dart';
+
+/// A collection of reusable spacing constants for consistent UI layout.
+class _Spacing {
+  static const double xs = 4.0;
+  static const double sm = 8.0;
+  static const double md = 16.0;
+  static const double lg = 24.0;
+  static const double xl = 32.0;
+}
 
 class ProducerDetailsPage extends StatefulWidget {
   final String personName;
@@ -25,6 +33,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
   String? _gender;
   String? _nationality;
   final TextEditingController _yearOfBirthController = TextEditingController();
+  DateTime? _selectedDate;
   String? _selectedCountry;
   final TextEditingController _otherCountryController = TextEditingController();
 
@@ -41,9 +50,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
   ];
   final TextEditingController _ghanaCardIdController = TextEditingController();
   final TextEditingController _otherIdController = TextEditingController();
-  final TextEditingController _noConsentReasonController =
-      TextEditingController();
-  final TextEditingController _occupationController = TextEditingController();
+  final TextEditingController _noConsentReasonController = TextEditingController();
   String? _hasGhanaCard;
   String? _selectedIdType;
   bool _consentToTakePhoto = false;
@@ -51,8 +58,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
   String? _relationshipToRespondent;
   String? _hasBirthCertificate;
   String? _selectedOccupation;
-  final TextEditingController _otherOccupationController =
-      TextEditingController();
+  final TextEditingController _otherOccupationController = TextEditingController();
   final List<String> _occupationOptions = [
     'Farmer (cocoa)',
     'Farmer (coffee)',
@@ -62,17 +68,13 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
     'Other (to specify)',
     'No activity'
   ];
-  final TextEditingController _otherRelationshipController =
-      TextEditingController();
+  final TextEditingController _otherRelationshipController = TextEditingController();
 
   final List<Map<String, String>> relationshipOptions = [
     {'value': 'husband_wife', 'label': 'Husband/Wife'},
     {'value': 'son_daughter', 'label': 'Son/Daughter'},
     {'value': 'brother_sister', 'label': 'Brother/Sister'},
-    {
-      'value': 'son_in_law_daughter_in_law',
-      'label': 'Son-in-law/Daughter-in-law'
-    },
+    {'value': 'son_in_law_daughter_in_law', 'label': 'Son-in-law/Daughter-in-law'},
     {'value': 'grandson_granddaughter', 'label': 'Grandson/Granddaughter'},
     {'value': 'niece_nephew', 'label': 'Niece/Nephew'},
     {'value': 'cousin', 'label': 'Cousin'},
@@ -91,6 +93,34 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
     {'value': 'none', 'label': 'None'},
   ];
 
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      initialDatePickerMode: DatePickerMode.year,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).primaryColor,
+              onPrimary: Colors.white,
+              onSurface: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _yearOfBirthController.text = picked.year.toString();
+      });
+    }
+  }
+
   Future<void> _takePhoto() async {
     try {
       final picker = ImagePicker();
@@ -108,7 +138,11 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to capture image')),
+          SnackBar(
+            content: const Text('Failed to capture image'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -121,14 +155,201 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
     _ghanaCardIdController.dispose();
     _otherIdController.dispose();
     _noConsentReasonController.dispose();
-    _occupationController.dispose();
     _otherRelationshipController.dispose();
     _otherOccupationController.dispose();
     super.dispose();
   }
 
+  Widget _buildQuestionCard({required Widget child}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: _Spacing.lg),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+          color: isDark ? AppTheme.darkCard : Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      color: isDark ? AppTheme.darkCard : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(_Spacing.lg),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildRadioOption({
+    required String value,
+    required String? groupValue,
+    required String label,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return RadioListTile<String>(
+      title: Text(
+        label,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+        ),
+      ),
+      value: value,
+      groupValue: groupValue,
+      onChanged: onChanged,
+      activeColor: AppTheme.primaryColor,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+      tileColor: isDark ? AppTheme.darkCard : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    String hintText = '',
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+    int maxLines = 1,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: _Spacing.md),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: theme.primaryColor,
+                width: 1.5,
+              ),
+            ),
+            filled: true,
+            fillColor: isDark ? AppTheme.darkCard : Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: _Spacing.lg,
+              vertical: _Spacing.md,
+            ),
+          ),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
+          ),
+          validator: validator,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String? value,
+    required List<Map<String, String>> items,
+    required ValueChanged<String?> onChanged,
+    String? Function(String?)? validator,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: _Spacing.sm),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8.0),
+            border: Border.all(
+              color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+            ),
+            color: isDark ? AppTheme.darkCard : Colors.white,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: _Spacing.md),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              icon: Icon(Icons.arrow_drop_down, color: theme.primaryColor),
+              iconSize: 24,
+              elevation: 16,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
+              ),
+              onChanged: onChanged,
+              dropdownColor: isDark ? AppTheme.darkCard : Colors.white,
+              items: items.map<DropdownMenuItem<String>>((Map<String, String> item) {
+                return DropdownMenuItem<String>(
+                  value: item['value'],
+                  child: Text(
+                    item['label']!,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool get _isFormComplete {
+    return _hasGhanaCard != null &&
+        _consentToTakePhoto != null &&
+        _relationshipToRespondent != null &&
+        _gender != null &&
+        _nationality != null &&
+        _hasBirthCertificate != null &&
+        _selectedOccupation != null;
+  }
+
   void _submitForm() {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && _isFormComplete) {
       // Parse year of birth safely
       int? yearOfBirth;
       if (_yearOfBirthController.text.trim().isNotEmpty) {
@@ -147,13 +368,11 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
       final details = {
         'name': widget.personName,
         'hasGhanaCard': _hasGhanaCard == 'Yes',
-        'ghanaCardId':
-            _hasGhanaCard == 'Yes' ? _ghanaCardIdController.text : null,
+        'ghanaCardId': _hasGhanaCard == 'Yes' ? _ghanaCardIdController.text : null,
         'otherIdType': _hasGhanaCard == 'No' ? _selectedIdType : null,
         'otherIdNumber': _hasGhanaCard == 'No' ? _otherIdController.text : null,
         'consentToTakePhoto': _consentToTakePhoto,
-        'noConsentReason':
-            !_consentToTakePhoto ? _noConsentReasonController.text : null,
+        'noConsentReason': !_consentToTakePhoto ? _noConsentReasonController.text : null,
         'idPhotoPath': _idPhoto?.path,
         'relationshipToRespondent': _relationshipToRespondent,
         'otherRelationship': _relationshipToRespondent == 'other'
@@ -164,8 +383,8 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
         'yearOfBirth': yearOfBirth,
         'countryOfOrigin': _nationality == 'non_ghanaian'
             ? (_selectedCountry == 'Other (specify)'
-                ? _otherCountryController.text
-                : _selectedCountry)
+            ? _otherCountryController.text
+            : _selectedCountry)
             : null,
         'hasBirthCertificate': _hasBirthCertificate,
         'occupation': occupation,
@@ -186,792 +405,574 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
     }
   }
 
-  Widget _buildRadioOption({
-    required String value,
-    required String? groupValue,
-    required String label,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return GestureDetector(
-      onTap: () => onChanged(value),
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: value == groupValue
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-              : Colors.grey[50],
-          border: Border.all(
-            color: value == groupValue
-                ? Theme.of(context).colorScheme.primary
-                : Colors.grey[300]!,
-            width: value == groupValue ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: value == groupValue
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey[400]!,
-                  width: 2,
-                ),
-                color: value == groupValue
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.transparent,
-              ),
-              child: value == groupValue
-                  ? Icon(
-                      Icons.check,
-                      size: 14,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: value == groupValue
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                      color: value == groupValue
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey[800],
-                    ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
       appBar: AppBar(
-        title:
-            Text('PRODUCER\'S / MANAGER\'S INFORMATION - ${widget.personName}'),
+        title: Text(
+          'PRODUCER\'S / MANAGER\'S INFORMATION - ${widget.personName.toUpperCase()}',
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: AppTheme.primaryColor,
+        automaticallyImplyLeading: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Ghana Card Question Card
-              Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Does ${widget.personName} have a Ghana card?',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                      ),
-                      const SizedBox(height: 12),
-                      Column(
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(_Spacing.lg),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ghana Card Question
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildRadioOption(
-                            value: 'Yes',
-                            groupValue: _hasGhanaCard,
-                            label: 'Yes',
-                            onChanged: (value) {
-                              setState(() {
-                                _hasGhanaCard = value;
-                                _otherIdController.clear();
-                              });
-                            },
+                          Text(
+                            'Does ${widget.personName} have a Ghana card?',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                          _buildRadioOption(
-                            value: 'No',
-                            groupValue: _hasGhanaCard,
-                            label: 'No',
-                            onChanged: (value) {
-                              setState(() {
-                                _hasGhanaCard = value;
-                                if (_hasGhanaCard == 'No') {
-                                  _ghanaCardIdController.clear();
-                                } else {
-                                  _selectedIdType = null;
-                                }
-                              });
-                            },
+                          const SizedBox(height: _Spacing.md),
+                          Wrap(
+                            spacing: 20,
+                            children: [
+                              _buildRadioOption(
+                                value: 'Yes',
+                                groupValue: _hasGhanaCard,
+                                label: 'Yes',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasGhanaCard = value;
+                                    _otherIdController.clear();
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'No',
+                                groupValue: _hasGhanaCard,
+                                label: 'No',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasGhanaCard = value;
+                                    if (_hasGhanaCard == 'No') {
+                                      _ghanaCardIdController.clear();
+                                    } else {
+                                      _selectedIdType = null;
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
 
-              // Ghana Card ID Field (shown when 'Yes' is selected)
-              if (_hasGhanaCard == 'Yes')
-                Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ghana Card ID',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
+                    // Ghana Card ID Field (shown when 'Yes' is selected)
+                    if (_hasGhanaCard == 'Yes')
+                      _buildQuestionCard(
+                        child: _buildTextField(
+                          label: 'Ghana Card ID',
                           controller: _ghanaCardIdController,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          decoration: InputDecoration(
-                            hintText: 'Enter Ghana Card ID',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                          ),
+                          hintText: 'Enter Ghana Card ID',
                           validator: (value) {
-                            if (_hasGhanaCard == 'Yes' &&
-                                (value == null || value.isEmpty)) {
+                            if (_hasGhanaCard == 'Yes' && (value == null || value.isEmpty)) {
                               return 'Please enter Ghana Card ID';
                             }
                             return null;
                           },
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // Other ID Card (shown when 'No' is selected)
-              if (_hasGhanaCard == 'No')
-                Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Which other national id card is available',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          value: _selectedIdType,
-                          decoration: InputDecoration(
-                            hintText: 'Select ID type',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                          ),
-                          items: idTypes.map((idType) {
-                            return DropdownMenuItem<String>(
-                              value: idType['value'],
-                              child: Text(idType['label']!),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedIdType = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (_hasGhanaCard == 'No' &&
-                                (value == null || value.isEmpty)) {
-                              return 'Please select an ID type';
-                            }
-                            return null;
-                          },
-                        ),
-                        if (_selectedIdType != null &&
-                            _selectedIdType != 'none')
-                          const SizedBox(height: 16),
-                        if (_selectedIdType != null &&
-                            _selectedIdType != 'none')
-                          TextFormField(
-                            controller: _otherIdController,
-                            style: Theme.of(context).textTheme.bodyLarge,
-                            decoration: InputDecoration(
-                              hintText: 'Enter ID number',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (_hasGhanaCard == 'No' &&
-                                  _selectedIdType != 'none' &&
-                                  (value == null || value.isEmpty)) {
-                                return 'Please enter ID number';
-                              }
-                              return null;
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // Consent for taking ID photo
-              Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Do you consent to us taking a picture of your national ID?',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                ),
                       ),
-                      const SizedBox(height: 12),
-                      Column(
+
+                    // Other ID Card (shown when 'No' is selected)
+                    if (_hasGhanaCard == 'No')
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDropdownField(
+                              label: 'Which other national id card is available',
+                              value: _selectedIdType,
+                              items: idTypes,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedIdType = value;
+                                });
+                              },
+                              validator: (value) {
+                                if (_hasGhanaCard == 'No' && (value == null || value.isEmpty)) {
+                                  return 'Please select an ID type';
+                                }
+                                return null;
+                              },
+                            ),
+                            if (_selectedIdType != null && _selectedIdType != 'none') ...[
+                              const SizedBox(height: _Spacing.md),
+                              _buildTextField(
+                                label: 'ID Number',
+                                controller: _otherIdController,
+                                hintText: 'Enter ID number',
+                                validator: (value) {
+                                  if (_hasGhanaCard == 'No' &&
+                                      _selectedIdType != 'none' &&
+                                      (value == null || value.isEmpty)) {
+                                    return 'Please enter ID number';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                    // Consent for taking ID photo
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildRadioOption(
-                            value: 'Yes',
-                            groupValue: _consentToTakePhoto ? 'Yes' : 'No',
-                            label: 'Yes',
-                            onChanged: (value) {
-                              setState(() {
-                                _consentToTakePhoto = value == 'Yes';
-                              });
-                            },
-                          ),
-                          _buildRadioOption(
-                            value: 'No',
-                            groupValue: _consentToTakePhoto ? 'Yes' : 'No',
-                            label: 'No',
-                            onChanged: (value) {
-                              setState(() {
-                                _consentToTakePhoto = value == 'Yes';
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Show camera button if "Yes" is selected
-              if (_consentToTakePhoto) ...[
-                const SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ID Photo',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.black,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: _takePhoto,
-                      child: Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey[100],
-                        ),
-                        child: _idPhoto == null
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.camera_alt,
-                                      size: 40, color: Colors.grey[500]),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Tap to take photo of ID',
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                ],
-                              )
-                            : ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  _idPhoto!,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                ),
-                              ),
-                      ),
-                    ),
-                    // Relationship selection
-                    if (_idPhoto != null) ...[
-                      const SizedBox(height: 24),
-                      Text(
-                        'Relationship of ${widget.personName} to the respondent',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: _relationshipToRespondent,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                        hint: const Text('Select relationship'),
-                        items: relationshipOptions.map((option) {
-                          return DropdownMenuItem<String>(
-                            value: option['value'],
-                            child: Text(option['label']!),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _relationshipToRespondent = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      if (_relationshipToRespondent == 'worker' ||
-                          _relationshipToRespondent == 'workers_family_member')
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Text(
-                            '***Make sure to interview the Worker or Family of the Worker should any of these 2 be selected above.***',
-                            style: TextStyle(
-                              color: Colors.orange[800],
-                              fontStyle: FontStyle.italic,
+                          Text(
+                            'Do you consent to us taking a picture of your national ID?',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ),
-                      if (_relationshipToRespondent == 'other') ...[
-                        const SizedBox(height: 16),
-                        FormFields.buildTextField(
-                          context: context,
-                          label: 'If Other, please specify',
-                          hintText: 'Enter relationship',
-                          controller: _otherRelationshipController,
-                          onChanged: (value) {},
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ],
-
-              // Show reason field if "No" is selected for consent
-              if (!_consentToTakePhoto) ...[
-                const SizedBox(height: 16),
-                FormFields.buildTextField(
-                  context: context,
-                  label: 'Reason for not providing photo',
-                  hintText: 'Please specify reason',
-                  controller: _noConsentReasonController,
-                  onChanged: (value) {},
-                  maxLines: 3,
-                ),
-                // Relationship selection for non-consent case
-                const SizedBox(height: 24),
-                Text(
-                  'Relationship of ${widget.personName} to the respondent',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _relationshipToRespondent,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                  hint: const Text('Select relationship'),
-                  items: relationshipOptions.map((option) {
-                    return DropdownMenuItem<String>(
-                      value: option['value'],
-                      child: Text(option['label']!),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _relationshipToRespondent = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 8),
-                if (_relationshipToRespondent == 'worker' ||
-                    _relationshipToRespondent == 'workers_family_member')
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(
-                      '***Make sure to interview the Worker or Family of the Worker should any of these 2 be selected above.***',
-                      style: TextStyle(
-                        color: Colors.orange[800],
-                        fontStyle: FontStyle.italic,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                if (_relationshipToRespondent == 'other') ...[
-                  const SizedBox(height: 16),
-                  FormFields.buildTextField(
-                    context: context,
-                    label: 'If Other, please specify',
-                    hintText: 'Enter relationship',
-                    controller: _otherRelationshipController,
-                    onChanged: (value) {},
-                  ),
-                ],
-              ],
-
-              // Personal Information Section
-              Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-
-                      // Gender Selection
-                      Text(
-                        'Gender of ${widget.personName}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Male'),
-                              value: 'male',
-                              groupValue: _gender,
-                              onChanged: (String? value) {
-                                setState(() {
-                                  _gender = value;
-                                });
-                              },
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Female'),
-                              value: 'female',
-                              groupValue: _gender,
-                              onChanged: (String? value) {
-                                setState(() {
-                                  _gender = value;
-                                });
-                              },
-                              contentPadding: EdgeInsets.zero,
-                            ),
+                          const SizedBox(height: _Spacing.md),
+                          Wrap(
+                            spacing: 20,
+                            children: [
+                              _buildRadioOption(
+                                value: 'Yes',
+                                groupValue: _consentToTakePhoto ? 'Yes' : 'No',
+                                label: 'Yes',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _consentToTakePhoto = value == 'Yes';
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'No',
+                                groupValue: _consentToTakePhoto ? 'Yes' : 'No',
+                                label: 'No',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _consentToTakePhoto = value == 'Yes';
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                    ),
 
-                      const SizedBox(height: 16),
-
-                      // Nationality
-                      Text(
-                        'Nationality of ${widget.personName}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
+                    // ID Photo Section (shown when consent is given)
+                    if (_consentToTakePhoto)
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ID Photo',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
+                            const SizedBox(height: _Spacing.md),
+                            GestureDetector(
+                              onTap: _takePhoto,
+                              child: Container(
+                                height: 200,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: isDark ? AppTheme.darkCard : Colors.grey[100],
+                                ),
+                                child: _idPhoto == null
+                                    ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.camera_alt,
+                                        size: 40,
+                                        color: isDark ? Colors.white70 : Colors.grey[500]),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Tap to take photo of ID',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: isDark ? Colors.white70 : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                                    : ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    _idPhoto!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
+
+                    // No Consent Reason (shown when consent is not given)
+                    if (!_consentToTakePhoto)
+                      _buildQuestionCard(
+                        child: _buildTextField(
+                          label: 'Reason for not providing photo',
+                          controller: _noConsentReasonController,
+                          hintText: 'Please specify reason',
+                          maxLines: 3,
+                        ),
+                      ),
+
+                    // Relationship to Respondent
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Ghanaian'),
-                              value: 'ghanaian',
-                              groupValue: _nationality,
-                              onChanged: (String? value) {
-                                setState(() {
-                                  _nationality = value;
-                                  if (_nationality == 'ghanaian') {
-                                    _selectedCountry = null;
-                                    _otherCountryController.clear();
-                                  }
-                                });
-                              },
-                              contentPadding: EdgeInsets.zero,
+                          Text(
+                            'Relationship of ${widget.personName} to the respondent',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Non-Ghanaian'),
-                              value: 'non_ghanaian',
-                              groupValue: _nationality,
-                              onChanged: (String? value) {
-                                setState(() {
-                                  _nationality = value;
-                                });
-                              },
-                              contentPadding: EdgeInsets.zero,
+                          const SizedBox(height: _Spacing.md),
+                          _buildDropdownField(
+                            label: 'Select relationship',
+                            value: _relationshipToRespondent,
+                            items: relationshipOptions,
+                            onChanged: (value) {
+                              setState(() {
+                                _relationshipToRespondent = value;
+                              });
+                            },
+                          ),
+                          if (_relationshipToRespondent == 'worker' ||
+                              _relationshipToRespondent == 'workers_family_member')
+                            Padding(
+                              padding: const EdgeInsets.only(top: _Spacing.sm),
+                              child: Text(
+                                '***Make sure to interview the Worker or Family of the Worker should any of these 2 be selected above.***',
+                                style: TextStyle(
+                                  color: Colors.orange[800],
+                                  fontStyle: FontStyle.italic,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ),
+                          if (_relationshipToRespondent == 'other') ...[
+                            const SizedBox(height: _Spacing.md),
+                            _buildTextField(
+                              label: 'If Other, please specify',
+                              controller: _otherRelationshipController,
+                              hintText: 'Enter relationship',
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    // Gender Selection
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Gender of ${widget.personName}',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: _Spacing.md),
+                          Wrap(
+                            spacing: 20,
+                            children: [
+                              _buildRadioOption(
+                                value: 'male',
+                                groupValue: _gender,
+                                label: 'Male',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _gender = value;
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'female',
+                                groupValue: _gender,
+                                label: 'Female',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _gender = value;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                    ),
 
-                      // Year of Birth
-                      const SizedBox(height: 16),
-                      InkWell(
-                        onTap: () async {
-                          final DateTime? picked = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now()
-                                .subtract(const Duration(days: 365 * 18)),
-                            firstDate: DateTime(1900),
-                            lastDate: DateTime.now(),
-                            initialDatePickerMode: DatePickerMode.year,
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _yearOfBirthController.text =
-                                  picked.year.toString();
-                            });
-                          }
-                        },
-                        child: AbsorbPointer(
-                          child: TextFormField(
-                            controller: _yearOfBirthController,
-                            decoration: InputDecoration(
-                              labelText: 'Year of Birth',
-                              hintText: 'Tap to select year',
-                              suffixIcon: const Icon(Icons.calendar_today),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                    // Nationality
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nationality of ${widget.personName}',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: _Spacing.md),
+                          Wrap(
+                            spacing: 20,
+                            children: [
+                              _buildRadioOption(
+                                value: 'ghanaian',
+                                groupValue: _nationality,
+                                label: 'Ghanaian',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _nationality = value;
+                                    if (_nationality == 'ghanaian') {
+                                      _selectedCountry = null;
+                                      _otherCountryController.clear();
+                                    }
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'non_ghanaian',
+                                groupValue: _nationality,
+                                label: 'Non-Ghanaian',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _nationality = value;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Year of Birth
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Year of Birth',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? AppTheme.darkTextSecondary 
+                                  : AppTheme.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () => _selectDate(context),
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                suffixIcon: const Icon(Icons.calendar_today, size: 20),
+                              ),
+                              child: Text(
+                                _selectedDate != null 
+                                    ? '${_selectedDate!.year}'
+                                    : 'Select year of birth',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: _selectedDate != null 
+                                      ? null 
+                                      : Theme.of(context).hintColor,
+                                ),
                               ),
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+
+                    // Country of Origin (Conditional)
+                    if (_nationality == 'non_ghanaian')
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDropdownField(
+                              label: 'Country of Origin',
+                              value: _selectedCountry,
+                              items: countries.map((country) => {'value': country, 'label': country}).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCountry = value;
+                                });
+                              },
+                            ),
+                            if (_selectedCountry == 'Other (specify)') ...[
+                              const SizedBox(height: _Spacing.md),
+                              _buildTextField(
+                                label: 'Specify Country',
+                                controller: _otherCountryController,
+                                hintText: 'Enter country name',
+                              ),
+                            ],
+                          ],
                         ),
                       ),
 
-                      // Country of Origin (Conditional)
-                      if (_nationality == 'non_ghanaian') ...[
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          value: _selectedCountry,
-                          decoration: InputDecoration(
-                            labelText: 'Country of Origin',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          hint: const Text('Select country'),
-                          items: countries.map((country) {
-                            return DropdownMenuItem(
-                              value: country,
-                              child: Text(country),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedCountry = value;
-                            });
-                          },
-                        ),
-                        if (_selectedCountry == 'Other (specify)')
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: FormFields.buildTextField(
-                              context: context,
-                              label: 'Specify Country',
-                              hintText: 'Enter country name',
-                              controller: _otherCountryController,
-                            ),
-                          ),
-                      ],
-
-                      // Birth Certificate Question
-                      const SizedBox(height: 16),
-                      Text(
-                        'Does ${widget.personName} have a birth certificate?',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
+                    // Birth Certificate Question
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Yes'),
-                              value: 'yes',
-                              groupValue: _hasBirthCertificate,
-                              onChanged: (String? value) {
-                                setState(() {
-                                  _hasBirthCertificate = value;
-                                });
-                              },
-                              contentPadding: EdgeInsets.zero,
+                          Text(
+                            'Does ${widget.personName} have a birth certificate?',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('No'),
-                              value: 'no',
-                              groupValue: _hasBirthCertificate,
-                              onChanged: (String? value) {
-                                setState(() {
-                                  _hasBirthCertificate = value;
-                                });
-                              },
-                              contentPadding: EdgeInsets.zero,
-                            ),
+                          const SizedBox(height: _Spacing.md),
+                          Wrap(
+                            spacing: 20,
+                            children: [
+                              _buildRadioOption(
+                                value: 'yes',
+                                groupValue: _hasBirthCertificate,
+                                label: 'Yes',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasBirthCertificate = value;
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'no',
+                                groupValue: _hasBirthCertificate,
+                                label: 'No',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasBirthCertificate = value;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                    ),
 
-                      // Occupation
-                      const SizedBox(height: 16),
-                      Column(
+                    // Occupation
+                    _buildQuestionCard(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Work/main occupation of ${widget.personName}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          DropdownButtonFormField<String>(
-                            value: _selectedOccupation,
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              fontWeight: FontWeight.w500,
                             ),
-                            items: _occupationOptions.map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
+                          ),
+                          const SizedBox(height: _Spacing.md),
+                          _buildDropdownField(
+                            label: 'Select occupation',
+                            value: _selectedOccupation,
+                            items: _occupationOptions.map((occupation) => {'value': occupation, 'label': occupation}).toList(),
+                            onChanged: (value) {
                               setState(() {
-                                _selectedOccupation = newValue;
+                                _selectedOccupation = value;
                               });
                             },
                           ),
-                          if (_selectedOccupation == 'Other (to specify)')
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: TextFormField(
-                                controller: _otherOccupationController,
-                                decoration: InputDecoration(
-                                  labelText: 'Please specify occupation',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
+                          if (_selectedOccupation == 'Other (to specify)') ...[
+                            const SizedBox(height: _Spacing.md),
+                            _buildTextField(
+                              label: 'Please specify occupation',
+                              controller: _otherOccupationController,
+                              hintText: 'Enter occupation',
                             ),
+                          ],
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
 
-              // Save Button
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('NEXT'),
+                    const SizedBox(height: 80), // Space for bottom button
+                  ],
                 ),
               ),
-            ],
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(_Spacing.lg),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: ElevatedButton(
+          onPressed: _isFormComplete ? _submitForm : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _isFormComplete ? AppTheme.primaryColor : Colors.grey[400],
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            elevation: 2,
+          ),
+          child: Text(
+            'Next: Children in Household',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

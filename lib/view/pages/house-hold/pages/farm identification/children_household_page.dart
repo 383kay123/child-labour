@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
-
+import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
+import 'package:surveyflow/view/theme/app_theme.dart';
 import '../../child_details_page.dart';
+
+/// A collection of reusable spacing constants for consistent UI layout.
+class _Spacing {
+  static const double xs = 4.0;
+  static const double sm = 8.0;
+  static const double md = 16.0;
+  static const double lg = 24.0;
+  static const double xl = 32.0;
+}
 
 class ChildrenHouseholdPage extends StatefulWidget {
   final Map<String, dynamic> producerDetails;
@@ -15,107 +25,229 @@ class ChildrenHouseholdPage extends StatefulWidget {
 }
 
 class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
+  final _formKey = GlobalKey<FormState>();
   String? _hasChildrenInHousehold;
-  final TextEditingController _numberOfChildrenController =
-      TextEditingController();
-  final TextEditingController _children5To17Controller =
-      TextEditingController();
+  final TextEditingController _numberOfChildrenController = TextEditingController();
+  final TextEditingController _children5To17Controller = TextEditingController();
   final List<Map<String, dynamic>> _childrenDetails = [];
 
-  Future<void> _navigateToChildDetails(
-      BuildContext context, int totalChildren) async {
-    for (int i = 1; i <= totalChildren; i++) {
+  Future<void> _navigateToChildDetails(BuildContext context, int totalChildren, {int? childNumberToEdit}) async {
+    int currentChild = childNumberToEdit ?? 1;
+    
+    while (currentChild <= totalChildren) {
+      // Navigate to child details page
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ChildDetailsPage(
-            childNumber: i,
+            childNumber: currentChild,
             totalChildren: totalChildren,
+            childrenDetails: _childrenDetails,
           ),
         ),
       );
 
-      if (result == null) {
-        // User cancelled the operation
+      if (result == null || result['childData'] == null) {
+        // User cancelled the operation or there was an error
         return;
       }
 
+      // Update or add the child data to our list
       setState(() {
-        _childrenDetails.add(result);
+        final existingIndex = _childrenDetails.indexWhere(
+          (child) => child['childNumber'] == result['childData']['childNumber']
+        );
+        
+        if (existingIndex >= 0) {
+          // Update existing child data
+          _childrenDetails[existingIndex] = result['childData'];
+        } else {
+          // Add new child data
+          _childrenDetails.add(result['childData']);
+        }
       });
 
-      // If this is the last child, save and go back
-      if (i == totalChildren) {
-        final childrenData = {
-          'hasChildrenInHousehold': _hasChildrenInHousehold,
-          'numberOfChildren': _numberOfChildrenController.text.isNotEmpty
-              ? int.tryParse(_numberOfChildrenController.text) ?? 0
-              : 0,
-          'children5To17': totalChildren,
-          'childrenDetails': _childrenDetails,
-        };
-
-        if (mounted) {
+      // Check if we should navigate to next child
+      if (result['navigateToNextChild'] == true && result['nextChildNumber'] != null) {
+        currentChild = result['nextChildNumber'];
+      } else {
+        // Return to children household page
+        if (context.mounted) {
+          // Save the children data before navigating
+          final childrenData = {
+            'hasChildrenInHousehold': _hasChildrenInHousehold,
+            'numberOfChildren': _numberOfChildrenController.text.isNotEmpty
+                ? int.tryParse(_numberOfChildrenController.text) ?? 0
+                : 0,
+            'children5To17': totalChildren,
+            'childrenDetails': _childrenDetails,
+            'editingMode': childNumberToEdit != null,
+          };
+          
+          // Return to the children household page
           Navigator.pop(context, childrenData);
         }
+        return;
       }
     }
   }
 
+  Widget _buildQuestionCard({required Widget child}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: _Spacing.lg),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+          color: isDark ? AppTheme.darkCard : Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      color: isDark ? AppTheme.darkCard : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(_Spacing.lg),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildRadioOption({
+    required String value,
+    required String? groupValue,
+    required String label,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return RadioListTile<String>(
+      title: Text(
+        label,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+        ),
+      ),
+      value: value,
+      groupValue: groupValue,
+      onChanged: onChanged,
+      activeColor: AppTheme.primaryColor,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+      tileColor: isDark ? AppTheme.darkCard : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    String hintText = '',
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+    ValueChanged<String>? onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: _Spacing.md),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: theme.primaryColor,
+                width: 1.5,
+              ),
+            ),
+            filled: true,
+            fillColor: isDark ? AppTheme.darkCard : Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: _Spacing.lg,
+              vertical: _Spacing.md,
+            ),
+          ),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
+          ),
+          onChanged: onChanged,
+          validator: validator,
+        ),
+      ],
+    );
+  }
+
+  bool get _isFormComplete {
+    if (_hasChildrenInHousehold == null) return false;
+    
+    if (_hasChildrenInHousehold == 'No') return true;
+    
+    // For 'Yes' case
+    if (_numberOfChildrenController.text.isEmpty) return false;
+    
+    final totalChildren = int.tryParse(_numberOfChildrenController.text) ?? 0;
+    if (totalChildren < 1 || totalChildren > 19) return false;
+    
+    // Only require children5To17 if there are children
+    if (totalChildren > 0) {
+      if (_children5To17Controller.text.isEmpty) return false;
+      final children5To17 = int.tryParse(_children5To17Controller.text) ?? 0;
+      if (children5To17 < 0 || children5To17 > totalChildren) return false;
+    }
+    
+    return true;
+  }
+
   void _submitForm() {
-    if (_hasChildrenInHousehold == null) {
+    if (!_formKey.currentState!.validate() || !_isFormComplete) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an option')),
+        SnackBar(
+          content: const Text('Please fill all required fields correctly'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
       );
       return;
     }
 
     if (_hasChildrenInHousehold == 'Yes') {
-      if (_numberOfChildrenController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter the number of children')),
-        );
-        return;
-      }
-
-      final numberOfChildren =
-          int.tryParse(_numberOfChildrenController.text) ?? 0;
-      if (numberOfChildren < 1 || numberOfChildren > 19) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Number of children must be between 1 and 19')),
-        );
-        return;
-      }
-
-      // Validate 5-17 years field
-      if (_children5To17Controller.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content:
-                  Text('Please enter the number of children aged 5-17 years')),
-        );
-        return;
-      }
-
       final children5To17 = int.tryParse(_children5To17Controller.text) ?? 0;
-
-      if (children5To17 < 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Number of children (5-17) cannot be negative')),
-        );
-        return;
-      }
-
-      if (children5To17 > numberOfChildren) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Number of children (5-17) cannot be more than total children')),
-        );
-        return;
-      }
 
       // If there are children 5-17, navigate to child details
       if (children5To17 > 0) {
@@ -142,154 +274,178 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
     }
   }
 
-  Widget _buildRadioOption({
-    required String value,
-    required String? groupValue,
-    required String label,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return RadioListTile<String>(
-      title: Text(label),
-      value: value,
-      groupValue: groupValue,
-      onChanged: onChanged,
-      contentPadding: EdgeInsets.zero,
-      dense: true,
-      activeColor: Theme.of(context).primaryColor,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('Children in Household'),
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              // Question about children in household
-              Text(
-                'Are there children living in the respondent\'s household?',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              _buildRadioOption(
-                value: 'Yes',
-                groupValue: _hasChildrenInHousehold,
-                label: 'Yes',
-                onChanged: (value) {
-                  setState(() {
-                    _hasChildrenInHousehold = value;
-                  });
-                },
-              ),
-              _buildRadioOption(
-                value: 'No',
-                groupValue: _hasChildrenInHousehold,
-                label: 'No',
-                onChanged: (value) {
-                  setState(() {
-                    _hasChildrenInHousehold = value;
-                    _numberOfChildrenController.clear();
-                    _children5To17Controller.clear();
-                    _childrenDetails.clear();
-                  });
-                },
-              ),
-
-              if (_hasChildrenInHousehold == 'Yes') ...[
-                const SizedBox(height: 16),
-                Text(
-                  'How many children are in the household?',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _numberOfChildrenController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Enter number of children',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      // Clear the 5-17 field when total children changes
-                      if (_children5To17Controller.text.isNotEmpty) {
-                        _children5To17Controller.clear();
-                        _childrenDetails.clear();
-                      }
-                    });
-                  },
-                ),
-
-                // Children aged 5-17 field
-                if (_numberOfChildrenController.text.isNotEmpty &&
-                    int.tryParse(_numberOfChildrenController.text) != null) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    'Out of ${_numberOfChildrenController.text} children, how many are between 5-17 years old?',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _children5To17Controller,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w500),
-                    decoration: InputDecoration(
-                      hintText: 'Enter number of children (5-17 years)',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                    ),
-                    onChanged: (value) {
-                      // Clear children details when 5-17 count changes
-                      if (_childrenDetails.isNotEmpty) {
-                        setState(() {
-                          _childrenDetails.clear();
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ],
-
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('NEXT'),
-                ),
-              ),
-            ],
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text(
+          'Children in Household',
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
           ),
-        ));
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: AppTheme.primaryColor,
+        automaticallyImplyLeading: false,
+      ),
+      body: Form(
+        key: _formKey,
+        child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(_Spacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Question about children in household
+                  _buildQuestionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Are there children living in the respondent\'s household?',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        Wrap(
+                          spacing: 20,
+                          children: [
+                            _buildRadioOption(
+                              value: 'Yes',
+                              groupValue: _hasChildrenInHousehold,
+                              label: 'Yes',
+                              onChanged: (value) {
+                                setState(() {
+                                  _hasChildrenInHousehold = value;
+                                  if (value == 'No') {
+                                    _numberOfChildrenController.clear();
+                                    _children5To17Controller.clear();
+                                    _childrenDetails.clear();
+                                  }
+                                });
+                              },
+                            ),
+                            _buildRadioOption(
+                              value: 'No',
+                              groupValue: _hasChildrenInHousehold,
+                              label: 'No',
+                              onChanged: (value) {
+                                setState(() {
+                                  _hasChildrenInHousehold = value;
+                                  _numberOfChildrenController.clear();
+                                  _children5To17Controller.clear();
+                                  _childrenDetails.clear();
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Number of children field (conditional)
+                  if (_hasChildrenInHousehold == 'Yes')
+                    _buildQuestionCard(
+                      child: _buildTextField(
+                        label: 'How many children are in the household?',
+                        controller: _numberOfChildrenController,
+                        hintText: 'Enter number of children',
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          setState(() {
+                            _children5To17Controller.clear();
+                            _childrenDetails.clear();
+                          });
+                        },
+                        validator: (value) {
+                          if (_hasChildrenInHousehold == 'Yes' && (value == null || value.isEmpty)) {
+                            return 'Please enter number of children';
+                          }
+                          final number = int.tryParse(value ?? '');
+                          if (number != null && (number < 1 || number > 19)) {
+                            return 'Number must be between 1 and 19';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+
+                  // Children aged 5-17 field (conditional)
+                  if (_hasChildrenInHousehold == 'Yes' &&
+                      _numberOfChildrenController.text.isNotEmpty &&
+                      int.tryParse(_numberOfChildrenController.text) != null &&
+                      int.tryParse(_numberOfChildrenController.text)! > 0)
+                    _buildQuestionCard(
+                      child: _buildTextField(
+                        label: 'Out of ${_numberOfChildrenController.text} children, how many are between 5-17 years old?',
+                        controller: _children5To17Controller,
+                        hintText: 'Enter number of children (5-17 years)',
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (_hasChildrenInHousehold == 'Yes' && (value == null || value.isEmpty)) {
+                            return 'Please enter number of children (5-17 years)';
+                          }
+                          final totalChildren = int.tryParse(_numberOfChildrenController.text) ?? 0;
+                          final children5To17 = int.tryParse(value ?? '') ?? 0;
+
+                          if (children5To17 < 0) {
+                            return 'Number cannot be negative';
+                          }
+                          if (children5To17 > totalChildren) {
+                            return 'Cannot exceed total children count';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+
+                  const SizedBox(height: _Spacing.lg),
+                  
+                  // Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isFormComplete ? _submitForm : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        _hasChildrenInHousehold == 'Yes' && 
+                        int.tryParse(_children5To17Controller.text) != null &&
+                        (int.tryParse(_children5To17Controller.text) ?? 0) > 0
+                            ? 'Continue to Child Details'
+                            : 'Next',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: _Spacing.lg),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      ),
+    );
   }
 }

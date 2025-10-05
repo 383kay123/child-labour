@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:surveyflow/view/pages/house-hold/pages/steps/consent_page.dart';
+import 'package:surveyflow/view/pages/house-hold/pages/steps/cover_page.dart';
+import 'package:surveyflow/view/pages/house-hold/pages/steps/farmer_identification_page.dart';
 
-import 'consent_page.dart';
-import 'cover_page.dart';
-import 'farmer_identification_page.dart';
 
 class SurveyState {
   bool isInterviewTimeRecorded = false;
@@ -58,8 +58,8 @@ class _HouseHoldState extends State<HouseHold> {
   ];
 
   final List<Map<String, String>> _farmers = [
-    {'id': '1', 'name': 'Farmer 1'},
-    {'id': '2', 'name': 'Farmer 2'},
+    {'code': '1', 'name': 'Farmer 1'},
+    {'code': '2', 'name': 'Farmer 2'},
   ];
 
   String? _communityType;
@@ -86,10 +86,12 @@ class _HouseHoldState extends State<HouseHold> {
   }
 
   Future<void> _getCurrentLocation() async {
+    print('_getCurrentLocation started');
     setState(() {
       _surveyState.isGettingLocation = true;
       _surveyState.locationStatus = 'Getting location...';
     });
+    print('Set isGettingLocation to true');
 
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -188,7 +190,9 @@ class _HouseHoldState extends State<HouseHold> {
   @override
   void initState() {
     super.initState();
+    print('initState called');
     _recordInterviewTime();
+    
     _otherSpecController.addListener(() {
       _otherSpecification = _otherSpecController.text;
     });
@@ -283,7 +287,8 @@ class _HouseHoldState extends State<HouseHold> {
   }
 
   Widget _buildNavigationButtons() {
-    if (_currentPageIndex == 0) return const SizedBox.shrink();
+    // Hide navigation on the cover page (index 0) and last page
+    if (_currentPageIndex == 0 || _currentPageIndex >= _totalPages) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -387,10 +392,20 @@ class _HouseHoldState extends State<HouseHold> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fetch location when the page is first loaded
+    if (_surveyState.currentPosition == null && !_surveyState.isGettingLocation) {
+      _getCurrentLocation();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
+        automaticallyImplyLeading: false, // This removes the back button
         title: Column(
           children: [
             Text(
@@ -419,7 +434,6 @@ class _HouseHoldState extends State<HouseHold> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4.0),
           child: LinearProgressIndicator(

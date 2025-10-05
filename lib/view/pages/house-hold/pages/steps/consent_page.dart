@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:surveyflow/view/theme/app_theme.dart';
 
 import '../../form_fields.dart';
+
+// Reusable spacing constants
+class _Spacing {
+  static const xs = 4.0;
+  static const sm = 8.0;
+  static const md = 12.0;
+  static const lg = 16.0;
+  static const xl = 24.0;
+}
 
 class ConsentPage extends StatefulWidget {
   final DateTime? interviewStartTime;
@@ -72,23 +82,65 @@ class _ConsentPageState extends State<ConsentPage> {
   // Reusable card widget for form questions
   Widget _buildQuestionCard({required Widget child}) {
     return Card(
-      elevation: 1,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: _Spacing.lg),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: Colors.grey.shade200, width: 1),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(_Spacing.lg),
         child: child,
+      ),
+    );
+  }
+
+  // Reusable radio button widget
+  Widget _buildRadioListTile({
+    required String title,
+    required String value,
+    required String? groupValue,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return InkWell(
+      onTap: () => onChanged(value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          children: [
+            Radio<String>(
+              value: value,
+              groupValue: groupValue,
+              onChanged: onChanged,
+              activeColor: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.normal,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
+    
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 100, left: 16, right: 16, top: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _Spacing.lg,
+        vertical: _Spacing.md,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -119,58 +171,185 @@ class _ConsentPageState extends State<ConsentPage> {
     );
   }
 
-  Widget _buildTimePickerField() {
+  Widget _buildResidenceConfirmation() {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          'Do you reside in this community?',
+          style: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildRadioListTile(
+          title: 'Yes',
+          value: 'Yes',
+          groupValue: widget.residesInCommunityConsent,
+          onChanged: widget.onResidesInCommunityChanged,
+        ),
+        _buildRadioListTile(
+          title: 'No',
+          value: 'No',
+          groupValue: widget.residesInCommunityConsent,
+          onChanged: widget.onResidesInCommunityChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimePickerField() {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Title and status row
         Row(
           children: [
             Expanded(
               child: Text(
                 'Interview Start Time',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
+                style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[800],
+                  fontSize: 16, // Reduced from 16
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: _Spacing.sm),
             Text(
               widget.timeStatus,
-              style: GoogleFonts.inter(
-                fontSize: 14,
+              style: textTheme.bodyMedium?.copyWith(
+                fontSize: 12, // Reduced from 14
                 color: widget.interviewStartTime != null
-                    ? Colors.green
-                    : Colors.grey[600],
-                fontWeight: FontWeight.w500,
+                    ? AppTheme.primaryColor
+                    : textTheme.bodyMedium?.color?.withOpacity(0.7),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        
+        const SizedBox(height: _Spacing.md),
+        
+        // Button or recorded time display
+        SizedBox(
+          width: double.infinity,
+          child: widget.interviewStartTime == null
+              ? ElevatedButton.icon(
+                  onPressed: widget.onRecordTime,
+                  icon: const Icon(Icons.access_time, size: 20),
+                  label: const Text('Record Start Time', style: TextStyle(fontSize: 12)), // Reduced from 14
+                )
+              : Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: _Spacing.md,
+                    horizontal: _Spacing.lg,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.dividerColor),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: AppTheme.primaryColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: _Spacing.sm),
+                      Text(
+                        'Time recorded at ${widget.interviewStartTime!.hour}:${widget.interviewStartTime!.minute.toString().padLeft(2, '0')}',
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12, // Reduced from 14
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGPSField() {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Title and status row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('GPS Location', 
+                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500,fontSize: 16)),
+            Text(
+              widget.isGettingLocation 
+                  ? 'Recording...' 
+                  : widget.currentPosition != null ? 'Recorded' : 'Not recorded',
+              style: textTheme.bodyMedium?.copyWith(
+                fontSize: 12, // Reduced from 14
+                color: widget.isGettingLocation
+                    ? AppTheme.accentColor
+                    : widget.currentPosition != null
+                        ? AppTheme.primaryColor
+                        : textTheme.bodyMedium?.color?.withOpacity(0.7),
+              ),
+            ),
+          ],
+        ),
+        
+        // Location status text
+        if (widget.currentPosition != null || widget.isGettingLocation) ...[
+          const SizedBox(height: _Spacing.sm),
+          Text(
+            widget.locationStatus,
+            style: textTheme.bodySmall?.copyWith(
+              fontSize: 10, // Reduced from 12
+              fontFamily: 'RobotoMono',
+              color: widget.isGettingLocation 
+                  ? AppTheme.accentColor 
+                  : textTheme.bodySmall?.color?.withOpacity(0.7),
+              height: 1.4,
+            ),
+          ),
+        ],
+        
+        // Button
+        const SizedBox(height: _Spacing.md),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: widget.onRecordTime,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 1,
-            ),
-            icon: const Icon(Icons.access_time, size: 20),
+            onPressed: widget.isGettingLocation ? null : widget.onGetLocation,
+            icon: widget.isGettingLocation
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.gps_fixed, size: 18),
             label: Text(
-              widget.interviewStartTime == null
-                  ? 'Record Start Time'
-                  : 'Update Time',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w500,
-                fontSize: 15,
-              ),
+              widget.isGettingLocation ? 'Recording Location...' : 'Get Current Location',
+              style: const TextStyle(fontSize: 12), // Reduced from 14
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: widget.currentPosition != null
+                  ? AppTheme.primaryColor
+                  : widget.isGettingLocation
+                      ? AppTheme.accentColor
+                      : null,
             ),
           ),
         ),
@@ -178,151 +357,123 @@ class _ConsentPageState extends State<ConsentPage> {
     );
   }
 
-  Widget _buildGPSField() {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'GPS Location',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                Text(
-                  widget.currentPosition != null ? 'Recorded' : 'Not recorded',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: widget.currentPosition != null
-                        ? Colors.green
-                        : Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            if (widget.currentPosition != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                widget.locationStatus,
-                style: GoogleFonts.robotoMono(
-                  fontSize: 14,
-                  color: Colors.grey[800],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed:
-                    widget.isGettingLocation ? null : widget.onGetLocation,
-                icon: widget.isGettingLocation
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Icon(Icons.gps_fixed, size: 20),
-                label: Text(
-                  widget.isGettingLocation
-                      ? 'Getting Location...'
-                      : 'Get Current Location',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  backgroundColor:
-                      widget.currentPosition != null ? Colors.green : null,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildCommunityTypeSection() {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Select the type of community',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-        ),
-        const SizedBox(height: 8),
-        Row(
+        // Section title
+        Text('Select the type of community', 
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500,fontSize: 16)),
+        
+        const SizedBox(height: _Spacing.sm),
+        
+        // Radio buttons
+        Column(
           children: [
-            Expanded(
-              child: FormFields.buildRadioGroup<String>(
-                context: context,
-                label: '',
-                value: widget.communityType,
-                items: const [
-                  MapEntry('Town', 'Town'),
-                  MapEntry('Village', 'Village'),
-                  MapEntry('Camp', 'Camp'),
-                ],
-                onChanged: widget.onCommunityTypeChanged,
-                isRequired: true,
-              ),
+            _buildRadioListTile(
+              title: 'Rural',
+              value: 'rural',
+              groupValue: widget.communityType,
+              onChanged: widget.onCommunityTypeChanged,
+            ),
+            _buildRadioListTile(
+              title: 'Urban',
+              value: 'urban',
+              groupValue: widget.communityType,
+              onChanged: widget.onCommunityTypeChanged,
+            ),
+            _buildRadioListTile(
+              title: 'Semi-Urban',
+              value: 'semi_urban',
+              groupValue: widget.communityType,
+              onChanged: widget.onCommunityTypeChanged,
             ),
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildResidenceConfirmation() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FormFields.buildRadioGroup<String>(
-          context: context,
-          label: 'Does the farmer reside in this community? *',
-          value: widget.residesInCommunityConsent,
-          items: const [
-            MapEntry('Yes', 'Yes'),
-            MapEntry('No', 'No'),
+        // Section title
+        Text('Does the farmer reside in this community?',
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500,fontSize: 16)),
+        
+        const SizedBox(height: _Spacing.sm),
+        
+        // Radio buttons
+        Column(
+          children: [
+            _buildRadioListTile(
+              title: 'Yes',
+              value: 'Yes',
+              groupValue: widget.residesInCommunityConsent,
+              onChanged: widget.onResidesInCommunityChanged,
+            ),
+            _buildRadioListTile(
+              title: 'No',
+              value: 'No',
+              groupValue: widget.residesInCommunityConsent,
+              onChanged: widget.onResidesInCommunityChanged,
+            ),
           ],
-          onChanged: widget.onResidesInCommunityChanged,
-          isRequired: true,
         ),
       ],
     );
   }
 
   Widget _buildFarmerAvailability() {
-    return FormFields.buildRadioGroup<String>(
-      context: context,
-      label: 'Is the farmer available for the interview? *',
-      value: widget.farmerAvailable,
-      items: const [
-        MapEntry('Yes', 'Yes'),
-        MapEntry('No', 'No'),
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section title
+        Text('Is the farmer available for the interview?', 
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500,fontSize: 16)),
+        
+        const SizedBox(height: _Spacing.sm),
+        
+        // Radio buttons
+        Theme(
+          data: theme.copyWith(
+            radioTheme: RadioThemeData(
+              fillColor: MaterialStateProperty.resolveWith<Color>(
+                (Set<MaterialState> states) {
+                  if (states.contains(MaterialState.disabled)) {
+                    return theme.disabledColor;
+                  }
+                  return AppTheme.primaryColor;
+                },
+              ),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Yes option
+              RadioListTile<String>(
+                title: Text('Yes', style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w300,fontSize: 14,)),
+                value: 'Yes',
+                groupValue: widget.farmerAvailable,
+                onChanged: widget.onFarmerAvailableChanged,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              
+              // No option
+              RadioListTile<String>(
+                title: Text('No', style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w300, fontSize: 14)),
+                value: 'No',
+                groupValue: widget.farmerAvailable,
+                onChanged: widget.onFarmerAvailableChanged,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+            ],
+          ),
+        ),
       ],
-      onChanged: widget.onFarmerAvailableChanged,
-      isRequired: true,
     );
   }
 
@@ -425,6 +576,9 @@ class _ConsentPageState extends State<ConsentPage> {
   }
 
   Widget _buildConsentSection() {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    
     // Skip consent if farmer is not available or doesn't work with TOUTON anymore
     bool shouldSkipConsent = false;
     if (widget.farmerAvailable == 'No' ||
@@ -438,194 +592,160 @@ class _ConsentPageState extends State<ConsentPage> {
 
     // Show the consent UI
     return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Consent for Data Processing',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade800,
+      padding: const EdgeInsets.all(_Spacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Consent for Data Processing',
+            style: textTheme.titleLarge?.copyWith(
+              fontSize: 17, // Reduced from 20
+              fontWeight: FontWeight.w400,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: _Spacing.lg),
+          Container(
+            height: 300,
+            padding: const EdgeInsets.all(_Spacing.lg),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'By selecting « Yes, I confirm », I hereby give my free, explicit and unequivocal consent to the processing of my personal data for purposes below ("Purpose") and in accordance with the principles set out in this note ("Note").',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontSize: 12, // Reduced from 14
+                      height: 1.6,
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.9),
+                    ),
+                  ),
+                  const SizedBox(height: _Spacing.md),
+                  Text(
+                    'I understand that the following personal data may be collected and processed:',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontSize: 12, // Reduced from 14
+                      height: 1.6,
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.9),
+                    ),
+                  ),
+                  const SizedBox(height: _Spacing.sm),
+                  Text(
+                    '• Name, telephone number, e-mail address\n• Gender, date of birth, marital status\n• Level of education\n• Information on my farm and professional experience\n• Information on my household and my family\n• My standard of living and social/economic situation',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontSize: 12, // Reduced from 14
+                      height: 1.6,
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.9),
+                    ),
+                  ),
+                  const SizedBox(height: _Spacing.md),
+                  Text(
+                    'The said purposes relate to the implementation of sustainable development/agricultural programs and projects initiated for the benefit of cocoa farmers and agricultural organizations, the optimization of traceability and sustainability of cocoa production and supply as well as the improvement of yields and livelihoods of cocoa farmers worldwide.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontSize: 12, // Reduced from 14
+                      height: 1.6,
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.9),
+                    ),
+                  ),
+                  const SizedBox(height: _Spacing.md),
+                  Text(
+                    'I agree that CJ COMMODITIES/NANANOM can communicate my personal data to other recipients in Ghana, partner entities and service providers in Ghana that CJ COMMODITIES/NANANOM can or could engage in the realization of its purposes.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontSize: 12, // Reduced from 14
+                      height: 1.6,
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.9),
+                    ),
+                  ),
+                  const SizedBox(height: _Spacing.md),
+                  Text(
+                    'CJ COMMODITIES/NANANOM shall take technical and organizational measures to ensure the security of my personal data and to protect my personal data against unauthorized or unlawful processing, against loss, destruction or accidental damage.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontSize: 12, // Reduced from 14
+                      height: 1.6,
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.9),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Container(
-              height: 300,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey.shade50,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'By selecting « Yes, I confirm », I hereby give my free, explicit and unequivocal consent to the processing of my personal data for purposes below ("Purpose") and in accordance with the principles set out in this note ("Note").',
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.black87, height: 1.5),
+          ),
+          const SizedBox(height: _Spacing.xl),
+          // Consent checkbox
+          Row(
+            children: [
+              Theme(
+                data: theme.copyWith(
+                  checkboxTheme: theme.checkboxTheme.copyWith(
+                    fillColor: MaterialStateProperty.resolveWith<Color>(
+                      (Set<MaterialState> states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return AppTheme.primaryColor;
+                        }
+                        return theme.disabledColor.withOpacity(0.3);
+                      },
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'I agree to the purpose envisaged that CJ COMMODITIES/NANANOM can collect and process these types of personal data including the following data:',
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.black87, height: 1.5),
-                    ),
-                    const Padding(
-                      padding:
-                          EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                      child: Text(
-                        '• Name, telephone number, e-mail address\n• Gender, date of birth, marital status\n• Level of education\n• Information on my farm and professional experience\n• Information on my household and my family\n• My standard of living and social/economic situation',
-                        style: TextStyle(
-                            fontSize: 14, color: Colors.black87, height: 1.5),
-                      ),
-                    ),
-                    const Text(
-                      'The said purposes relate to the implementation of sustainable development/agricultural programs and projects initiated for the benefit of cocoa farmers and agricultural organizations, the optimization of traceability and sustainability of cocoa production and supply as well as the improvement of yields and livelihoods of cocoa farmers worldwide.',
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.black87, height: 1.5),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'I agree that CJ COMMODITIES/NANANOM can communicate my personal data to other recipients in Ghana, partner entities and service providers in Ghana that CJ COMMODITIES/NANANOM can or could engage in the realization of its purposes.',
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.black87, height: 1.5),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'CJ COMMODITIES/NANANOM shall take technical and organizational measures to ensure the security of my personal data and to protect my personal data against unauthorized or unlawful processing, against loss, destruction or accidental damage.',
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.black87, height: 1.5),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'I recognize and understand that, with regard to my personal data, I have the right to:',
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
-                          height: 1.5,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const Padding(
-                      padding:
-                          EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                      child: Text(
-                        '• Know what personal data concerning me are processed and to object to their use\n• Request access, rectification and erasure of my personal data\n• Restrict the processing of my personal data and the right to data portability\n• Withdraw my consent to the processing of my personal data at any time\n• Lodge a complaint with the competent supervisory authority',
-                        style: TextStyle(
-                            fontSize: 14, color: Colors.black87, height: 1.5),
-                      ),
-                    ),
-                    const Text(
-                      'I confirm that before accepting the present note, I have received reading and explanation of its content, and confirm that, insofar as I have provided CJ COMMODITIES/NANANOM with personal data on one of my family members, I have been authorized to do so by the family member concerned.',
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.black87, height: 1.5),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'I accept that my consent to the present note can be given electronically, and that this electronic consent has the same legal value as my consent given by hand.',
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
-                          height: 1.5,
-                          fontStyle: FontStyle.italic),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Accept checkbox
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Checkbox(
+                child: Checkbox(
                   value: _consentGiven,
                   onChanged: _handleConsentChange,
                 ),
-                const Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      'I accept the above conditions',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // Decline checkbox
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Checkbox(
-                  value: _declinedConsent,
-                  onChanged: _handleDeclineChange,
-                ),
-                const Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      'No i refuse and end the survey',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.red),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            if (_declinedConsent)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Handle survey refusal submission
-                    // You might want to add your submission logic here
-                    Navigator.of(context)
-                        .pop(); // Or navigate to a thank you screen
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    backgroundColor: Colors.red.shade600,
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                  ),
-                  child: const Text(
-                    'Submit Refusal',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              )
-            else if (_consentGiven)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: widget.onNext,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    backgroundColor: Colors.green.shade600,
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                  ),
-                  child: const Text(
-                    'Next',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: _Spacing.sm),
+              Expanded(
+                child: Text(
+                  'I give my consent for data collection and processing',
+                  style: textTheme.bodyLarge?.copyWith(
+                    fontSize: 13, // Reduced from 16
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-          ],
-        ));
+            ],
+          ),
+          const SizedBox(height: _Spacing.md),
+          // Decline checkbox
+          Row(
+            children: [
+              Theme(
+                data: theme.copyWith(
+                  checkboxTheme: theme.checkboxTheme.copyWith(
+                    fillColor: MaterialStateProperty.resolveWith<Color>(
+                      (Set<MaterialState> states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return AppTheme.primaryColor;
+                        }
+                        return theme.disabledColor.withOpacity(0.3);
+                      },
+                    ),
+                  ),
+                ),
+                child: Checkbox(
+                  value: _declinedConsent,
+                  onChanged: _handleDeclineChange,
+                ),
+              ),
+              const SizedBox(width: _Spacing.sm),
+              Expanded(
+                child: Text(
+                  'I do not give my consent for data collection and processing',
+                  style: textTheme.bodyLarge?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: _Spacing.lg),
+
+        ],
+      ),
+    );
   }
 }

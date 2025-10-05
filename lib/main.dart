@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:surveyflow/view/pages/house-hold/house_hold_survey_provider.dart';
 import 'package:surveyflow/view/screen_wrapper/screen_wrapper.dart';
@@ -9,6 +8,13 @@ import 'package:surveyflow/view/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set preferred orientations if needed
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   runApp(const Surveyflow());
 }
 
@@ -17,33 +23,43 @@ class Surveyflow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return MultiProvider(
       providers: [
-        // ChangeNotifierProvider(create: (_) => SurveyProvider()),
         ChangeNotifierProvider(create: (_) => HouseHoldSurveyProvider()),
       ],
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle(
-          statusBarColor:  Color(0xFF1B5E20).withOpacity(0.9),
-          statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: Color(0xFF1B5E20).withOpacity(0.8),
-          systemNavigationBarIconBrightness: Brightness.light,
-        ),
-        child: MaterialApp(
-          title: 'Human Rights Monitoring',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme.copyWith(
-            textTheme: GoogleFonts.comicNeueTextTheme(Theme.of(context).textTheme),
-            primaryTextTheme:
-                GoogleFonts.comicNeueTextTheme(Theme.of(context).primaryTextTheme),
-          ),
-          initialRoute: '/',
-          routes: {
-            '/': (context) => const SplashScreen(),
-            '/home': (context) => const ScreenWrapper(),
-          },
-        ),
+      child: MaterialApp(
+        title: 'Human Rights Monitoring',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.lightTheme,
+        themeMode: ThemeMode.light,
+        initialRoute: '/splash',
+        routes: {
+          '/splash': (context) => const SplashScreen(),
+          '/home': (context) => const ScreenWrapper(),
+        },
+        onGenerateRoute: (settings) {
+          // Handle unknown routes by going to splash
+          return MaterialPageRoute(
+            builder: (context) => const SplashScreen(),
+          );
+        },
+        builder: (context, child) {
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.dark,
+              systemNavigationBarColor: Colors.white,
+              systemNavigationBarIconBrightness: Brightness.dark,
+            ),
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: const TextScaler.linear(1.0),
+              ),
+              child: child!,
+            ),
+          );
+        },
       ),
     );
   }
