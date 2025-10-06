@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'consent_page.dart';
-import 'cover_page.dart';
-import 'farmer_identification_page.dart';
+import 'pages/steps/consent_page.dart';
+import 'pages/steps/cover_page.dart';
+import 'pages/steps/farmer_identification_page.dart';
 
 class SurveyState {
   bool isInterviewTimeRecorded = false;
@@ -403,11 +403,11 @@ class _HouseHoldState extends State<HouseHold> {
             ),
             const SizedBox(height: 2),
             Text(
-              _currentPageIndex == 0 
-                ? 'Cover Page' 
-                : _currentPageIndex == 1 
-                  ? 'Consent Form' 
-                  : 'Farmer Identification',
+              _currentPageIndex == 0
+                  ? 'Cover Page'
+                  : _currentPageIndex == 1
+                      ? 'Consent Form'
+                      : 'Farmer Identification',
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w500,
                 color: Colors.white.withOpacity(0.9),
