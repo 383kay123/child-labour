@@ -74,7 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   'Skip',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.primaryColor,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),

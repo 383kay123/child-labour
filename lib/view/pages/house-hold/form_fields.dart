@@ -171,7 +171,7 @@ class FormFields {
               text: label,
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
-                fontSize: 14,
+                fontSize: 13,
                 color: Colors.black87,
               ),
               children: [
@@ -251,7 +251,7 @@ class FormFields {
               text: label,
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
-                fontSize: 14,
+                fontSize: 13,
                 color: Colors.black87,
               ),
               children: [

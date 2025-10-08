@@ -54,10 +54,10 @@ class SurveyListPage extends StatelessWidget {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('📋 ', style: TextStyle(fontSize: 20)),
+            Text('📋 ', style: GoogleFonts.inter(fontSize: 20)),
             Text(
               'Available Surveys',
-              style: GoogleFonts.comicNeue(
+              style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
@@ -67,13 +67,13 @@ class SurveyListPage extends StatelessWidget {
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFF4CAF50),
-        elevation: 0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(20),
-          ),
-        ),
+        // elevation: 0,
+        // shape: const RoundedRectangleBorder(
+        //   borderRadius: BorderRadius.only(
+        //     bottomLeft: Radius.circular(20),
+        //     bottomRight: Radius.circular(20),
+        //   ),
+        // ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color(0xFFFAFAFA),
@@ -151,12 +151,12 @@ class SurveyListPage extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Text('⭐', style: TextStyle(fontSize: 24)),
+                Text('⭐', style: GoogleFonts.inter(fontSize: 24)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Thank you for your help in this exercise',
-                    style: GoogleFonts.nunito(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFFE65100),
@@ -207,7 +207,7 @@ class SurveyListPage extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        Text(survey['emoji'], style: TextStyle(fontSize: 24)),
+                        Text(survey['emoji'], style: GoogleFonts.inter(fontSize: 24)),
                         const SizedBox(height: 4),
                         Icon(
                           survey['icon'],
@@ -225,17 +225,17 @@ class SurveyListPage extends StatelessWidget {
                       children: [
                         Text(
                           survey['title'],
-                          style: GoogleFonts.comicNeue(
+                          style: GoogleFonts.inter(
                             fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                             color: survey['color'],
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           survey['subtitle'],
-                          style: GoogleFonts.nunito(
-                            fontSize: 11,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
                             color: Colors.grey[500],
                             fontWeight: FontWeight.w500,
                           ),
@@ -243,7 +243,7 @@ class SurveyListPage extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           survey['description'],
-                          style: GoogleFonts.nunito(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             color: Colors.grey[700],
                           ),
@@ -277,7 +277,7 @@ class SurveyListPage extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       'Tap to Start Survey',
-                      style: GoogleFonts.nunito(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: survey['color'],
@@ -329,13 +329,13 @@ class SurveyListPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child:
-                          Text(survey['emoji'], style: TextStyle(fontSize: 20)),
+                          Text(survey['emoji'], style: GoogleFonts.inter(fontSize: 20)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         survey['title'],
-                        style: GoogleFonts.comicNeue(
+                        style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: survey['color'],
@@ -428,7 +428,7 @@ class SurveyListPage extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.comicNeue(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: color,
@@ -437,7 +437,7 @@ class SurveyListPage extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: GoogleFonts.nunito(
+                    style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Colors.grey[600],
                     ),

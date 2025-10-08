@@ -3,10 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'pages/steps/consent_page.dart';
-import 'pages/steps/cover_page.dart';
-import 'pages/steps/farmer_identification_page.dart';
+import 'package:surveyflow/view/pages/house-hold/pages/steps/consent_page.dart';
+import 'package:surveyflow/view/pages/house-hold/pages/steps/cover_page.dart';
+import 'package:surveyflow/view/pages/house-hold/pages/steps/farmer_identification_page.dart';
 
 class SurveyState {
   bool isInterviewTimeRecorded = false;
@@ -43,9 +42,11 @@ class HouseHold extends StatefulWidget {
 class _HouseHoldState extends State<HouseHold> {
   final _surveyState = SurveyState();
   final _formKey = GlobalKey<FormState>();
+  final PageController _pageController = PageController();
 
+  // Keep track of current page for UI updates
   int _currentPageIndex = 0;
-  final int _totalPages = 3;
+  final int _totalPages = 3; // Update this if you add more pages
 
   double get _progress => (_currentPageIndex + 1) / _totalPages;
 
@@ -58,8 +59,8 @@ class _HouseHoldState extends State<HouseHold> {
   ];
 
   final List<Map<String, String>> _farmers = [
-    {'id': '1', 'name': 'Farmer 1'},
-    {'id': '2', 'name': 'Farmer 2'},
+    {'code': '1', 'name': 'Farmer 1'},
+    {'code': '2', 'name': 'Farmer 2'},
   ];
 
   String? _communityType;
@@ -74,6 +75,83 @@ class _HouseHoldState extends State<HouseHold> {
   final TextEditingController _otherCommunityController =
       TextEditingController();
 
+  // Callback methods for ConsentPage
+  void _onCommunityTypeChanged(String? value) {
+    setState(() {
+      _communityType = value;
+    });
+  }
+
+  void _onResidesInCommunityChanged(String? value) {
+    setState(() {
+      _residesInCommunityConsent = value;
+    });
+  }
+
+  void _onFarmerAvailableChanged(String? value) {
+    setState(() {
+      _farmerAvailable = value;
+    });
+  }
+
+  void _onFarmerStatusChanged(String? value) {
+    setState(() {
+      _farmerStatus = value;
+    });
+  }
+
+  void _onAvailablePersonChanged(String? value) {
+    setState(() {
+      _availablePerson = value;
+    });
+  }
+
+  void _onConsentChanged(bool value) {
+    setState(() {
+      _consentGiven = value;
+    });
+  }
+
+  void _onOtherSpecChanged(String value) {
+    setState(() {
+      _otherSpecification = value;
+    });
+  }
+
+  void _onOtherCommunityChanged(String value) {
+    setState(() {
+      _otherCommunityName = value;
+    });
+  }
+
+  void _onNext() {
+    print(
+        '_onNext called. Current page: $_currentPageIndex, Total pages: $_totalPages');
+
+    // Bypass all form validation and just go to the next page
+    if (_currentPageIndex < _totalPages - 1) {
+      setState(() {
+        _currentPageIndex++;
+      });
+    }
+
+    // Keep the consent check but remove form validation
+    if (_currentPageIndex == 1 && !_consentGiven) {
+      // If on consent page and consent not given, show message but still allow navigation
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Note: Proceeding without consent'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _onSurveyEnd() {
+    // Handle survey end logic here
+    Navigator.of(context).pop();
+  }
+
   void _recordInterviewTime() {
     if (!_surveyState.isInterviewTimeRecorded) {
       setState(() {
@@ -86,10 +164,12 @@ class _HouseHoldState extends State<HouseHold> {
   }
 
   Future<void> _getCurrentLocation() async {
+    print('_getCurrentLocation started');
     setState(() {
       _surveyState.isGettingLocation = true;
       _surveyState.locationStatus = 'Getting location...';
     });
+    print('Set isGettingLocation to true');
 
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -188,103 +268,102 @@ class _HouseHoldState extends State<HouseHold> {
   @override
   void initState() {
     super.initState();
+    _pageController.addListener(() {
+      // Handle page changes if needed
+    });
+    print('initState called');
     _recordInterviewTime();
-    _otherSpecController.addListener(() {
-      _otherSpecification = _otherSpecController.text;
-    });
-    _otherCommunityController.addListener(() {
-      _otherCommunityName = _otherCommunityController.text;
-    });
   }
 
   Widget _buildCurrentPage() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SizedBox(
-          height: constraints.maxHeight,
-          child: _buildPageContent(),
-        );
-      },
-    );
+    return _buildPageContent();
   }
 
   Widget _buildPageContent() {
-    switch (_currentPageIndex) {
-      case 0:
-        return CoverPage(
-          selectedTown: _selectedTown,
-          selectedFarmer: _selectedFarmer,
-          towns: _towns,
-          farmers: _farmers,
-          onTownChanged: (value) {
-            setState(() => _selectedTown = value);
-          },
-          onFarmerChanged: (value) {
-            setState(() => _selectedFarmer = value);
-          },
-          onNext: () {
-            setState(() => _currentPageIndex = 1);
-          },
-        );
-      case 1:
-        return SingleChildScrollView(
-          child: ConsentPage(
-            interviewStartTime: _surveyState.interviewStartTime,
-            timeStatus: _surveyState.timeStatus,
-            currentPosition: _surveyState.currentPosition,
-            locationStatus: _surveyState.locationStatus,
-            isGettingLocation: _surveyState.isGettingLocation,
-            communityType: _communityType,
-            residesInCommunityConsent: _residesInCommunityConsent,
-            farmerAvailable: _farmerAvailable,
-            farmerStatus: _farmerStatus,
-            availablePerson: _availablePerson,
-            otherSpecification: _otherSpecification,
-            otherCommunityName: _otherCommunityName,
-            consentGiven: _consentGiven,
-            otherSpecController: _otherSpecController,
-            otherCommunityController: _otherCommunityController,
-            onRecordTime: _recordInterviewTime,
-            onGetLocation: _getCurrentLocation,
-            onCommunityTypeChanged: (value) {
-              setState(() => _communityType = value);
-            },
-            onResidesInCommunityChanged: (value) {
-              setState(() => _residesInCommunityConsent = value);
-            },
-            onFarmerAvailableChanged: (value) {
-              setState(() => _farmerAvailable = value);
-            },
-            onFarmerStatusChanged: (value) {
-              setState(() => _farmerStatus = value);
-            },
-            onAvailablePersonChanged: (value) {
-              setState(() => _availablePerson = value);
-            },
-            onOtherSpecChanged: (value) {
-              setState(() => _otherSpecification = value);
-            },
-            onOtherCommunityChanged: (value) {
-              setState(() => _otherCommunityName = value);
-            },
-            onConsentChanged: (value) {
-              setState(() => _consentGiven = value);
-            },
-            onNext: () {
-              setState(() => _currentPageIndex = 2);
-            },
+    return PageView(
+      controller: _pageController,
+      physics: const NeverScrollableScrollPhysics(), // Disable swipe
+      onPageChanged: _handlePageChanged,
+      children: [
+        // Cover Page
+        Form(
+          key: _formKey,
+          child: CoverPage(
+            selectedTown: _selectedTown,
+            selectedFarmer: _selectedFarmer,
+            towns: _towns,
+            farmers: _farmers,
+            onTownChanged: (value) => setState(() => _selectedTown = value),
+            onFarmerChanged: (value) => setState(() => _selectedFarmer = value),
+            onNext: () => _pageController.nextPage(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            ),
           ),
-        );
-      case 2:
-        return const FarmerIdentificationPage();
-      default:
-        return const Center(child: Text('Page not found'));
-    }
+        ),
+
+        // Consent Page
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: ConsentPage(
+                    interviewStartTime: _surveyState.interviewStartTime,
+                    timeStatus: _surveyState.timeStatus,
+                    currentPosition: _surveyState.currentPosition,
+                    locationStatus: _surveyState.locationStatus,
+                    isGettingLocation: _surveyState.isGettingLocation,
+                    communityType: _communityType,
+                    residesInCommunityConsent: _residesInCommunityConsent,
+                    farmerAvailable: _farmerAvailable,
+                    farmerStatus: _farmerStatus,
+                    availablePerson: _availablePerson,
+                    otherSpecification: _otherSpecification,
+                    otherCommunityName: _otherCommunityName,
+                    consentGiven: _consentGiven,
+                    otherSpecController: _otherSpecController,
+                    otherCommunityController: _otherCommunityController,
+                    onRecordTime: _recordInterviewTime,
+                    onGetLocation: _getCurrentLocation,
+                    onCommunityTypeChanged: _onCommunityTypeChanged,
+                    onResidesInCommunityChanged: _onResidesInCommunityChanged,
+                    onFarmerAvailableChanged: _onFarmerAvailableChanged,
+                    onFarmerStatusChanged: _onFarmerStatusChanged,
+                    onAvailablePersonChanged: _onAvailablePersonChanged,
+                    onConsentChanged: _onConsentChanged,
+                    onOtherSpecChanged: _onOtherSpecChanged,
+                    onOtherCommunityChanged: _onOtherCommunityChanged,
+                    onNext: () => _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    ),
+                    onPrevious: () => _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    ),
+                    onSurveyEnd: _onSurveyEnd,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+
+        // Farmer Identification Page
+        FarmerIdentificationPage(
+          onPrevious: () => _pageController.previousPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          ),
+        ),
+      ],
+    );
   }
 
+  // Add the missing navigation buttons method
   Widget _buildNavigationButtons() {
-    if (_currentPageIndex == 0) return const SizedBox.shrink();
-
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -307,9 +386,14 @@ class _HouseHoldState extends State<HouseHold> {
             Expanded(
               child: OutlinedButton(
                 onPressed: () {
-                  setState(() {
-                    _currentPageIndex--;
-                  });
+                  if (_currentPageIndex == 0) {
+                    Navigator.of(context).pop();
+                  } else {
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  }
                 },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -324,7 +408,7 @@ class _HouseHoldState extends State<HouseHold> {
                         size: 18, color: Colors.green.shade600),
                     const SizedBox(width: 8),
                     Text(
-                      'Previous',
+                      _currentPageIndex == 0 ? 'Cancel' : 'Previous',
                       style: GoogleFonts.inter(
                         color: Colors.green.shade600,
                         fontWeight: FontWeight.w600,
@@ -341,9 +425,10 @@ class _HouseHoldState extends State<HouseHold> {
                 onPressed: _currentPageIndex == _totalPages - 1
                     ? _submitForm
                     : () {
-                        setState(() {
-                          _currentPageIndex++;
-                        });
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade600,
@@ -381,9 +466,26 @@ class _HouseHoldState extends State<HouseHold> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _otherSpecController.dispose();
     _otherCommunityController.dispose();
     super.dispose();
+  }
+
+  void _handlePageChanged(int index) {
+    setState(() {
+      _currentPageIndex = index;
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fetch location when the page is first loaded
+    if (_surveyState.currentPosition == null &&
+        !_surveyState.isGettingLocation) {
+      _getCurrentLocation();
+    }
   }
 
   @override
@@ -391,6 +493,7 @@ class _HouseHoldState extends State<HouseHold> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Column(
           children: [
             Text(
@@ -419,7 +522,6 @@ class _HouseHoldState extends State<HouseHold> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.green.shade600,
-        foregroundColor: Colors.white,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4.0),
           child: LinearProgressIndicator(
@@ -431,8 +533,16 @@ class _HouseHoldState extends State<HouseHold> {
           ),
         ),
       ),
-      body: _buildCurrentPage(),
-      bottomNavigationBar: _buildNavigationButtons(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: _buildCurrentPage(),
+            ),
+            _buildNavigationButtons(),
+          ],
+        ),
+      ),
     );
   }
 }

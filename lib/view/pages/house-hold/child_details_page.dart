@@ -225,11 +225,13 @@ class ModernCheckbox extends StatelessWidget {
 class ChildDetailsPage extends StatefulWidget {
   final int childNumber;
   final int totalChildren;
+  final List<dynamic> childrenDetails;
 
   const ChildDetailsPage({
     Key? key,
     required this.childNumber,
     required this.totalChildren,
+    required this.childrenDetails,
   }) : super(key: key);
 
   @override
@@ -940,8 +942,22 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     }
   }
 
+  void _onChildNumberChanged() {
+    // Trigger a rebuild when the child number changes
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _childNumberController.addListener(_onChildNumberChanged);
+  }
+
   @override
   void dispose() {
+    _childNumberController.removeListener(_onChildNumberChanged);
     _otherLocationController.dispose();
     _otherReasonController.dispose();
     _otherReasonForSchoolController.dispose();
@@ -1544,170 +1560,173 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                       return null;
                     },
                   ),
-                  if (_schoolNameController.text.trim().isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _buildModernRadioGroup<String>(
-                      question: 'Is the school a public or private school?',
-                      groupValue: _schoolType,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _schoolType = value;
-                        });
-                      },
-                      options: [
-                        {'value': 'Public', 'title': 'Public'},
-                        {'value': 'Private', 'title': 'Private'},
-                      ],
-                    ),
-                    if (_schoolType != null) ...[
-                      const SizedBox(height: 16),
-                      _buildModernDropdown<String>(
-                        label: 'What grade is the child enrolled in?',
-                        value: _gradeLevel,
-                        items: _gradeLevels.map((String grade) {
-                          return DropdownMenuItem<String>(
-                            value: grade,
-                            child: Text(grade),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
+                ],
+                if (_isCurrentlyEnrolled == true &&
+                    _schoolNameController.text.trim().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _buildModernRadioGroup<String>(
+                    question: 'Is the school a public or private school?',
+                    groupValue: _schoolType,
+                    onChanged: (String? value) {
+                      setState(() {
+                        _schoolType = value;
+                      });
+                    },
+                    options: [
+                      {'value': 'Public', 'title': 'Public'},
+                      {'value': 'Private', 'title': 'Private'},
+                    ],
+                  ),
+                ],
+                if (_isCurrentlyEnrolled == true &&
+                    _schoolNameController.text.trim().isNotEmpty &&
+                    _schoolType != null) ...[
+                  const SizedBox(height: 16),
+                  _buildModernDropdown<String>(
+                    label: 'What grade is the child enrolled in?',
+                    value: _gradeLevel,
+                    items: _gradeLevels.map((String grade) {
+                      return DropdownMenuItem<String>(
+                        value: grade,
+                        child: Text(grade),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _gradeLevel = newValue;
+                      });
+                    },
+                    hintText: 'Select grade level',
+                    validator: (value) {
+                      if (_isCurrentlyEnrolled == true && value == null) {
+                        return 'Please select a grade level';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+                if (_isCurrentlyEnrolled == true &&
+                    _schoolNameController.text.trim().isNotEmpty &&
+                    _schoolType != null &&
+                    _gradeLevel != null) ...[
+                  const SizedBox(height: 16),
+                  _buildModernRadioGroup<String>(
+                    question:
+                        'How many times does the child go to school in a week?',
+                    groupValue: _schoolAttendanceFrequency,
+                    onChanged: (String? value) {
+                      setState(() {
+                        _schoolAttendanceFrequency = value;
+                      });
+                    },
+                    options: [
+                      {'value': 'Once', 'title': 'Once'},
+                      {'value': 'Twice', 'title': 'Twice'},
+                      {'value': 'Thrice', 'title': 'Thrice'},
+                      {'value': 'Four times', 'title': 'Four times'},
+                      {'value': 'Five times', 'title': 'Five times'},
+                    ],
+                  ), // <-- Changed from ], to ),
+                ],
+                if (_schoolAttendanceFrequency != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Select the basic school needs that are available to the child:',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Column(
+                    children: [
+                      ModernCheckbox(
+                        value: _availableSchoolSupplies.contains('Books'),
+                        onChanged: (bool? selected) {
                           setState(() {
-                            _gradeLevel = newValue;
+                            if (selected == true) {
+                              _availableSchoolSupplies.add('Books');
+                            } else {
+                              _availableSchoolSupplies.remove('Books');
+                            }
                           });
                         },
-                        hintText: 'Select grade level',
-                        validator: (value) {
-                          if (_isCurrentlyEnrolled == true && value == null) {
-                            return 'Please select a grade level';
-                          }
-                          return null;
-                        },
+                        title: 'Books',
                       ),
-                    ],
-                    if (_gradeLevel != null) ...[
-                      const SizedBox(height: 16),
-                      _buildModernRadioGroup<String>(
-                        question:
-                            'How many times does the child go to school in a week?',
-                        groupValue: _schoolAttendanceFrequency,
-                        onChanged: (String? value) {
+                      ModernCheckbox(
+                        value: _availableSchoolSupplies.contains('School bag'),
+                        onChanged: (bool? selected) {
                           setState(() {
-                            _schoolAttendanceFrequency = value;
+                            if (selected == true) {
+                              _availableSchoolSupplies.add('School bag');
+                            } else {
+                              _availableSchoolSupplies.remove('School bag');
+                            }
                           });
                         },
-                        options: [
-                          {'value': 'Once', 'title': 'Once'},
-                          {'value': 'Twice', 'title': 'Twice'},
-                          {'value': 'Thrice', 'title': 'Thrice'},
-                          {'value': 'Four times', 'title': 'Four times'},
-                          {'value': 'Five times', 'title': 'Five times'},
-                        ],
+                        title: 'School bag',
+                      ),
+                      ModernCheckbox(
+                        value:
+                            _availableSchoolSupplies.contains('Pen / Pencils'),
+                        onChanged: (bool? selected) {
+                          setState(() {
+                            if (selected == true) {
+                              _availableSchoolSupplies.add('Pen / Pencils');
+                            } else {
+                              _availableSchoolSupplies.remove('Pen / Pencils');
+                            }
+                          });
+                        },
+                        title: 'Pen / Pencils',
+                      ),
+                      ModernCheckbox(
+                        value: _availableSchoolSupplies
+                            .contains('School Uniforms'),
+                        onChanged: (bool? selected) {
+                          setState(() {
+                            if (selected == true) {
+                              _availableSchoolSupplies.add('School Uniforms');
+                            } else {
+                              _availableSchoolSupplies
+                                  .remove('School Uniforms');
+                            }
+                          });
+                        },
+                        title: 'School Uniforms',
+                      ),
+                      ModernCheckbox(
+                        value: _availableSchoolSupplies
+                            .contains('Shoes and Socks'),
+                        onChanged: (bool? selected) {
+                          setState(() {
+                            if (selected == true) {
+                              _availableSchoolSupplies.add('Shoes and Socks');
+                            } else {
+                              _availableSchoolSupplies
+                                  .remove('Shoes and Socks');
+                            }
+                          });
+                        },
+                        title: 'Shoes and Socks',
+                      ),
+                      ModernCheckbox(
+                        value: _availableSchoolSupplies
+                            .contains('None of the above'),
+                        onChanged: (bool? selected) {
+                          setState(() {
+                            if (selected == true) {
+                              _availableSchoolSupplies.clear();
+                              _availableSchoolSupplies.add('None of the above');
+                            } else {
+                              _availableSchoolSupplies
+                                  .remove('None of the above');
+                            }
+                          });
+                        },
+                        title: 'None of the above',
                       ),
                     ],
-                  ],
-                  if (_schoolAttendanceFrequency != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      'Select the basic school needs that are available to the child:',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Column(
-                      children: [
-                        ModernCheckbox(
-                          value: _availableSchoolSupplies.contains('Books'),
-                          onChanged: (bool? selected) {
-                            setState(() {
-                              if (selected == true) {
-                                _availableSchoolSupplies.add('Books');
-                              } else {
-                                _availableSchoolSupplies.remove('Books');
-                              }
-                            });
-                          },
-                          title: 'Books',
-                        ),
-                        ModernCheckbox(
-                          value:
-                              _availableSchoolSupplies.contains('School bag'),
-                          onChanged: (bool? selected) {
-                            setState(() {
-                              if (selected == true) {
-                                _availableSchoolSupplies.add('School bag');
-                              } else {
-                                _availableSchoolSupplies.remove('School bag');
-                              }
-                            });
-                          },
-                          title: 'School bag',
-                        ),
-                        ModernCheckbox(
-                          value: _availableSchoolSupplies
-                              .contains('Pen / Pencils'),
-                          onChanged: (bool? selected) {
-                            setState(() {
-                              if (selected == true) {
-                                _availableSchoolSupplies.add('Pen / Pencils');
-                              } else {
-                                _availableSchoolSupplies
-                                    .remove('Pen / Pencils');
-                              }
-                            });
-                          },
-                          title: 'Pen / Pencils',
-                        ),
-                        ModernCheckbox(
-                          value: _availableSchoolSupplies
-                              .contains('School Uniforms'),
-                          onChanged: (bool? selected) {
-                            setState(() {
-                              if (selected == true) {
-                                _availableSchoolSupplies.add('School Uniforms');
-                              } else {
-                                _availableSchoolSupplies
-                                    .remove('School Uniforms');
-                              }
-                            });
-                          },
-                          title: 'School Uniforms',
-                        ),
-                        ModernCheckbox(
-                          value: _availableSchoolSupplies
-                              .contains('Shoes and Socks'),
-                          onChanged: (bool? selected) {
-                            setState(() {
-                              if (selected == true) {
-                                _availableSchoolSupplies.add('Shoes and Socks');
-                              } else {
-                                _availableSchoolSupplies
-                                    .remove('Shoes and Socks');
-                              }
-                            });
-                          },
-                          title: 'Shoes and Socks',
-                        ),
-                        ModernCheckbox(
-                          value: _availableSchoolSupplies
-                              .contains('None of the above'),
-                          onChanged: (bool? selected) {
-                            setState(() {
-                              if (selected == true) {
-                                _availableSchoolSupplies.clear();
-                                _availableSchoolSupplies
-                                    .add('None of the above');
-                              } else {
-                                _availableSchoolSupplies
-                                    .remove('None of the above');
-                              }
-                            });
-                          },
-                          title: 'None of the above',
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ],
 
                 // Not currently enrolled section
@@ -1724,13 +1743,15 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                     options: [
                       {
                         'value': true,
-                        'title': 'Yes, they went to school but stopped'
+                        'title': 'Yes, they went to school but stopped',
+                        'subtitle': null,
                       },
                       {
                         'value': false,
-                        'title': 'No, they have never been to school'
+                        'title': 'No, they have never been to school',
+                        'subtitle': null,
                       },
-                    ],
+                    ], // <-- This is the closing bracket for options
                   ),
 
                   // Additional sections for children who were enrolled but stopped
@@ -3653,12 +3674,10 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                   {'value': false, 'title': 'No'},
                 ],
               ),
-              SizedBox(
-                height: 24,
-              ),
+              const SizedBox(height: 24),
+
               if (_sufferedInjury == true) ...[
                 const SizedBox(height: 24),
-
                 // How did the child get wounded?
                 _buildModernTextField(
                   label: 'How did the child get wounded?',
@@ -3674,7 +3693,6 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                   },
                 ),
                 const SizedBox(height: 16),
-
                 // When was the child wounded?
                 _buildModernTextField(
                   label: 'When was the child wounded?',

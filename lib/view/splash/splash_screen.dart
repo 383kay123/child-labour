@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../screens/onboarding_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -9,7 +10,8 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -30,8 +32,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         if (status == AnimationStatus.completed) {
           // Navigate to onboarding after animation completes
           Future.delayed(const Duration(seconds: 1), () {
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (context) => const OnboardingScreen()));
+            Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const OnboardingScreen()));
           });
         }
       });
@@ -79,9 +81,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               const SizedBox(height: 30),
               // App Name
               const Text(
-                'Human Right Monitor',
+                'Human Rights Monitor',
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: 30,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 1.5,
@@ -92,7 +94,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               const Text(
                 'Protecting the rights of individuals, Building Futures',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   color: Colors.white70,
                   fontWeight: FontWeight.w500,
                 ),
