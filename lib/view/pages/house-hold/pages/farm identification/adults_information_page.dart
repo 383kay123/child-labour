@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:surveyflow/view/theme/app_theme.dart';
+
+import '../../../../theme/app_theme.dart';
 import '../../producer_details_page.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
@@ -34,7 +35,8 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
     {'value': 'Other', 'display': 'Other'},
   ];
   String? _selectedNationality;
-  final TextEditingController _otherNationalityController = TextEditingController();
+  final TextEditingController _otherNationalityController =
+      TextEditingController();
   int? _numberOfAdults;
   String? _isGhanaCitizen;
   final List<TextEditingController> _nameControllers = [];
@@ -216,7 +218,8 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+              color:
+                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
@@ -257,7 +260,9 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
     if (_numberOfAdults == null || _numberOfAdults == 0) return false;
     if (_isGhanaCitizen == null) return false;
     if (_isGhanaCitizen == 'No' && _selectedNationality == null) return false;
-    if (_isGhanaCitizen == 'No' && _selectedNationality == 'Other' && _otherNationalityController.text.isEmpty) return false;
+    if (_isGhanaCitizen == 'No' &&
+        _selectedNationality == 'Other' &&
+        _otherNationalityController.text.isEmpty) return false;
 
     // Check all names are filled
     for (int i = 0; i < _nameControllers.length; i++) {
@@ -326,7 +331,8 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
+      backgroundColor:
+          isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text(
           'Information on Adults in Household',
@@ -353,7 +359,9 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                     // Number of adults input
                     _buildQuestionCard(
                       child: _buildTextField(
-                        label: 'Total number of adults in the household (producer/manager/owner not included)',
+                        label: 'Total number of adults in the household'
+                            '(Producer/manager/owner not included). '
+                            'Include the manager\'s family only if they live in the producer\'s household. *',
                         controller: _adultsCountController,
                         hintText: 'Enter number of adults',
                         keyboardType: TextInputType.number,
@@ -376,123 +384,132 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                       ),
                     ),
 
-                    // Citizenship question
-                    if (_numberOfAdults != null && _numberOfAdults! > 0)
-                      _buildQuestionCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Are all household members Ghanaian citizens?',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: _Spacing.md),
-                            Wrap(
-                              spacing: 20,
-                              children: [
-                                _buildRadioOption(
-                                  value: 'Yes',
-                                  groupValue: _isGhanaCitizen,
-                                  label: 'Yes',
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _isGhanaCitizen = value;
-                                      if (value == 'Yes') {
-                                        _nationalityController.clear();
-                                      }
-                                      _saveData(); // Save the selection
-                                    });
-                                  },
-                                ),
-                                _buildRadioOption(
-                                  value: 'No',
-                                  groupValue: _isGhanaCitizen,
-                                  label: 'No',
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _isGhanaCitizen = value;
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    // Nationality for non-Ghanaian
-                    if (_isGhanaCitizen == 'No')
-                      Column(
-                        children: [
-                          _buildQuestionCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Nationality',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Theme.of(context).brightness == Brightness.dark
-                                        ? AppTheme.darkTextSecondary
-                                        : AppTheme.textPrimary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: _Spacing.md),
-                                DropdownButtonFormField<String>(
-                                  value: _selectedNationality,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide: BorderSide(
-                                        color: Theme.of(context).brightness == Brightness.dark
-                                            ? AppTheme.darkCard
-                                            : Colors.grey.shade300,
-                                      ),
-                                    ),
-                                    filled: true,
-                                    fillColor: Theme.of(context).brightness == Brightness.dark
-                                        ? AppTheme.darkCard
-                                        : Colors.white,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: _Spacing.lg,
-                                      vertical: _Spacing.md,
-                                    ),
-                                  ),
-                                  hint: const Text('Select nationality'),
-                                  items: _nationalityOptions.map((option) {
-                                    return DropdownMenuItem<String>(
-                                      value: option['value'],
-                                      child: Text(option['display']!),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedNationality = value;
-                                    });
-                                  },
-                                  validator: (value) {
-                                    if (_isGhanaCitizen == 'No' && value == null) {
-                                      return 'Please select a nationality';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_selectedNationality == 'Other')
-                            _buildQuestionCard(
-                              child: _buildTextField(
-                                label: 'Specify other nationality',
-                                controller: _otherNationalityController,
-                                hintText: 'Enter nationality',
-                              ),
-                            ),
-                        ],
-                      ),
+                    // // Citizenship question
+                    // if (_numberOfAdults != null && _numberOfAdults! > 0)
+                    //   _buildQuestionCard(
+                    //     child: Column(
+                    //       crossAxisAlignment: CrossAxisAlignment.start,
+                    //       children: [
+                    //         Text(
+                    //           'Are all household members Ghanaian citizens?',
+                    //           style: theme.textTheme.titleMedium?.copyWith(
+                    //             color: isDark
+                    //                 ? AppTheme.darkTextSecondary
+                    //                 : AppTheme.textPrimary,
+                    //             fontWeight: FontWeight.w500,
+                    //           ),
+                    //         ),
+                    //         const SizedBox(height: _Spacing.md),
+                    //         Wrap(
+                    //           spacing: 20,
+                    //           children: [
+                    //             _buildRadioOption(
+                    //               value: 'Yes',
+                    //               groupValue: _isGhanaCitizen,
+                    //               label: 'Yes',
+                    //               onChanged: (value) {
+                    //                 setState(() {
+                    //                   _isGhanaCitizen = value;
+                    //                   if (value == 'Yes') {
+                    //                     _nationalityController.clear();
+                    //                   }
+                    //                   _saveData(); // Save the selection
+                    //                 });
+                    //               },
+                    //             ),
+                    //             _buildRadioOption(
+                    //               value: 'No',
+                    //               groupValue: _isGhanaCitizen,
+                    //               label: 'No',
+                    //               onChanged: (value) {
+                    //                 setState(() {
+                    //                   _isGhanaCitizen = value;
+                    //                 });
+                    //               },
+                    //             ),
+                    //           ],
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    //
+                    // // Nationality for non-Ghanaian
+                    // if (_isGhanaCitizen == 'No')
+                    //   Column(
+                    //     children: [
+                    //       _buildQuestionCard(
+                    //         child: Column(
+                    //           crossAxisAlignment: CrossAxisAlignment.start,
+                    //           children: [
+                    //             Text(
+                    //               'Nationality',
+                    //               style: Theme.of(context)
+                    //                   .textTheme
+                    //                   .titleMedium
+                    //                   ?.copyWith(
+                    //                     color: Theme.of(context).brightness ==
+                    //                             Brightness.dark
+                    //                         ? AppTheme.darkTextSecondary
+                    //                         : AppTheme.textPrimary,
+                    //                     fontWeight: FontWeight.w500,
+                    //                   ),
+                    //             ),
+                    //             const SizedBox(height: _Spacing.md),
+                    //             DropdownButtonFormField<String>(
+                    //               value: _selectedNationality,
+                    //               decoration: InputDecoration(
+                    //                 border: OutlineInputBorder(
+                    //                   borderRadius: BorderRadius.circular(8.0),
+                    //                   borderSide: BorderSide(
+                    //                     color: Theme.of(context).brightness ==
+                    //                             Brightness.dark
+                    //                         ? AppTheme.darkCard
+                    //                         : Colors.grey.shade300,
+                    //                   ),
+                    //                 ),
+                    //                 filled: true,
+                    //                 fillColor: Theme.of(context).brightness ==
+                    //                         Brightness.dark
+                    //                     ? AppTheme.darkCard
+                    //                     : Colors.white,
+                    //                 contentPadding: const EdgeInsets.symmetric(
+                    //                   horizontal: _Spacing.lg,
+                    //                   vertical: _Spacing.md,
+                    //                 ),
+                    //               ),
+                    //               hint: const Text('Select nationality'),
+                    //               items: _nationalityOptions.map((option) {
+                    //                 return DropdownMenuItem<String>(
+                    //                   value: option['value'],
+                    //                   child: Text(option['display']!),
+                    //                 );
+                    //               }).toList(),
+                    //               onChanged: (value) {
+                    //                 setState(() {
+                    //                   _selectedNationality = value;
+                    //                 });
+                    //               },
+                    //               validator: (value) {
+                    //                 if (_isGhanaCitizen == 'No' &&
+                    //                     value == null) {
+                    //                   return 'Please select a nationality';
+                    //                 }
+                    //                 return null;
+                    //               },
+                    //             ),
+                    //           ],
+                    //         ),
+                    //       ),
+                    //       if (_selectedNationality == 'Other')
+                    //         _buildQuestionCard(
+                    //           child: _buildTextField(
+                    //             label: 'Specify other nationality',
+                    //             controller: _otherNationalityController,
+                    //             hintText: 'Enter nationality',
+                    //           ),
+                    //         ),
+                    //     ],
+                    //   ),
 
                     // Household members section header
                     if (_numberOfAdults != null && _numberOfAdults! > 0) ...[
@@ -503,7 +520,9 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                             Text(
                               'Full name of household members',
                               style: theme.textTheme.titleMedium?.copyWith(
-                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.textPrimary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -511,7 +530,9 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                             Text(
                               'List all members of the producer\'s household. Do not include the manager/farmer. Include the manager\'s family only if they live in the producer\'s household. Write the first and last names of household members.',
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.textSecondary,
                               ),
                             ),
                           ],
@@ -526,7 +547,8 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                           children: [
                             _buildQuestionCard(
                               child: _buildTextField(
-                                label: 'Full Name of Household Member ${index + 1}',
+                                label:
+                                    'Full Name of Household Member ${index + 1}',
                                 controller: _nameControllers[index],
                                 hintText: 'Enter first and last name',
                                 validator: (value) {
@@ -547,18 +569,25 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
 
                             // Producer details card
                             Opacity(
-                              opacity: _isNameValid(_nameControllers[index].text) ? 1.0 : 0.5,
+                              opacity:
+                                  _isNameValid(_nameControllers[index].text)
+                                      ? 1.0
+                                      : 0.5,
                               child: GestureDetector(
                                 onTap: () {
-                                  if (_isNameValid(_nameControllers[index].text)) {
+                                  if (_isNameValid(
+                                      _nameControllers[index].text)) {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => ProducerDetailsPage(
-                                          personName: _nameControllers[index].text,
+                                        builder: (context) =>
+                                            ProducerDetailsPage(
+                                          personName:
+                                              _nameControllers[index].text,
                                           onSave: (details) {
                                             // Handle saving the details
-                                            print('Saved details for ${_nameControllers[index].text}: $details');
+                                            print(
+                                                'Saved details for ${_nameControllers[index].text}: $details');
                                           },
                                         ),
                                       ),
@@ -566,15 +595,20 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                                   }
                                 },
                                 child: Card(
-                                  margin: const EdgeInsets.only(bottom: _Spacing.lg),
-                                  color: _isNameValid(_nameControllers[index].text)
-                                      ? AppTheme.primaryColor.withOpacity(0.1)
-                                      : Colors.grey.shade200,
+                                  margin: const EdgeInsets.only(
+                                      bottom: _Spacing.lg),
+                                  color:
+                                      _isNameValid(_nameControllers[index].text)
+                                          ? AppTheme.primaryColor
+                                              .withOpacity(0.1)
+                                          : Colors.grey.shade200,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12.0),
                                     side: BorderSide(
-                                      color: _isNameValid(_nameControllers[index].text)
-                                          ? AppTheme.primaryColor.withOpacity(0.3)
+                                      color: _isNameValid(
+                                              _nameControllers[index].text)
+                                          ? AppTheme.primaryColor
+                                              .withOpacity(0.3)
                                           : Colors.grey.shade300,
                                       width: 1,
                                     ),
@@ -582,14 +616,18 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(_Spacing.lg),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Text(
                                             'PRODUCER DETAILS - ${_nameControllers[index].text.isNotEmpty ? _nameControllers[index].text.toUpperCase() : 'ENTER FULL NAME'}',
-                                            style: theme.textTheme.bodyLarge?.copyWith(
+                                            style: theme.textTheme.bodyLarge
+                                                ?.copyWith(
                                               fontWeight: FontWeight.w600,
-                                              color: _isNameValid(_nameControllers[index].text)
+                                              color: _isNameValid(
+                                                      _nameControllers[index]
+                                                          .text)
                                                   ? AppTheme.primaryColor
                                                   : Colors.grey.shade600,
                                             ),
@@ -601,7 +639,8 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
                                         Icon(
                                           Icons.arrow_forward_ios,
                                           size: 16,
-                                          color: _isNameValid(_nameControllers[index].text)
+                                          color: _isNameValid(
+                                                  _nameControllers[index].text)
                                               ? AppTheme.primaryColor
                                               : Colors.grey.shade600,
                                         ),
@@ -638,9 +677,8 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
         child: ElevatedButton(
           onPressed: _isFormComplete ? _saveAndContinue : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _isFormComplete
-                ? AppTheme.primaryColor
-                : Colors.grey[400],
+            backgroundColor:
+                _isFormComplete ? AppTheme.primaryColor : Colors.grey[400],
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             shape: RoundedRectangleBorder(

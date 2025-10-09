@@ -492,46 +492,13 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_respondentImage == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Please take a picture of the respondent'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  } else if (_producerSignatureImage == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Please capture the producer\'s signature'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  } else if (_gpsCoordinates == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please capture GPS coordinates'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  } else if (_endTime == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Please select the end time of the survey'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  } else {
-                    // Handle form submission
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SurveyCompletionPage(),
-                      ),
-                    );
-                  }
+                  // Handle form submission without validation
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SurveyCompletionPage(),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4CAF50),

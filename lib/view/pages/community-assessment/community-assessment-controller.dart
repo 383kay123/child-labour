@@ -10,22 +10,22 @@
 //   }
 // }
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:surveyflow/controller/api/api.dart';
-import '../../../controller/db/db.dart';
-import '../../../controller/models/community-assessment-model.dart';
-import '../../globals/globals.dart';
 import 'package:get/get.dart';
 
-class CommunityAssessmentController {
+// import 'package:surveyflow/controller/api/api.dart';
+import '../../../controller/api/api.dart';
+import '../../../controller/db/db.dart';
+import '../../../controller/models/community-assessment-model.dart';
+// import '../../../controller/models/community-assessment-modelrt 'package:get/get.dart';
 
+class CommunityAssessmentController {
   BuildContext? communityAssessmentContext;
   final ApiService _api = ApiService();
 
   var communityName = ''.obs;
-  var communityScore = 0.obs;  // Changed to int for score calculation
-  
+  var communityScore = 0.obs; // Changed to int for score calculation
+
   // Method to update score based on answer
   void updateScore(String questionKey, String answer) {
     if (answer == 'Yes') {
@@ -35,6 +35,7 @@ class CommunityAssessmentController {
       // communityScore--;
     }
   }
+
   var q1 = ''.obs;
   var q2 = ''.obs;
   var q3 = ''.obs;
@@ -91,10 +92,11 @@ class CommunityAssessmentController {
     debugPrint("Form saved offline: ${response.toMap()}");
 
     try {
-      final int id = await LocalDBHelper.instance.insertCommunityAssessment(response);
+      final int id =
+          await LocalDBHelper.instance.insertCommunityAssessment(response);
       if (id > 0) {
-        ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
-          SnackBar(content: Text("Form saved offline")));
+        ScaffoldMessenger.of(communityAssessmentContext!)
+            .showSnackBar(SnackBar(content: Text("Form saved offline")));
         return true;
       } else {
         ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
@@ -102,8 +104,8 @@ class CommunityAssessmentController {
         return false;
       }
     } catch (e) {
-      ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
-        SnackBar(content: Text("DB error: ${e.toString()}")));
+      ScaffoldMessenger.of(communityAssessmentContext!)
+          .showSnackBar(SnackBar(content: Text("DB error: ${e.toString()}")));
       return false;
     }
   }

@@ -1,6 +1,6 @@
+import 'package:human_rights_monitor/controller/db/table_names.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:surveyflow/controller/db/table_names.dart';
 
 import '../../view/models/monitoring_model.dart';
 import '../models/community-assessment-model.dart';

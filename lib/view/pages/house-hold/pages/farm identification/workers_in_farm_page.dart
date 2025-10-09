@@ -62,6 +62,7 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
   void initState() {
     super.initState();
     _hasRecruitedWorker = '0'; // Default to 'No'
+    _everRecruitedWorker = 'No'; // Default to 'No' for ever recruited
   }
 
   @override
@@ -76,25 +77,26 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
     // Check if the main recruitment question is answered
     if (_hasRecruitedWorker == null) return false;
 
-    // If recruited workers, check if at least one type is selected
+    // If recruited workers in past year, check if at least one type is selected
     if (_hasRecruitedWorker == '1') {
       if (!_permanentLabor && !_casualLabor) return false;
+
+      // Check if all agreement responses are filled
+      if (_agreementResponses.values.any((response) => response == null)) {
+        return false;
+      }
     }
 
     // If not recruited in past year, check if ever recruited question is answered
-    if (_hasRecruitedWorker == '0' && _everRecruitedWorker == null) {
-      return false;
+    if (_hasRecruitedWorker == '0') {
+      if (_everRecruitedWorker == null) return false;
+
+      // If they have recruited before, check agreement responses
+      if (_everRecruitedWorker == 'Yes' &&
+          _agreementResponses.values.any((response) => response == null)) {
+        return false;
+      }
     }
-
-    // Check if task clarification question is answered
-    if (_tasksClarified == null) return false;
-
-    // Check if additional tasks question is answered
-    if (_additionalTasks == null) return false;
-
-    // Check if refusal action question is answered
-    if (_refusalAction == null) return false;
-
     // If 'Other' is selected, check if text is provided
     if (_refusalAction == 'Other' &&
         _otherAgreementController.text.trim().isEmpty) {
@@ -320,25 +322,20 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor:
+          isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text(
-          'Workers in Farm',
+          'Workers in the farm',
           style: theme.textTheme.titleLarge?.copyWith(
+            color: Colors.white,
             fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : AppTheme.textPrimary,
           ),
         ),
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-        //   onPressed: () => Navigator.of(context).pop(),
-        //   padding: const EdgeInsets.all(_Spacing.md),
-        // ),
-        automaticallyImplyLeading: false,
+        centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(
-          color: Colors.black,
-        ),
+        backgroundColor: AppTheme.primaryColor,
+        automaticallyImplyLeading: false,
       ),
       body: Container(
         color: AppTheme.backgroundColor,
@@ -473,6 +470,129 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
                             },
                           ),
                         ],
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Workers Recruitment Title
+              Padding(
+                padding: const EdgeInsets.only(
+                    top: _Spacing.lg, bottom: _Spacing.sm),
+                child: Text(
+                  'Workers Recruitment',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+
+              // Worker Agreement Type Card
+              _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'What kind of agreement do you have with your workers?',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: isDark
+                            ? AppTheme.darkTextPrimary
+                            : AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: _Spacing.md),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildRadioOption(
+                          value: 'Verbal agreement without witness',
+                          groupValue: _workerAgreementType,
+                          label: 'Verbal agreement without witness',
+                          onChanged: (value) {
+                            setState(() {
+                              _workerAgreementType = value;
+                            });
+                          },
+                        ),
+                        _buildRadioOption(
+                          value: 'Verbal agreement with witness',
+                          groupValue: _workerAgreementType,
+                          label: 'Verbal agreement with witness',
+                          onChanged: (value) {
+                            setState(() {
+                              _workerAgreementType = value;
+                            });
+                          },
+                        ),
+                        _buildRadioOption(
+                          value: 'Written agreement without witness',
+                          groupValue: _workerAgreementType,
+                          label: 'Written agreement without witness',
+                          onChanged: (value) {
+                            setState(() {
+                              _workerAgreementType = value;
+                            });
+                          },
+                        ),
+                        _buildRadioOption(
+                          value: 'Written contract with witness',
+                          groupValue: _workerAgreementType,
+                          label: 'Written contract with witness',
+                          onChanged: (value) {
+                            setState(() {
+                              _workerAgreementType = value;
+                            });
+                          },
+                        ),
+                        _buildRadioOption(
+                          value: 'Other (specify)',
+                          groupValue: _workerAgreementType,
+                          label: 'Other (specify)',
+                          onChanged: (value) {
+                            setState(() {
+                              _workerAgreementType = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Other Agreement Type Specification Card
+              if (_workerAgreementType == 'Other (specify)')
+                _buildCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Please specify the agreement type',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: _Spacing.md),
+                      TextFormField(
+                        controller: _otherAgreementController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter agreement type',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: 10.0,
+                          ),
+                        ),
+                        maxLines: 2,
                       ),
                     ],
                   ),
@@ -738,88 +858,72 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
                 ),
               ),
 
-              // Agreement Statements Section - Salary and Debt
-              _buildAgreementSection(
-                statements: [
-                  'It is acceptable to withhold a worker\'s salary without their consent.',
-                  'It is acceptable for a person who cannot pay their debts to work for the creditor to reimburse the debt.',
-                ],
-                ids: ['salary_workers', 'recruit_1'],
-              ),
+              // Show agreement section if:
+              // 1. Have recruited during the past year (Yes), or
+              // 2. Haven't recruited in past year but have recruited before (Yes)
+              if (_hasRecruitedWorker == '1' || 
+                  (_hasRecruitedWorker == '0' && _everRecruitedWorker == 'Yes'))
+                ...[
+                  // Note for the respondent
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: _Spacing.lg),
+                    child: Text(
+                      'For the following section, please read the statements to the respondent, and ask him/her if he/she agrees or disagrees.',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
 
-              // Agreement Statements Section - Recruitment
-              _buildAgreementSection(
-                statements: [
-                  'It is acceptable for an employer not to reveal the true nature of the work during the recruitment.',
-                  'A worker is obliged to work whenever he is called upon by his employer.',
-                ],
-                ids: ['recruit_2', 'recruit_3'],
-              ),
+                  // Agreement Statements Section - Salary and Debt
+                  _buildAgreementSection(
+                    statements: [
+                      'It is acceptable to withhold a worker\'s salary without their consent.',
+                      'It is acceptable for a person who cannot pay their debts to work for the creditor to reimburse the debt.',
+                    ],
+                    ids: ['salary_workers', 'recruit_1'],
+                  ),
 
-              // Agreement Statements Section - Working Conditions
-              _buildAgreementSection(
-                statements: [
-                  'A worker is not entitled to move freely.',
-                  'A worker must be free to communicate with his or her family and friends.',
-                  'A worker is obliged to adapt to any living conditions imposed by the employer.',
-                  'It is acceptable for an employer and their family to interfere in a worker\'s private life.',
-                  'A worker should not have the freedom to leave work whenever they wish.',
-                ],
-                ids: [
-                  'conditions_1',
-                  'conditions_2',
-                  'conditions_3',
-                  'conditions_4',
-                  'conditions_5'
-                ],
-              ),
+                  // Agreement Statements Section - Recruitment
+                  _buildAgreementSection(
+                    statements: [
+                      'It is acceptable for an employer not to reveal the true nature of the work during the recruitment.',
+                      'A worker is obliged to work whenever he is called upon by his employer.',
+                    ],
+                    ids: ['recruit_2', 'recruit_3'],
+                  ),
 
-              // Agreement Statements Section - Leaving Employment
-              _buildAgreementSection(
-                statements: [
-                  'A worker should be required to stay longer than expected while waiting for unpaid salary.',
-                  'A worker should not be able to leave their employer when they owe money to their employer.',
-                ],
-                ids: ['leaving_1', 'leaving_2'],
-              ),
+                  // Agreement Statements Section - Working Conditions
+                  _buildAgreementSection(
+                    statements: [
+                      'A worker is not entitled to move freely.',
+                      'A worker must be free to communicate with his or her family and friends.',
+                      'A worker is obliged to adapt to any living conditions imposed by the employer.',
+                      'It is acceptable for an employer and their family to interfere in a worker\'s private life.',
+                      'A worker should not have the freedom to leave work whenever they wish.',
+                    ],
+                    ids: [
+                      'conditions_1',
+                      'conditions_2',
+                      'conditions_3',
+                      'conditions_4',
+                      'conditions_5',
+                    ],
+                  ),
 
-              // // Next Button
-              // Padding(
-              //   padding: const EdgeInsets.only(
-              //     top: _Spacing.xl,
-              //     bottom: _Spacing.xxl,
-              //   ),
-              //   child: SizedBox(
-              //     width: double.infinity,
-              //     child: ElevatedButton(
-              //       onPressed: () {
-              //         Navigator.pushAndRemoveUntil(
-              //           context,
-              //           MaterialPageRoute(
-              //             builder: (context) => const AdultsInformationPage(),
-              //           ),
-              //           (route) => false, // This removes all previous routes
-              //         );
-              //       },
-              //       style: ElevatedButton.styleFrom(
-              //         backgroundColor: AppTheme.primaryColor,
-              //         padding:
-              //             const EdgeInsets.symmetric(vertical: _Spacing.lg),
-              //         shape: RoundedRectangleBorder(
-              //           borderRadius: BorderRadius.circular(8.0),
-              //         ),
-              //         elevation: 0,
-              //       ),
-              //       child: Text(
-              //         'Next: Adults in Household',
-              //         style: theme.textTheme.labelLarge?.copyWith(
-              //           color: Colors.white,
-              //           fontWeight: FontWeight.w600,
-              //         ),
-              //       ),
-              //     ),
-              //   ),
-              // ),
+                  // Agreement Statements Section - Leaving Employment
+                  _buildAgreementSection(
+                    statements: [
+                      'A worker should be required to stay longer than expected while waiting for unpaid salary.',
+                      'A worker should not be able to leave their employer when they owe money to their employer.',
+                    ],
+                    ids: ['leaving_1', 'leaving_2'],
+                  ),
+                ],
+
+              const SizedBox(height: _Spacing.xxl),
             ],
           ),
         ),

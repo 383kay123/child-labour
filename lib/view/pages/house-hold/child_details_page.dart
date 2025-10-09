@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
 import 'package:image_picker/image_picker.dart';
+// import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
 
 class _ArithmeticItem extends StatelessWidget {
   final String expression;
@@ -827,87 +829,86 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
   }
 
   void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      final childData = {
-        'childNumber': widget.childNumber,
-        'schoolDayHours': _schoolDayTaskDurationController.text.trim(),
-        'isFarmerChild': _isFarmerChild,
-        'childListNumber': _childNumberController.text.trim(),
-        'birthYear': _selectedDate?.year,
-        'canBeSurveyedNow': _canBeSurveyedNow,
-        'surveyNotPossibleReasons':
-            _canBeSurveyedNow == false ? _surveyNotPossibleReasons : [],
-        'otherReason': _canBeSurveyedNow == false &&
-                _surveyNotPossibleReasons.contains('other')
-            ? _otherReasonController.text.trim()
-            : null,
-        'respondentType': _canBeSurveyedNow == false ? _respondentType : null,
-        'otherRespondentType':
-            _canBeSurveyedNow == false && _respondentType == 'other'
-                ? _otherRespondentTypeController.text.trim()
-                : null,
-        'childName': _nameController.text.trim(),
-        'childSurname': _surnameController.text.trim(),
-        'childGender': _gender,
-        'childAge': _selectedDate != null
-            ? (DateTime.now().year - _selectedDate!.year).toString()
-            : '',
-        'birthYear': _selectedDate?.year.toString() ?? '',
-        'hasBirthCertificate': _hasBirthCertificate,
-        'bornInCommunity': _bornInCommunity,
-        'birthCountry': _birthCountry,
-        'relationshipToHead': _relationshipToHead,
-        'otherRelationship': _otherRelationshipController.text.trim(),
-        'notWithFamilyReasons': _notWithFamilyReasons,
-        'otherNotWithFamilyReason': _otherNotWithFamilyController.text.trim(),
-        'childAgreedWithDecision': _childAgreedWithDecision,
-        'hasSpokenWithParents': _hasSpokenWithParents,
-        'timeInHousehold': _timeInHousehold,
-        'whoAccompaniedChild': _whoAccompaniedChild,
-        'otherAccompanied': _otherAccompaniedController.text.trim(),
-        'fatherResidence': _fatherResidence,
-        'fatherCountry': _fatherCountry,
-        'otherFatherCountry': _otherFatherCountryController.text.trim(),
-        'motherResidence': _motherResidence,
-        'motherCountry': _motherCountry,
-        'otherMotherCountry': _otherMotherCountryController.text.trim(),
-        'isCurrentlyEnrolled': _isCurrentlyEnrolled,
-        'schoolName': _isCurrentlyEnrolled == true
-            ? _schoolNameController.text.trim()
-            : null,
-        'schoolType': _isCurrentlyEnrolled == true ? _schoolType : null,
-        'gradeLevel': _isCurrentlyEnrolled == true ? _gradeLevel : null,
-        'schoolAttendanceFrequency':
-            _isCurrentlyEnrolled == true ? _schoolAttendanceFrequency : null,
-        'availableSchoolSupplies': _isCurrentlyEnrolled == true
-            ? _availableSchoolSupplies.toList()
-            : null,
-        'hasEverBeenToSchool':
-            _isCurrentlyEnrolled == false ? _hasEverBeenToSchool : null,
-        'leftSchoolYear': _hasEverBeenToSchool == true
-            ? _leftSchoolYearController.text.trim()
-            : null,
-        'attendedSchoolLast7Days': _attendedSchoolLast7Days,
-        'missedSchoolDays': _missedSchoolDays,
-        'workedInHouse': _workedInHouse,
-        'workedOnCocoaFarm': _workedOnCocoaFarm,
-        'cocoaFarmTasks': _cocoaFarmTasks.toList(),
-        'workFrequency': _workFrequency,
-        'observedWorking': _observedWorking,
-        'receivedRemuneration': _receivedRemuneration,
-        'wasSupervisedByAdult': _wasSupervisedByAdult,
-        'longestLightDutyTime': _longestLightDutyTime,
-        'longestNonSchoolDayTime': _longestNonSchoolDayTime,
-        'tasksLast12Months': _tasksLast12Months.toList(),
-        'taskLocation': _taskLocation,
-        'otherTaskLocation': _otherLocationController.text.trim(),
-        'schoolDayHours': _schoolDayHoursController.text.trim(),
-        'parentConsentPhoto': _parentConsentPhoto,
-        'childPhotoPath': _childPhoto?.path,
-      };
+    // Allow form submission without validation
+    final childData = {
+      'childNumber': widget.childNumber,
+      'schoolDayHours': _schoolDayTaskDurationController.text.trim(),
+      'isFarmerChild': _isFarmerChild,
+      'childListNumber': _childNumberController.text.trim(),
+      'birthYear': _selectedDate?.year,
+      'canBeSurveyedNow': _canBeSurveyedNow,
+      'surveyNotPossibleReasons':
+          _canBeSurveyedNow == false ? _surveyNotPossibleReasons : [],
+      'otherReason': _canBeSurveyedNow == false &&
+              _surveyNotPossibleReasons.contains('other')
+          ? _otherReasonController.text.trim()
+          : null,
+      'respondentType': _canBeSurveyedNow == false ? _respondentType : null,
+      'otherRespondentType':
+          _canBeSurveyedNow == false && _respondentType == 'other'
+              ? _otherRespondentTypeController.text.trim()
+              : null,
+      'childName': _nameController.text.trim(),
+      'childSurname': _surnameController.text.trim(),
+      'childGender': _gender,
+      'childAge': _selectedDate != null
+          ? (DateTime.now().year - _selectedDate!.year).toString()
+          : '',
+      'birthYear': _selectedDate?.year.toString() ?? '',
+      'hasBirthCertificate': _hasBirthCertificate,
+      'bornInCommunity': _bornInCommunity,
+      'birthCountry': _birthCountry,
+      'relationshipToHead': _relationshipToHead,
+      'otherRelationship': _otherRelationshipController.text.trim(),
+      'notWithFamilyReasons': _notWithFamilyReasons,
+      'otherNotWithFamilyReason': _otherNotWithFamilyController.text.trim(),
+      'childAgreedWithDecision': _childAgreedWithDecision,
+      'hasSpokenWithParents': _hasSpokenWithParents,
+      'timeInHousehold': _timeInHousehold,
+      'whoAccompaniedChild': _whoAccompaniedChild,
+      'otherAccompanied': _otherAccompaniedController.text.trim(),
+      'fatherResidence': _fatherResidence,
+      'fatherCountry': _fatherCountry,
+      'otherFatherCountry': _otherFatherCountryController.text.trim(),
+      'motherResidence': _motherResidence,
+      'motherCountry': _motherCountry,
+      'otherMotherCountry': _otherMotherCountryController.text.trim(),
+      'isCurrentlyEnrolled': _isCurrentlyEnrolled,
+      'schoolName': _isCurrentlyEnrolled == true
+          ? _schoolNameController.text.trim()
+          : null,
+      'schoolType': _isCurrentlyEnrolled == true ? _schoolType : null,
+      'gradeLevel': _isCurrentlyEnrolled == true ? _gradeLevel : null,
+      'schoolAttendanceFrequency':
+          _isCurrentlyEnrolled == true ? _schoolAttendanceFrequency : null,
+      'availableSchoolSupplies': _isCurrentlyEnrolled == true
+          ? _availableSchoolSupplies.toList()
+          : null,
+      'hasEverBeenToSchool':
+          _isCurrentlyEnrolled == false ? _hasEverBeenToSchool : null,
+      'leftSchoolYear': _hasEverBeenToSchool == true
+          ? _leftSchoolYearController.text.trim()
+          : null,
+      'attendedSchoolLast7Days': _attendedSchoolLast7Days,
+      'missedSchoolDays': _missedSchoolDays,
+      'workedInHouse': _workedInHouse,
+      'workedOnCocoaFarm': _workedOnCocoaFarm,
+      'cocoaFarmTasks': _cocoaFarmTasks.toList(),
+      'workFrequency': _workFrequency,
+      'observedWorking': _observedWorking,
+      'receivedRemuneration': _receivedRemuneration,
+      'wasSupervisedByAdult': _wasSupervisedByAdult,
+      'longestLightDutyTime': _longestLightDutyTime,
+      'longestNonSchoolDayTime': _longestNonSchoolDayTime,
+      'tasksLast12Months': _tasksLast12Months.toList(),
+      'taskLocation': _taskLocation,
+      'otherTaskLocation': _otherLocationController.text.trim(),
+      'schoolDayHours': _schoolDayHoursController.text.trim(),
+      'parentConsentPhoto': _parentConsentPhoto,
+      'childPhotoPath': _childPhoto?.path,
+    };
 
-      Navigator.pop(context, childData);
-    }
+    Navigator.pop(context, childData);
   }
 
   Future<void> _selectWoundedDate(BuildContext context) async {
@@ -1242,29 +1243,72 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                   const SizedBox(height: 16),
                 ],
 
-                // Born in community
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<bool>(
-                  question: 'Was the child born in this community?',
-                  groupValue: _bornInCommunity,
+                const SizedBox(height: 24), // Changed semicolon to comma
+                _buildModernRadioGroup<String>(
+                  question: 'Is the child born in this community?',
+                  groupValue: _bornInCommunity == null
+                      ? null
+                      : _bornInCommunity!
+                          ? 'same_community'
+                          : _birthCountry == 'same_district'
+                              ? 'same_district'
+                              : _birthCountry == 'same_region'
+                                  ? 'same_region'
+                                  : _birthCountry == 'other_ghana_region'
+                                      ? 'other_ghana_region'
+                                      : 'other_country',
                   onChanged: (value) {
                     setState(() {
-                      _bornInCommunity = value;
+                      _bornInCommunity = value == 'same_community';
+                      if (value == 'same_community') {
+                        _birthCountry = null;
+                      } else if (value == 'same_district') {
+                        _birthCountry = 'same_district';
+                      } else if (value == 'same_region') {
+                        _birthCountry = 'same_region';
+                      } else if (value == 'other_ghana_region') {
+                        _birthCountry = 'other_ghana_region';
+                      } else if (value == 'other_country') {
+                        _birthCountry = 'other_country';
+                      }
                     });
                   },
                   options: [
-                    {'value': true, 'title': 'Yes'},
-                    {'value': false, 'title': 'No'},
+                    {
+                      'value': 'same_community',
+                      'title': 'Yes',
+                    },
+                    {
+                      'value': 'same_district',
+                      'title':
+                          'No, he was born in this district but different community within the district',
+                    },
+                    {
+                      'value': 'same_region',
+                      'title':
+                          'No, he was born in this region but different district within the region',
+                    },
+                    {
+                      'value': 'other_ghana_region',
+                      'title': 'No, he was born in another region of Ghana',
+                    },
+                    {
+                      'value': 'other_country',
+                      'title': 'No, he was born in another country',
+                    },
                   ],
                 ),
 
-                // Country of birth (shown only if not born in this community)
-                if (_bornInCommunity == false) ...[
-                  const SizedBox(height: 24),
+                // Country of birth (shown only if born in another country)
+                if (_birthCountry == 'other_country') ...[
+                  const SizedBox(height: 16),
                   _buildModernDropdown<String>(
                     label: 'In which country was the child born?',
-                    value: _birthCountry,
-                    items: _countries.map((String country) {
+                    value:
+                        _birthCountry == 'other_country' ? null : _birthCountry,
+                    items: _countries
+                        .where((c) => c != 'Ghana')
+                        .map((String country) {
                       return DropdownMenuItem<String>(
                         value: country,
                         child: Text(country),
@@ -1277,7 +1321,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                     },
                     hintText: 'Select country',
                     validator: (value) {
-                      if (_bornInCommunity == false &&
+                      if (_birthCountry == 'other_country' &&
                           (value == null || value.isEmpty)) {
                         return 'Please select the country of birth';
                       }
@@ -3899,11 +3943,19 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: _submitForm,
+                    onTap: () {
+                      _submitForm();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SensitizationPage(),
+                        ),
+                      );
+                    },
                     borderRadius: BorderRadius.circular(16),
                     child: Center(
                       child: Text(
-                        'SAVE CHILD DETAILS',
+                        'NEXT:SENSITIZATION',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,

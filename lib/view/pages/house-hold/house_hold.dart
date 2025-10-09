@@ -3,9 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:surveyflow/view/pages/house-hold/pages/steps/consent_page.dart';
-import 'package:surveyflow/view/pages/house-hold/pages/steps/cover_page.dart';
-import 'package:surveyflow/view/pages/house-hold/pages/steps/farmer_identification_page.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/consent_page.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/cover_page.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/farmer_identification_page.dart';
+
+// import 'package:surveyflow/view/pages/house-hold/pages/steps/consent_page.dart';
+// import 'package:surveyflow/view/pages/house-hold/pages/steps/cover_page.dart';
+// import 'package:surveyflow/view/pages/house-hold/pages/steps/farmer_identification_page.dart';
+
+import 'pages/farm identification/farmer_identification1_page.dart';
 
 class SurveyState {
   bool isInterviewTimeRecorded = false;
@@ -46,7 +52,7 @@ class _HouseHoldState extends State<HouseHold> {
 
   // Keep track of current page for UI updates
   int _currentPageIndex = 0;
-  final int _totalPages = 3; // Update this if you add more pages
+  final int _totalPages = 4; // Total number of pages in the form
 
   double get _progress => (_currentPageIndex + 1) / _totalPages;
 
@@ -351,7 +357,26 @@ class _HouseHoldState extends State<HouseHold> {
           },
         ),
 
-        // Farmer Identification Page
+        // Farmer Identification 1 Page
+        FarmerIdentification1Page(
+          onComplete: (data) {
+            // Handle the form data from FarmerIdentification1Page
+            print('Farmer Data: $data');
+          },
+          onPrevious: () => _pageController.previousPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          ),
+          onNext: () {
+            // Navigate to the next page after FarmerIdentification1Page
+            _pageController.nextPage(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          },
+        ),
+
+        // Farmer Identification Page (4th page)
         FarmerIdentificationPage(
           onPrevious: () => _pageController.previousPage(
             duration: const Duration(milliseconds: 300),
@@ -408,7 +433,7 @@ class _HouseHoldState extends State<HouseHold> {
                         size: 18, color: Colors.green.shade600),
                     const SizedBox(width: 8),
                     Text(
-                      _currentPageIndex == 0 ? 'Cancel' : 'Previous',
+                      'Previous',
                       style: GoogleFonts.inter(
                         color: Colors.green.shade600,
                         fontWeight: FontWeight.w600,

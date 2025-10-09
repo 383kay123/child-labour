@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:surveyflow/view/theme/app_theme.dart';
 
+import '../../../../theme/app_theme.dart';
 import 'end_of_collection_page.dart';
 
 class SensitizationQuestionsPage extends StatefulWidget {
@@ -263,15 +263,6 @@ class _SensitizationQuestionsPageState
                     vertical: 12,
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a number';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
               ),
 
               const SizedBox(height: 16),
@@ -299,15 +290,6 @@ class _SensitizationQuestionsPageState
                     vertical: 12,
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a number';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
               ),
 
               const SizedBox(height: 16),
@@ -385,18 +367,12 @@ class _SensitizationQuestionsPageState
                       vertical: 12,
                     ),
                   ),
-                  validator: (value) {
-                    if (_consentForPicture == false &&
-                        (value == null || value.isEmpty)) {
-                      return 'Please specify the reason for not consenting';
-                    }
-                    return null;
-                  },
                 ),
               ],
 
               const SizedBox(height: 16),
 
+              // Submit Button
               // Sensitization Picture Section
               Text(
                 '7. Please take a picture of the sensitization session',
@@ -588,12 +564,6 @@ class _SensitizationQuestionsPageState
                     vertical: 12,
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please provide your observations';
-                  }
-                  return null;
-                },
               ),
 
               const SizedBox(height: 24),
@@ -603,32 +573,13 @@ class _SensitizationQuestionsPageState
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    if (hasSensitizedHousehold == null ||
-                        hasSensitizedOnProtection == null ||
-                        hasSensitizedOnSafeLabour == null ||
-                        _femaleAdultsController.text.isEmpty ||
-                        _maleAdultsController.text.isEmpty ||
-                        _consentForPicture == null ||
-                        (_consentForPicture == false &&
-                            _consentReasonController.text.isEmpty) ||
-                        _sensitizationImage == null ||
-                        _householdWithUserImage == null ||
-                        _reactionController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please answer the question'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    } else {
-                      // Handle form submission
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const EndOfCollectionPage(),
-                        ),
-                      );
-                    }
+                    // Handle form submission without validation
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EndOfCollectionPage(),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF4CAF50),
