@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../theme/app_theme.dart';
 import 'Startsurvey.dart';
 
 class Homepage extends StatelessWidget {
@@ -11,15 +12,14 @@ class Homepage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
+        backgroundColor: AppTheme.primaryColor,
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
         title: Text(
           'Human Rights Monitoring',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF1A1A1A),
-            fontSize: 18,
-          ),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         centerTitle: true,
       ),
