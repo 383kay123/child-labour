@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,18 @@ import 'package:image_picker/image_picker.dart';
 
 import '../survey_completion_page.dart';
 
+/// This file contains the end-of-collection form for the farm identification survey.
+/// It captures final details including respondent's photo, signature, GPS coordinates, and end time.
+
+/// A collection of reusable spacing constants for consistent UI layout.
+class _Spacing {
+  static const double xs = 4.0;
+  static const double sm = 8.0;
+  static const double md = 16.0;
+  static const double lg = 24.0;
+  static const double xl = 32.0;
+}
+
 class EndOfCollectionPage extends StatefulWidget {
   const EndOfCollectionPage({Key? key}) : super(key: key);
 
@@ -16,28 +29,83 @@ class EndOfCollectionPage extends StatefulWidget {
 }
 
 class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
+  // Form controllers and state
   final TextEditingController _remarksController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+
+  /// Image file of the respondent
   File? _respondentImage;
+
+  /// Image file of the producer's signature
   File? _producerSignatureImage;
+
+  /// String containing the GPS coordinates in 'latitude, longitude' format
   String? _gpsCoordinates;
+
+  /// Flag to track if GPS location is being fetched
   bool _isLoadingGps = false;
+
+  /// Time when the survey was completed
   TimeOfDay? _endTime;
 
+  /// Tag for logging purposes
+  static const String _logTag = 'EndOfCollectionPage';
+
+  /// Validates if all required fields are filled
+  /// Returns true if all required fields have values, false otherwise
+  bool get _isFormComplete {
+    final isComplete = _respondentImage != null &&
+        _producerSignatureImage != null &&
+        _gpsCoordinates != null &&
+        _endTime != null;
+
+    developer.log('Form validation - Complete: $isComplete',
+        name: _logTag,
+        level: isComplete ? 800 : 500 // INFO for complete, FINE for incomplete
+        );
+
+    if (!isComplete) {
+      developer.log('Missing fields:', name: _logTag);
+      if (_respondentImage == null)
+        developer.log('- Respondent image', name: _logTag);
+      if (_producerSignatureImage == null)
+        developer.log('- Producer signature', name: _logTag);
+      if (_gpsCoordinates == null)
+        developer.log('- GPS coordinates', name: _logTag);
+      if (_endTime == null) developer.log('- End time', name: _logTag);
+    }
+
+    return isComplete;
+  }
+
+  /// Fetches the current device location using GPS
+  /// Updates the _gpsCoordinates state if successful
+  /// Shows error messages if location services are disabled or permissions are denied
   Future<void> _getCurrentLocation() async {
+    developer.log('Initiating location fetch', name: _logTag);
+
     setState(() {
       _isLoadingGps = true;
     });
 
     try {
+      // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        developer.log('Location services are disabled',
+            name: _logTag, level: 900); // WARNING
         if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Location services are disabled. Please enable them.'),
+          SnackBar(
+            content: const Text(
+                'Location services are disabled. Please enable them.'),
             backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'SETTINGS',
+              textColor: Colors.white,
+              onPressed: () => Geolocator.openLocationSettings(),
+            ),
           ),
         );
         return;
@@ -69,14 +137,22 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
         return;
       }
 
+      // Get current position with high accuracy
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
+      final coordinates = '${position.latitude}, ${position.longitude}';
+      developer.log('Location fetched successfully: $coordinates',
+          name: _logTag, level: 800 // INFO
+          );
+
       setState(() {
-        _gpsCoordinates = '${position.latitude}, ${position.longitude}';
+        _gpsCoordinates = coordinates;
       });
     } catch (e) {
+      developer.log('Error fetching location: $e',
+          name: _logTag, level: 1000); // ERROR
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -93,13 +169,66 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
     }
   }
 
+  /// Submits the form and navigates to the completion page
+  /// Logs all submitted data before navigation
+  /// If the form is not complete, logs a warning and shows an error message to the user
+  void _submitForm() {
+    developer.log('Form submission initiated', name: _logTag);
+
+    if (_isFormComplete) {
+      // Log all submitted data
+      developer.log('Form submission data:', name: _logTag);
+      developer.log(
+          '- Respondent image: ${_respondentImage?.path ?? 'Not provided'}',
+          name: _logTag);
+      developer.log(
+          '- Signature image: ${_producerSignatureImage?.path ?? 'Not provided'}',
+          name: _logTag);
+      developer.log('- GPS Coordinates: $_gpsCoordinates', name: _logTag);
+      developer.log('- End Time: ${_endTime?.format(context) ?? 'Not set'}',
+          name: _logTag);
+      developer.log(
+          '- Additional Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'None'}',
+          name: _logTag);
+
+      // Navigate to completion page
+      developer.log('Navigating to SurveyCompletionPage', name: _logTag);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SurveyCompletionPage(),
+        ),
+      );
+    } else {
+      developer.log(
+          'Form submission failed: Not all required fields are filled',
+          name: _logTag,
+          level: 900 // WARNING
+          );
+
+      // Show error message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Please complete all required fields before submitting.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
+    developer.log('Disposing resources', name: _logTag);
     _remarksController.dispose();
     super.dispose();
   }
 
+  /// Captures an image using the device camera
+  /// [isSignature] determines if this is for signature capture (different icon and styling)
   Future<void> _takePicture({bool isSignature = false}) async {
+    developer.log('Taking picture - isSignature: $isSignature', name: _logTag);
+
     try {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
@@ -109,6 +238,8 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
       );
 
       if (photo != null) {
+        developer.log('Picture captured successfully: ${photo.path}',
+            name: _logTag);
         setState(() {
           if (isSignature) {
             _producerSignatureImage = File(photo.path);
@@ -116,8 +247,11 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
             _respondentImage = File(photo.path);
           }
         });
+      } else {
+        developer.log('Picture capture cancelled by user', name: _logTag);
       }
     } catch (e) {
+      developer.log('Error capturing picture: $e', name: _logTag, level: 1000);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -128,395 +262,440 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
     }
   }
 
+  Widget _buildQuestionCard({required Widget child}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: _Spacing.lg),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      color: isDark ? Colors.grey.shade900 : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(_Spacing.lg),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildImageSection({
+    required String title,
+    required String note,
+    required File? image,
+    required VoidCallback onTakePicture,
+    required String buttonText,
+    IconData? icon,
+    double imageHeight = 200,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return _buildQuestionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: isDark ? Colors.white70 : Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: _Spacing.sm),
+          Text(
+            note,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: isDark ? Colors.white60 : Colors.grey.shade600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: _Spacing.md),
+
+          // Image Preview
+          Container(
+            width: double.infinity,
+            height: imageHeight,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+            ),
+            child: image == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        icon ?? Icons.photo_camera,
+                        size: 48,
+                        color: isDark ? Colors.white60 : Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: _Spacing.sm),
+                      Text(
+                        'No image captured',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: isDark ? Colors.white60 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  )
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      image,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: _Spacing.md),
+
+          // Capture Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onTakePicture,
+              icon: Icon(icon ?? Icons.camera_alt, size: 20),
+              label: Text(buttonText),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4CAF50),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTapToCaptureSection({
+    required String title,
+    required String placeholder,
+    required String? value,
+    required VoidCallback onTap,
+    required IconData icon,
+    bool isLoading = false,
+    bool showCopyButton = false,
+    String? timestamp,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return _buildQuestionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: isDark ? Colors.white70 : Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: _Spacing.md),
+          InkWell(
+            onTap: isLoading ? null : onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(_Spacing.lg),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                color: value == null
+                    ? (isDark ? Colors.grey.shade800 : Colors.grey.shade50)
+                    : (isDark
+                        ? Colors.green.shade900.withOpacity(0.3)
+                        : Colors.green.shade50),
+              ),
+              child: isLoading
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: _Spacing.md),
+                        Text(
+                          'Getting location...',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Icon(
+                          icon,
+                          color: value == null
+                              ? (isDark ? Colors.white60 : Colors.grey.shade600)
+                              : const Color(0xFF4CAF50),
+                        ),
+                        const SizedBox(width: _Spacing.lg),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                value ?? placeholder,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: value == null
+                                      ? (isDark
+                                          ? Colors.white60
+                                          : Colors.grey.shade600)
+                                      : (isDark
+                                          ? Colors.green.shade300
+                                          : Colors.green.shade800),
+                                  fontWeight: value == null
+                                      ? FontWeight.normal
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                              if (timestamp != null && value != null)
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.only(top: _Spacing.xs),
+                                  child: Text(
+                                    timestamp,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: isDark
+                                          ? Colors.white54
+                                          : Colors.grey.shade600,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (showCopyButton && value != null)
+                          IconButton(
+                            icon: const Icon(Icons.copy, size: 20),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: value));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('Coordinates copied to clipboard'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                            tooltip: 'Copy to clipboard',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
           'End of Collection',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+          style: theme.textTheme.titleLarge?.copyWith(
             color: Colors.white,
+            fontWeight: FontWeight.w600,
           ),
         ),
         backgroundColor: const Color(0xFF4CAF50),
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(_Spacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Respondent's Photo
+                  _buildImageSection(
+                    title: '1. Take a picture of the respondent',
+                    note: 'Ensure the respondent\'s face is clearly visible',
+                    image: _respondentImage,
+                    onTakePicture: _takePicture,
+                    buttonText: _respondentImage == null
+                        ? 'Take Picture of Respondent'
+                        : 'Retake Picture',
+                    icon: Icons.photo_camera,
+                  ),
 
-            const SizedBox(height: 32),
+                  // Producer's Signature
+                  _buildImageSection(
+                    title: '2. Signature of Respondent',
+                    note:
+                        'Please take a clear picture of the producer\'s signature',
+                    image: _producerSignatureImage,
+                    onTakePicture: () => _takePicture(isSignature: true),
+                    buttonText: _producerSignatureImage == null
+                        ? 'Capture Signature'
+                        : 'Retake Signature',
+                    icon: Icons.sign_language,
+                    imageHeight: 150,
+                  ),
 
-            // Question 2 - Respondent's Photo
-            Text(
-              '1. Take a picture of the respondent',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Ensure the respondent\'s face is clearly visible',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Respondent's Image Preview or Placeholder
-            Container(
-              width: double.infinity,
-              height: 200,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey[100],
-              ),
-              child: _respondentImage == null
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.photo_camera,
-                          size: 48,
-                          color: Colors.grey,
+                  // End Time
+                  _buildTapToCaptureSection(
+                    title: '3. End Time of Survey',
+                    placeholder: 'Tap to select end time',
+                    value: _endTime?.format(context),
+                    onTap: () {
+                      setState(() {
+                        _endTime = TimeOfDay.now();
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              'End time recorded at ${_endTime!.format(context)}'),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No image captured',
-                          style: GoogleFonts.poppins(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        _respondentImage!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 12),
-
-            // Capture/Retake Button for Respondent's Photo
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _takePicture,
-                icon: const Icon(Icons.camera_alt, size: 20),
-                label: Text(
-                  _respondentImage == null
-                      ? 'Take Picture of Respondent'
-                      : 'Retake Picture',
-                  style: GoogleFonts.poppins(fontSize: 14),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                      );
+                    },
+                    icon: Icons.access_time,
                   ),
-                ),
-              ),
-            ),
 
-            const SizedBox(height: 16),
-
-            // Question 3 - Producer's Signature
-            Text(
-              '2. Signature of Respondent',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Please take a clear picture of the producer\'s signature',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Producer's Signature Image Preview or Placeholder
-            Container(
-              width: double.infinity,
-              height: 150,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey[100],
-              ),
-              child: _producerSignatureImage == null
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.sign_language,
-                          size: 48,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No signature captured',
-                          style: GoogleFonts.poppins(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        _producerSignatureImage!,
-                        fit: BoxFit.contain,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 12),
-
-            // Capture/Retake Button for Producer's Signature
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _takePicture(isSignature: true),
-                icon: const Icon(Icons.camera_alt, size: 20),
-                label: Text(
-                  _producerSignatureImage == null
-                      ? 'Capture Signature'
-                      : 'Retake Signature',
-                  style: GoogleFonts.poppins(fontSize: 14),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  // GPS Coordinates
+                  _buildTapToCaptureSection(
+                    title: '4. End GPS Coordinates',
+                    placeholder: 'Tap to capture GPS coordinates',
+                    value: _gpsCoordinates,
+                    onTap: _getCurrentLocation,
+                    icon: Icons.location_on,
+                    isLoading: _isLoadingGps,
+                    showCopyButton: true,
+                    timestamp: _gpsCoordinates != null
+                        ? 'Captured at: ${DateTime.now().toString().substring(0, 19)}'
+                        : null,
                   ),
-                ),
-              ),
-            ),
 
-            const SizedBox(height: 16),
-
-            const SizedBox(height: 16),
-
-            // Question 4 - GPS Coordinates
-            Text(
-              '4. End GPS Coordinates',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                  const SizedBox(height: 80), // Space for bottom button
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: _isLoadingGps ? null : _getCurrentLocation,
-              child: Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                  color: _gpsCoordinates == null
-                      ? Colors.grey[50]
-                      : Colors.green[50],
-                ),
-                child: _isLoadingGps
-                    ? const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          SizedBox(width: 8),
-                          Text('Getting location...'),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          Icon(
-                            _gpsCoordinates == null
-                                ? Icons.location_off
-                                : Icons.location_on,
-                            color: _gpsCoordinates == null
-                                ? Colors.grey
-                                : Colors.green,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _gpsCoordinates ??
-                                  'Tap to capture GPS coordinates',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: _gpsCoordinates == null
-                                    ? Colors.grey[600]
-                                    : Colors.green[800],
-                                fontWeight: _gpsCoordinates == null
-                                    ? FontWeight.normal
-                                    : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          if (_gpsCoordinates != null)
-                            IconButton(
-                              icon: const Icon(Icons.copy, size: 20),
-                              onPressed: () {
-                                Clipboard.setData(
-                                    ClipboardData(text: _gpsCoordinates!));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('Coordinates copied to clipboard'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              },
-                              tooltip: 'Copy to clipboard',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                        ],
-                      ),
-              ),
-            ),
-            if (_gpsCoordinates != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, left: 8),
-                child: Text(
-                  'Captured at: ${DateTime.now().toString().substring(0, 19)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.grey[600],
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 16),
-
-            // Question 3 - End Time
-            Text(
-              '3. End Time of Survey',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _endTime = TimeOfDay.now();
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                        'End time recorded at ${_endTime!.format(context)}'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                  color: _endTime == null ? Colors.grey[50] : Colors.blue[50],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      color: _endTime == null
-                          ? Colors.grey
-                          : const Color(0xFF4CAF50),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      _endTime == null
-                          ? 'Tap to select end time'
-                          : '${_endTime!.format(context)}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: _endTime == null
-                            ? Colors.grey[600]
-                            : const Color(0xFF4CAF50),
-                        fontWeight: _endTime == null
-                            ? FontWeight.normal
-                            : FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 16,
-            ),
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle form submission without validation
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SurveyCompletionPage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'Submit & Finish',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(_Spacing.lg),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
           ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Previous Button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      developer.log('Previous button pressed', name: _logTag);
+                      Navigator.pop(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Colors.green.shade600, width: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.arrow_back_ios,
+                            size: 18, color: Colors.green.shade600),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Previous',
+                          style: GoogleFonts.inter(
+                            color: Colors.green.shade600,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Submit Button
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isFormComplete ? _submitForm : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isFormComplete
+                          ? Colors.green.shade600
+                          : Colors.grey[400],
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                      shadowColor: Colors.green.shade600.withOpacity(0.3),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Submit & Finish',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.check_circle,
+                            size: 18, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

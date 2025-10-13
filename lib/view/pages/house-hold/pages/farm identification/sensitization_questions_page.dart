@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,15 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../theme/app_theme.dart';
 import 'end_of_collection_page.dart';
+
+/// A collection of reusable spacing constants for consistent UI layout.
+class _Spacing {
+  static const double xs = 4.0;
+  static const double sm = 8.0;
+  static const double md = 16.0;
+  static const double lg = 24.0;
+  static const double xl = 32.0;
+}
 
 class SensitizationQuestionsPage extends StatefulWidget {
   const SensitizationQuestionsPage({Key? key}) : super(key: key);
@@ -17,22 +27,74 @@ class SensitizationQuestionsPage extends StatefulWidget {
 
 class _SensitizationQuestionsPageState
     extends State<SensitizationQuestionsPage> {
+  // Form key for validation and form state management
   final _formKey = GlobalKey<FormState>();
+
+  /// Tracks if household has been sensitized
   bool? hasSensitizedHousehold;
+
+  /// Tracks if sensitization on protection was conducted
   bool? hasSensitizedOnProtection;
+
+  /// Tracks if sensitization on safe labor was conducted
   bool? hasSensitizedOnSafeLabour;
+
+  /// Controller for female adults count input
   final TextEditingController _femaleAdultsController = TextEditingController();
+
+  /// Controller for male adults count input
   final TextEditingController _maleAdultsController = TextEditingController();
+
+  /// Tracks if picture consent was given
   bool? _consentForPicture;
+
+  /// Controller for consent reason input (when consent is not given)
   final TextEditingController _consentReasonController =
       TextEditingController();
+
+  /// Stores the captured sensitization image
   File? _sensitizationImage;
+
+  /// Stores the captured household with user image
   File? _householdWithUserImage;
+
+  /// Image picker instance for camera operations
   final ImagePicker _picker = ImagePicker();
+
+  /// Controller for capturing user reactions/feedback
   final TextEditingController _reactionController = TextEditingController();
 
+  /// Tag for logging purposes
+  static const String _logTag = 'SensitizationQuestionsPage';
+
+  /// Validates if all required form fields are filled
+  bool get _isFormComplete {
+    final isComplete = hasSensitizedHousehold != null &&
+        hasSensitizedOnProtection != null &&
+        hasSensitizedOnSafeLabour != null &&
+        _femaleAdultsController.text.isNotEmpty &&
+        _maleAdultsController.text.isNotEmpty &&
+        _consentForPicture != null &&
+        (_consentForPicture == true ||
+            _consentReasonController.text.isNotEmpty) &&
+        _sensitizationImage != null &&
+        _householdWithUserImage != null &&
+        _reactionController.text.isNotEmpty;
+
+    developer.log('Form validation - Complete: $isComplete', name: _logTag);
+    return isComplete;
+  }
+
+  /// Captures an image using the device camera
+  ///
+  /// [isHouseholdWithUser] - If true, stores as household with user image,
+  /// otherwise stores as sensitization image
   @override
   Future<void> _takePicture(bool isHouseholdWithUser) async {
+    developer.log(
+        'Initiating image capture. Type: ${isHouseholdWithUser ? 'Household with user' : 'Sensitization'}',
+        name: _logTag);
+
     try {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
@@ -42,20 +104,38 @@ class _SensitizationQuestionsPageState
       );
 
       if (photo != null) {
+        developer.log('Image captured successfully: ${photo.path}',
+            name: _logTag);
+
         setState(() {
           if (isHouseholdWithUser) {
             _householdWithUserImage = File(photo.path);
+            developer.log('Household with user image updated', name: _logTag);
           } else {
             _sensitizationImage = File(photo.path);
+            developer.log('Sensitization image updated', name: _logTag);
           }
         });
+      } else {
+        developer.log('Image capture was cancelled by user', name: _logTag);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      developer.log('Error capturing image: $e',
+          name: _logTag, error: e, stackTrace: stackTrace);
+
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to capture image. Please try again.'),
+        SnackBar(
+          content: const Text('Failed to capture image. Please try again.'),
           backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'DISMISS',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
         ),
       );
     }
@@ -63,542 +143,622 @@ class _SensitizationQuestionsPageState
 
   @override
   void dispose() {
-    _femaleAdultsController.dispose();
-    _maleAdultsController.dispose();
-    _consentReasonController.dispose();
-    _reactionController.dispose();
+    developer.log('Disposing resources', name: _logTag);
+
+    // Dispose all controllers to prevent memory leaks
+    try {
+      _femaleAdultsController.dispose();
+      _maleAdultsController.dispose();
+      _consentReasonController.dispose();
+      _reactionController.dispose();
+      developer.log('All controllers disposed successfully', name: _logTag);
+    } catch (e) {
+      developer.log('Error disposing controllers: $e', name: _logTag, error: e);
+    }
+
     super.dispose();
+  }
+
+  /// Builds a consistent card widget for form questions
+  ///
+  /// [child] - The widget to be wrapped in the card
+  Widget _buildQuestionCard({required Widget child}) {
+    developer.log('Building question card', name: _logTag);
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: _Spacing.lg),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(
+          color: isDark ? AppTheme.darkCard : Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      color: isDark ? AppTheme.darkCard : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(_Spacing.lg),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildRadioOption({
+    required bool value,
+    required bool? groupValue,
+    required String label,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return RadioListTile<bool>(
+      title: Text(
+        label,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+        ),
+      ),
+      value: value,
+      groupValue: groupValue,
+      onChanged: onChanged,
+      activeColor: AppTheme.primaryColor,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+      tileColor: isDark ? AppTheme.darkCard : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    String hintText = '',
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: _Spacing.md),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: theme.textTheme.bodyMedium?.copyWith(
+              color:
+                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: theme.primaryColor,
+                width: 1.5,
+              ),
+            ),
+            filled: true,
+            fillColor: isDark ? AppTheme.darkCard : Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: _Spacing.lg,
+              vertical: _Spacing.md,
+            ),
+          ),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
+          ),
+          onChanged: (value) {
+            setState(() {});
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageSection({
+    required String title,
+    required String note,
+    required File? image,
+    required VoidCallback onTakePicture,
+    required String buttonText,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return _buildQuestionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: _Spacing.sm),
+          Text(
+            note,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color:
+                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: _Spacing.md),
+
+          // Image Preview
+          Container(
+            width: double.infinity,
+            height: 200,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              color: isDark ? AppTheme.darkBackground : Colors.grey[100],
+            ),
+            child: image == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.photo_camera,
+                        size: 48,
+                        color:
+                            isDark ? AppTheme.darkTextSecondary : Colors.grey,
+                      ),
+                      const SizedBox(height: _Spacing.sm),
+                      Text(
+                        'No image captured',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color:
+                              isDark ? AppTheme.darkTextSecondary : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  )
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      image,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: _Spacing.md),
+
+          // Capture Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onTakePicture,
+              icon: const Icon(Icons.camera_alt, size: 20),
+              label: Text(buttonText),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor:
+          isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text(
           'Sensitization Questions',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-              ),
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         backgroundColor: AppTheme.primaryColor,
         elevation: 0,
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-
-              // Question 1
-              Text(
-                '1. Have you sensitized the household members on Good Parenting?',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Row(
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(_Spacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      title: Text(
-                        'Yes',
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                      value: true,
-                      groupValue: hasSensitizedHousehold,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          hasSensitizedHousehold = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF1A5F7A),
-                      contentPadding: EdgeInsets.zero,
+                  // Question 1: Good Parenting Sensitization
+                  _buildQuestionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '1. Have you sensitized the household members on Good Parenting?',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        Wrap(
+                          spacing: 20,
+                          children: [
+                            _buildRadioOption(
+                              value: true,
+                              groupValue: hasSensitizedHousehold,
+                              label: 'Yes',
+                              onChanged: (value) {
+                                setState(() {
+                                  hasSensitizedHousehold = value;
+                                });
+                              },
+                            ),
+                            _buildRadioOption(
+                              value: false,
+                              groupValue: hasSensitizedHousehold,
+                              label: 'No',
+                              onChanged: (value) {
+                                setState(() {
+                                  hasSensitizedHousehold = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      title: Text(
-                        'No',
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                      value: false,
-                      groupValue: hasSensitizedHousehold,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          hasSensitizedHousehold = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF1A5F7A),
-                      contentPadding: EdgeInsets.zero,
+
+                  // Question 2: Child Protection Sensitization
+                  _buildQuestionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '2. Have you sensitized the household members on Child Protection?',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        Wrap(
+                          spacing: 20,
+                          children: [
+                            _buildRadioOption(
+                              value: true,
+                              groupValue: hasSensitizedOnProtection,
+                              label: 'Yes',
+                              onChanged: (value) {
+                                setState(() {
+                                  hasSensitizedOnProtection = value;
+                                });
+                              },
+                            ),
+                            _buildRadioOption(
+                              value: false,
+                              groupValue: hasSensitizedOnProtection,
+                              label: 'No',
+                              onChanged: (value) {
+                                setState(() {
+                                  hasSensitizedOnProtection = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
+
+                  // Question 3: Safe Labour Practices Sensitization
+                  _buildQuestionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '3. Have you sensitized the household members on Safe Labour Practices?',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        Wrap(
+                          spacing: 20,
+                          children: [
+                            _buildRadioOption(
+                              value: true,
+                              groupValue: hasSensitizedOnSafeLabour,
+                              label: 'Yes',
+                              onChanged: (value) {
+                                setState(() {
+                                  hasSensitizedOnSafeLabour = value;
+                                });
+                              },
+                            ),
+                            _buildRadioOption(
+                              value: false,
+                              groupValue: hasSensitizedOnSafeLabour,
+                              label: 'No',
+                              onChanged: (value) {
+                                setState(() {
+                                  hasSensitizedOnSafeLabour = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Question 4: Female Adults Count
+                  _buildQuestionCard(
+                    child: _buildTextField(
+                      label:
+                          '4. How many female adults were present during the sensitization?',
+                      controller: _femaleAdultsController,
+                      hintText: 'Enter number of female adults',
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+
+                  // Question 5: Male Adults Count
+                  _buildQuestionCard(
+                    child: _buildTextField(
+                      label:
+                          '5. How many male adults were present during the sensitization?',
+                      controller: _maleAdultsController,
+                      hintText: 'Enter number of male adults',
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+
+                  // Question 6: Picture Consent
+                  _buildQuestionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '6. Does the producer consent to taking a picture of his household?',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        Wrap(
+                          spacing: 20,
+                          children: [
+                            _buildRadioOption(
+                              value: true,
+                              groupValue: _consentForPicture,
+                              label: 'Yes',
+                              onChanged: (value) {
+                                setState(() {
+                                  _consentForPicture = value;
+                                  _consentReasonController.clear();
+                                });
+                              },
+                            ),
+                            _buildRadioOption(
+                              value: false,
+                              groupValue: _consentForPicture,
+                              label: 'No',
+                              onChanged: (value) {
+                                setState(() {
+                                  _consentForPicture = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+
+                        // Reason field for denied consent
+                        if (_consentForPicture == false) ...[
+                          const SizedBox(height: _Spacing.lg),
+                          _buildTextField(
+                            label:
+                                'Please specify the reason for not consenting:',
+                            controller: _consentReasonController,
+                            hintText: 'Enter reason...',
+                            maxLines: 2,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // Question 7: Sensitization Session Picture
+                  _buildImageSection(
+                    title:
+                        '7. Please take a picture of the sensitization session',
+                    note:
+                        'Note: Please take a picture of the household with your face showing as well as the household members',
+                    image: _sensitizationImage,
+                    onTakePicture: () => _takePicture(false),
+                    buttonText: _sensitizationImage == null
+                        ? 'Take Picture of Session'
+                        : 'Retake Session Picture',
+                  ),
+
+                  // Question 8: Household with User Picture
+                  _buildImageSection(
+                    title:
+                        '8. Please take a picture of the household with your face showing',
+                    note:
+                        'Note: Ensure your face is clearly visible along with the household members',
+                    image: _householdWithUserImage,
+                    onTakePicture: () => _takePicture(true),
+                    buttonText: _householdWithUserImage == null
+                        ? 'Take Picture with Household'
+                        : 'Retake Household Picture',
+                  ),
+
+                  // Question 9: Parents' Reaction
+                  _buildQuestionCard(
+                    child: _buildTextField(
+                      label:
+                          '9. What are your observations regarding the reaction from the parents on the sensitization provided?',
+                      controller: _reactionController,
+                      hintText:
+                          'Describe the parents\' reactions, concerns, or feedback...',
+                      maxLines: 4,
+                    ),
+                  ),
+
+                  const SizedBox(height: 80), // Space for bottom button
                 ],
               ),
-
-              const SizedBox(height: 16),
-
-              // Question 2
-              Text(
-                '2. Have you sensitized the household members on Child Protection?',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      title: Text(
-                        'Yes',
-                        style: GoogleFonts.poppins(fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(_Spacing.lg),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Previous Button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Colors.green.shade600, width: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      value: true,
-                      groupValue: hasSensitizedOnProtection,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          hasSensitizedOnProtection = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF1A5F7A),
-                      contentPadding: EdgeInsets.zero,
                     ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      title: Text(
-                        'No',
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                      value: false,
-                      groupValue: hasSensitizedOnProtection,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          hasSensitizedOnProtection = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF1A5F7A),
-                      contentPadding: EdgeInsets.zero,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.arrow_back_ios,
+                            size: 18, color: Colors.green.shade600),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Previous',
+                          style: GoogleFonts.inter(
+                            color: Colors.green.shade600,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Question 3
-              Text(
-                '3. Have you sensitized the household members on Safe Labour Practices?',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      title: Text(
-                        'Yes',
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                      value: true,
-                      groupValue: hasSensitizedOnSafeLabour,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          hasSensitizedOnSafeLabour = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF1A5F7A),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      title: Text(
-                        'No',
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                      value: false,
-                      groupValue: hasSensitizedOnSafeLabour,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          hasSensitizedOnSafeLabour = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF1A5F7A),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Question 4 - Number of Female Adults
-              Text(
-                '4. How many female adults were present during the sensitization?',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _femaleAdultsController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: 'Enter number of female adults',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Question 5 - Number of Male Adults
-              Text(
-                '5. How many male adults were present during the sensitization?',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _maleAdultsController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: 'Enter number of male adults',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Question 6 - Picture Consent
-              Text(
-                '6. Does the producer consent to taking a picture of his household?',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      title: Text(
-                        'Yes',
-                        style: GoogleFonts.poppins(fontSize: 14),
+                const SizedBox(width: 16),
+                // Next Button
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isFormComplete
+                        ? () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const EndOfCollectionPage(),
+                              ),
+                            );
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isFormComplete
+                          ? Colors.green.shade600
+                          : Colors.grey[400],
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      value: true,
-                      groupValue: _consentForPicture,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _consentForPicture = value;
-                          _consentReasonController.clear();
-                        });
-                      },
-                      activeColor: const Color(0xFF1A5F7A),
-                      contentPadding: EdgeInsets.zero,
+                      elevation: 2,
+                      shadowColor: Colors.green.shade600.withOpacity(0.3),
                     ),
-                  ),
-                  Expanded(
-                    child: RadioListTile<bool>(
-                      title: Text(
-                        'No',
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                      value: false,
-                      groupValue: _consentForPicture,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _consentForPicture = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF1A5F7A),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ),
-
-              // Show reason field only if consent is denied
-              if (_consentForPicture == false) ...[
-                const SizedBox(height: 16),
-                Text(
-                  'Please specify the reason for not consenting:',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _consentReasonController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    hintText: 'Enter reason...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Next',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_ios,
+                            size: 18, color: Colors.white),
+                      ],
                     ),
                   ),
                 ),
               ],
-
-              const SizedBox(height: 16),
-
-              // Submit Button
-              // Sensitization Picture Section
-              Text(
-                '7. Please take a picture of the sensitization session',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Note: Please take a picture of the household with your face showing as well as the household members',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                      fontStyle: FontStyle.italic,
-                    ),
-              ),
-              const SizedBox(height: 12),
-
-              // Image Preview or Placeholder
-              Container(
-                width: double.infinity,
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
-                ),
-                child: _sensitizationImage == null
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.photo_camera,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No image captured',
-                            style: GoogleFonts.poppins(
-                              color: Colors.grey,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          _sensitizationImage!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 12),
-
-              // Capture/Retake Button for Sensitization Session
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _takePicture(false),
-                  icon: const Icon(Icons.camera_alt, size: 20),
-                  label: Text(
-                    _sensitizationImage == null
-                        ? 'Take Picture of Session'
-                        : 'Retake Session Picture',
-                    style: GoogleFonts.poppins(fontSize: 14),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Household with User Picture Section
-              Text(
-                '8. Please take a picture of the household with your face showing',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Note: Ensure your face is clearly visible along with the household members',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                      fontStyle: FontStyle.italic,
-                    ),
-              ),
-              const SizedBox(height: 12),
-
-              // Household with User Image Preview or Placeholder
-              Container(
-                width: double.infinity,
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
-                ),
-                child: _householdWithUserImage == null
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.photo_camera,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No image captured',
-                            style: GoogleFonts.poppins(
-                              color: Colors.grey,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          _householdWithUserImage!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 12),
-
-              // Capture/Retake Button for Household with User
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _takePicture(true),
-                  icon: const Icon(Icons.camera_alt, size: 20),
-                  label: Text(
-                    _householdWithUserImage == null
-                        ? 'Take Picture with Household'
-                        : 'Retake Household Picture',
-                    style: GoogleFonts.poppins(fontSize: 14),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Question 9 - Parents' Reaction
-              Text(
-                '9. What are your observations regarding the reaction from the parents on the sensitization provided?',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _reactionController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText:
-                      'Describe the parents\' reactions, concerns, or feedback...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Handle form submission without validation
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EndOfCollectionPage(),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'Next',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
         ),
       ),
