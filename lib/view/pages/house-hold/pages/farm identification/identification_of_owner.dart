@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/workers_in_farm_page.dart';
 
-// import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/workers_in_farm_page.dart';
-// import 'package:surveyflow/view/theme/app_theme.dart';
-
 import '../../../../theme/app_theme.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
@@ -17,7 +14,16 @@ class _Spacing {
 }
 
 class IdentificationOfOwnerPage extends StatefulWidget {
-  const IdentificationOfOwnerPage({super.key});
+  const IdentificationOfOwnerPage({
+    super.key,
+    this.initialData,
+    this.onPrevious,
+    this.onNext,
+  });
+
+  final Map<String, dynamic>? initialData;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
 
   @override
   State<IdentificationOfOwnerPage> createState() =>
@@ -25,8 +31,6 @@ class IdentificationOfOwnerPage extends StatefulWidget {
 }
 
 class _IdentificationOfOwnerPageState extends State<IdentificationOfOwnerPage> {
-  bool _isFormComplete = true; // Always enable the form
-
   // Form controllers
   final TextEditingController _ownerNameController = TextEditingController();
   final TextEditingController _ownerFirstNameController =
@@ -52,23 +56,72 @@ class _IdentificationOfOwnerPageState extends State<IdentificationOfOwnerPage> {
     {'value': 'Other', 'display': 'Other (specify)'},
   ];
 
-  bool _validateForm() => true;
+  bool get _isFormComplete {
+    return _ownerNameController.text.isNotEmpty &&
+        _ownerFirstNameController.text.isNotEmpty &&
+        _nationality != null &&
+        (_nationality != 'Non-Ghanaian' ||
+            (_specificNationality != null &&
+                (_specificNationality != 'Other' ||
+                    _otherNationalityController.text.isNotEmpty))) &&
+        _yearsWithOwnerController.text.isNotEmpty;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFromData();
+  }
+
+  void _initializeFromData() {
+    if (widget.initialData != null) {
+      setState(() {
+        _nationality = widget.initialData!['nationality'];
+        _specificNationality = widget.initialData!['specificNationality'];
+
+        if (widget.initialData!['ownerName'] != null) {
+          _ownerNameController.text = widget.initialData!['ownerName'];
+        }
+        if (widget.initialData!['ownerFirstName'] != null) {
+          _ownerFirstNameController.text =
+              widget.initialData!['ownerFirstName'];
+        }
+        if (widget.initialData!['otherNationality'] != null) {
+          _otherNationalityController.text =
+              widget.initialData!['otherNationality'];
+        }
+        if (widget.initialData!['yearsWithOwner'] != null) {
+          _yearsWithOwnerController.text =
+              widget.initialData!['yearsWithOwner'];
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _ownerNameController.dispose();
+    _ownerFirstNameController.dispose();
+    _otherNationalityController.dispose();
+    _yearsWithOwnerController.dispose();
+    super.dispose();
+  }
 
   Widget _buildQuestionCard({required Widget child}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: _Spacing.md),
-      color: isDark ? AppTheme.darkCard : Colors.white,
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: _Spacing.lg),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
         side: BorderSide(
-          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+          color: isDark ? AppTheme.darkCard : Colors.grey.shade200,
           width: 1,
         ),
       ),
+      color: isDark ? AppTheme.darkCard : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(_Spacing.lg),
         child: child,
@@ -76,10 +129,40 @@ class _IdentificationOfOwnerPageState extends State<IdentificationOfOwnerPage> {
     );
   }
 
+  Widget _buildRadioOption({
+    required String value,
+    required String? groupValue,
+    required String label,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return RadioListTile<String>(
+      title: Text(
+        label,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+        ),
+      ),
+      value: value,
+      groupValue: groupValue,
+      onChanged: onChanged,
+      activeColor: AppTheme.primaryColor,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+      tileColor: isDark ? AppTheme.darkCard : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
-    String? hintText,
+    String hintText = '',
     TextInputType? keyboardType,
   }) {
     final theme = Theme.of(context);
@@ -134,35 +217,11 @@ class _IdentificationOfOwnerPageState extends State<IdentificationOfOwnerPage> {
           style: theme.textTheme.bodyLarge?.copyWith(
             color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
           ),
+          onChanged: (value) {
+            setState(() {});
+          },
         ),
       ],
-    );
-  }
-
-  Widget _buildRadioOption({
-    required String value,
-    required String? groupValue,
-    required String label,
-    required ValueChanged<String?> onChanged,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Radio<String>(
-        value: value,
-        groupValue: groupValue,
-        onChanged: onChanged,
-        activeColor: theme.primaryColor,
-      ),
-      title: Text(
-        label,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
-        ),
-      ),
-      onTap: () => onChanged(value),
     );
   }
 
@@ -185,23 +244,30 @@ class _IdentificationOfOwnerPageState extends State<IdentificationOfOwnerPage> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: _Spacing.md),
+        const SizedBox(height: _Spacing.sm),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: _Spacing.md),
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(8.0),
             border: Border.all(
-              color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-              width: 1,
+              color: isDark ? AppTheme.darkCard : Colors.grey.shade300,
             ),
+            color: isDark ? AppTheme.darkCard : Colors.white,
           ),
+          padding: const EdgeInsets.symmetric(horizontal: _Spacing.md),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
               icon: Icon(Icons.arrow_drop_down, color: theme.primaryColor),
-              items: items.map<DropdownMenuItem<String>>((item) {
+              iconSize: 24,
+              elevation: 16,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
+              ),
+              onChanged: onChanged,
+              dropdownColor: isDark ? AppTheme.darkCard : Colors.white,
+              items: items
+                  .map<DropdownMenuItem<String>>((Map<String, String> item) {
                 return DropdownMenuItem<String>(
                   value: item['value'],
                   child: Text(
@@ -214,7 +280,6 @@ class _IdentificationOfOwnerPageState extends State<IdentificationOfOwnerPage> {
                   ),
                 );
               }).toList(),
-              onChanged: onChanged,
             ),
           ),
         ),
@@ -243,171 +308,131 @@ class _IdentificationOfOwnerPageState extends State<IdentificationOfOwnerPage> {
         backgroundColor: AppTheme.primaryColor,
         automaticallyImplyLeading: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(_Spacing.lg),
-        child: Column(
-          children: [
-            // Owner Name
-            _buildQuestionCard(
-              child: _buildTextField(
-                label: 'Name of the owner?',
-                controller: _ownerNameController,
-                hintText:
-                    'Verify this information with his identification document or any other document of identification. In capital letters',
-              ),
-            ),
-
-            // Owner First Name
-            _buildQuestionCard(
-              child: _buildTextField(
-                label: 'First name of the owner?',
-                controller: _ownerFirstNameController,
-                hintText:
-                    'Verify this information with his identification document or any other document of identification. In capital letters',
-              ),
-            ),
-
-            // Nationality Card
-            _buildQuestionCard(
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(_Spacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'What is the nationality of the owner?',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.textPrimary,
-                      fontWeight: FontWeight.w500,
+                  // Owner Name
+                  _buildQuestionCard(
+                    child: _buildTextField(
+                      label: 'Name of the owner?',
+                      controller: _ownerNameController,
+                      hintText:
+                          'Verify this information with his identification document or any other document of identification. In capital letters',
                     ),
                   ),
-                  const SizedBox(height: _Spacing.md),
-                  _buildRadioOption(
-                    value: 'Ghanaian',
-                    groupValue: _nationality,
-                    label: 'Ghanaian',
-                    onChanged: (value) {
-                      setState(() {
-                        _nationality = value;
-                      });
-                    },
+
+                  // Owner First Name
+                  _buildQuestionCard(
+                    child: _buildTextField(
+                      label: 'First name of the owner?',
+                      controller: _ownerFirstNameController,
+                      hintText:
+                          'Verify this information with his identification document or any other document of identification. In capital letters',
+                    ),
                   ),
-                  _buildRadioOption(
-                    value: 'Non-Ghanaian',
-                    groupValue: _nationality,
-                    label: 'Non-Ghanaian',
-                    onChanged: (value) {
-                      setState(() {
-                        _nationality = value;
-                      });
-                    },
+
+                  // Nationality Card
+                  _buildQuestionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'What is the nationality of the owner?',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        Wrap(
+                          spacing: 20,
+                          children: [
+                            _buildRadioOption(
+                              value: 'Ghanaian',
+                              groupValue: _nationality,
+                              label: 'Ghanaian',
+                              onChanged: (value) {
+                                setState(() {
+                                  _nationality = value;
+                                  // Clear specific nationality when switching to Ghanaian
+                                  _specificNationality = null;
+                                  _otherNationalityController.clear();
+                                });
+                              },
+                            ),
+                            _buildRadioOption(
+                              value: 'Non-Ghanaian',
+                              groupValue: _nationality,
+                              label: 'Non-Ghanaian',
+                              onChanged: (value) {
+                                setState(() {
+                                  _nationality = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+
+                  // Show nationality selection only if Non-Ghanaian is selected
+                  if (_nationality == 'Non-Ghanaian')
+                    _buildQuestionCard(
+                      child: _buildDropdownField(
+                        label: 'If Non Ghanaian , specify country of origin',
+                        value: _specificNationality,
+                        items: _nationalityOptions,
+                        onChanged: (value) {
+                          setState(() {
+                            _specificNationality = value;
+                            // Clear the other field when changing selection
+                            if (value != 'Other') {
+                              _otherNationalityController.clear();
+                            }
+                          });
+                        },
+                      ),
+                    ),
+
+                  // Show 'Other' specification when 'Other' is selected
+                  if (_nationality == 'Non-Ghanaian' &&
+                      _specificNationality == 'Other')
+                    _buildQuestionCard(
+                      child: _buildTextField(
+                        label: 'Please specify nationality',
+                        controller: _otherNationalityController,
+                        hintText: 'Enter nationality',
+                      ),
+                    ),
+
+                  // Years working with owner
+                  _buildQuestionCard(
+                    child: _buildTextField(
+                      label:
+                          'For how many years has the respondent been working with owner?',
+                      controller: _yearsWithOwnerController,
+                      keyboardType: TextInputType.number,
+                      hintText: 'Enter number of years',
+                    ),
+                  ),
+
+                  const SizedBox(height: 80), // Space for bottom button
                 ],
               ),
             ),
-
-            // Show nationality selection only if Non-Ghanaian is selected
-            if (_nationality == 'Non-Ghanaian') ...[
-              _buildQuestionCard(
-                child: _buildDropdownField(
-                  label: 'If Non Ghanaian , specify country of origin',
-                  value: _specificNationality,
-                  items: _nationalityOptions,
-                  onChanged: (value) {
-                    setState(() {
-                      _specificNationality = value;
-                      // Clear the other field when changing selection
-                      if (value != 'Other') {
-                        _otherNationalityController.clear();
-                      }
-                    });
-                  },
-                ),
-              ),
-
-              // Show 'Other' specification when 'Other' is selected
-              if (_specificNationality == 'Other')
-                _buildQuestionCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Please specify nationality',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.textPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: _Spacing.md),
-                      TextField(
-                        controller: _otherNationalityController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter nationality',
-                          hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.textSecondary,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                            borderSide: BorderSide(
-                              color: isDark
-                                  ? AppTheme.darkCard
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                            borderSide: BorderSide(
-                              color: isDark
-                                  ? AppTheme.darkCard
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                            borderSide: BorderSide(
-                              color: theme.primaryColor,
-                              width: 1.5,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: isDark ? AppTheme.darkCard : Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: _Spacing.lg,
-                            vertical: _Spacing.md,
-                          ),
-                        ),
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.textPrimary,
-                        ),
-                        onChanged: (value) {},
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-
-            // Years working with owner
-            _buildQuestionCard(
-              child: _buildTextField(
-                label:
-                    'For how many years has the respondent been working with owner?',
-                controller: _yearsWithOwnerController,
-                keyboardType: TextInputType.number,
-                hintText: 'Enter number of years',
-              ),
-            ),
-
-            const SizedBox(height: 80), // Space for fixed bottom buttons
-          ],
-        ),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(_Spacing.lg),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           boxShadow: [
@@ -458,14 +483,45 @@ class _IdentificationOfOwnerPageState extends State<IdentificationOfOwnerPage> {
                 // Next Button
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const WorkersInFarmPage(),
-                        ),
-                      );
-                    },
+                    onPressed: _isFormComplete
+                        ? () {
+                            try {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const WorkersInFarmPage(),
+                                ),
+                              );
+                            } catch (e) {
+                              debugPrint('Navigation error: $e');
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text(
+                                        'Could not navigate. Please try again.'),
+                                    backgroundColor: Colors.red.shade600,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isFormComplete
+                          ? Colors.green.shade600
+                          : Colors.grey[400],
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                      shadowColor: Colors.green.shade600.withOpacity(0.3),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

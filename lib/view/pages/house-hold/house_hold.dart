@@ -316,6 +316,7 @@ class _HouseHoldState extends State<HouseHold> {
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
                   child: ConsentPage(
+                    key: ValueKey('consent_page_${_residesInCommunityConsent}_${_communityType}'),
                     interviewStartTime: _surveyState.interviewStartTime,
                     timeStatus: _surveyState.timeStatus,
                     currentPosition: _surveyState.currentPosition,

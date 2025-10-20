@@ -16,10 +16,10 @@ class FarmerChild {
   });
 
   Map<String, dynamic> toJson() => {
-        'child_number': childNumber,
-        'first_name': firstName,
-        'surname': surname,
-      };
+    'child_number': childNumber,
+    'first_name': firstName,
+    'surname': surname,
+  };
 }
 
 /// A collection of reusable spacing constants for consistent UI layout.
@@ -57,14 +57,14 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
   String? _selectedIdType;
   String? _idPictureConsent;
   final TextEditingController _ghanaCardNumberController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
   final TextEditingController _idNumberController = TextEditingController();
   String? _idImagePath;
   final TextEditingController _contactNumberController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _childrenCountController =
-      TextEditingController();
+  TextEditingController();
   final List<FarmerChild> _children = [];
 
   @override
@@ -118,6 +118,7 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
 
   void _submitForm() {
     if (_formKey.currentState?.validate() ?? false) {
+      // Validate Ghana Card number if they have Ghana Card and consented
       if (_hasGhanaCard == 'Yes' &&
           _idPictureConsent == 'Yes' &&
           (_ghanaCardNumberController.text.isEmpty ||
@@ -129,6 +130,19 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
         return;
       }
 
+      // Validate ID number if they have alternative ID and consented
+      if (_hasGhanaCard == 'No' &&
+          _idPictureConsent == 'Yes' &&
+          (_idNumberController.text.isEmpty)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Please enter a valid ${_getSelectedIdTypeDisplayName()} number')),
+        );
+        return;
+      }
+
+      // Validate picture if consented
       if (_idPictureConsent == 'Yes' && _idImagePath == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please take a picture of the ID')),
@@ -143,18 +157,21 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       final formData = {
         'farmer_gh_card_available': _hasGhanaCard == 'Yes' ? 'yes' : 'no',
         'farmer_nat_id_available':
-            _hasGhanaCard == 'Yes' ? 'ghana_card' : _getSelectedIdTypeValue(),
+        _hasGhanaCard == 'Yes' ? 'ghana_card' : _getSelectedIdTypeValue(),
         'id_picture_consent': _idPictureConsent,
         'id_image_path': _idImagePath,
         'ghana_card_number':
-            _hasGhanaCard == 'Yes' && _idPictureConsent == 'Yes'
-                ? _ghanaCardNumberController.text.trim()
-                : null,
+        _hasGhanaCard == 'Yes' && _idPictureConsent == 'Yes'
+            ? _ghanaCardNumberController.text.trim()
+            : null,
+        'id_number': _hasGhanaCard == 'No' && _idPictureConsent == 'Yes'
+            ? _idNumberController.text.trim()
+            : null,
         'id_rejection_reason':
-            _idPictureConsent == 'No' ? _reasonController.text.trim() : null,
+        _idPictureConsent == 'No' ? _reasonController.text.trim() : null,
         'contact_number': _contactNumberController.text.trim(),
         'children_5_17_count':
-            int.tryParse(_childrenCountController.text.trim()) ?? 0,
+        int.tryParse(_childrenCountController.text.trim()) ?? 0,
         'children': _children.map((child) => child.toJson()).toList(),
       };
 
@@ -328,6 +345,7 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
           maxLines: maxLines,
           textCapitalization: textCapitalization,
           validator: validator,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: GoogleFonts.inter(
@@ -364,9 +382,6 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
             fontSize: 14,
             color: isDark ? Colors.white : Colors.black87,
           ),
-          onChanged: (value) {
-            setState(() {});
-          },
         ),
       ],
     );
@@ -374,14 +389,11 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
 
   bool get _isFormComplete {
     return _hasGhanaCard != null &&
-            (_hasGhanaCard == 'Yes' ||
-                (_hasGhanaCard == 'No' && _selectedIdType != null)) &&
-            ((_hasGhanaCard == 'Yes' && _hasGhanaCard != null) ||
-                (_hasGhanaCard == 'No' && _selectedIdType != null))
-        ? _idPictureConsent != null
-        : true &&
-            _contactNumberController.text.isNotEmpty &&
-            _childrenCountController.text.isNotEmpty;
+        ((_hasGhanaCard == 'Yes') ||
+            (_hasGhanaCard == 'No' && _selectedIdType != null)) &&
+        _idPictureConsent != null &&
+        _contactNumberController.text.isNotEmpty &&
+        _childrenCountController.text.isNotEmpty;
   }
 
   @override
@@ -392,514 +404,526 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
 
     return Scaffold(
       backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
-      // appBar: AppBar(
-      //   title: Text(
-      //     'Farmer Identification',
-      //     style: GoogleFonts.inter(
-      //       fontSize: 18,
-      //       fontWeight: FontWeight.w600,
-      //       color: Colors.white,
-      //     ),
-      //   ),
-      //   centerTitle: true,
-      //   elevation: 0,
-      //   backgroundColor: Colors.green.shade600,
-      //   automaticallyImplyLeading: false,
-      // ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(_Spacing.lg),
-                    child: Form(
-                      key: _formKey,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(_Spacing.lg),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ghana Card Question
+                    _buildQuestionCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Ghana Card Question
-                          _buildQuestionCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Do you have a Ghana Card?',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: isDark
-                                        ? Colors.white70
-                                        : Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: _Spacing.md),
-                                Wrap(
-                                  spacing: 20,
-                                  children: [
-                                    _buildRadioOption(
-                                      value: 'Yes',
-                                      groupValue: _hasGhanaCard,
-                                      label: 'Yes',
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _hasGhanaCard = value;
-                                          _selectedIdType = null;
-                                        });
-                                      },
-                                    ),
-                                    _buildRadioOption(
-                                      value: 'No',
-                                      groupValue: _hasGhanaCard,
-                                      label: 'No',
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _hasGhanaCard = value;
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
+                          Text(
+                            'Does the farmer have a Ghana Card?',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: isDark
+                                  ? Colors.white70
+                                  : Colors.black87,
                             ),
                           ),
-
-                          // Ghana Card Number Field
-                          if (_hasGhanaCard == 'Yes')
-                            _buildQuestionCard(
-                              child: _buildTextField(
-                                label: 'Ghana Card Number',
-                                controller: _ghanaCardNumberController,
-                                hintText: 'Enter Ghana Card number',
-                                keyboardType: TextInputType.text,
-                                textCapitalization:
-                                    TextCapitalization.characters,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter your Ghana Card number';
-                                  }
-                                  return null;
+                          const SizedBox(height: _Spacing.md),
+                          Wrap(
+                            spacing: 20,
+                            children: [
+                              _buildRadioOption(
+                                value: 'Yes',
+                                groupValue: _hasGhanaCard,
+                                label: 'Yes',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasGhanaCard = value;
+                                    _selectedIdType = null;
+                                    _idPictureConsent = null;
+                                    _idImagePath = null;
+                                  });
                                 },
                               ),
-                            ),
-
-                          // Alternative ID Options
-                          if (_hasGhanaCard == 'No')
-                            _buildQuestionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Which of the following ID cards do you have?',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  Column(
-                                    children: [
-                                      _buildRadioOption(
-                                        value: 'voter_id',
-                                        groupValue: _selectedIdType,
-                                        label: 'Voter ID',
-                                        onChanged: (value) {
-                                          setState(
-                                              () => _selectedIdType = value);
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'drivers_license',
-                                        groupValue: _selectedIdType,
-                                        label: 'Driver\'s License',
-                                        onChanged: (value) {
-                                          setState(
-                                              () => _selectedIdType = value);
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'nhis_card',
-                                        groupValue: _selectedIdType,
-                                        label: 'NHIS Card',
-                                        onChanged: (value) {
-                                          setState(
-                                              () => _selectedIdType = value);
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'passport',
-                                        groupValue: _selectedIdType,
-                                        label: 'Passport',
-                                        onChanged: (value) {
-                                          setState(
-                                              () => _selectedIdType = value);
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'ssnit',
-                                        groupValue: _selectedIdType,
-                                        label: 'SSNIT',
-                                        onChanged: (value) {
-                                          setState(
-                                              () => _selectedIdType = value);
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'birth_certificate',
-                                        groupValue: _selectedIdType,
-                                        label: 'Birth Certificate',
-                                        onChanged: (value) {
-                                          setState(
-                                              () => _selectedIdType = value);
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // ID Number Field for Alternative IDs
-                          if (_hasGhanaCard == 'No' && _selectedIdType != null)
-                            _buildQuestionCard(
-                              child: _buildTextField(
-                                label:
-                                    'Enter ${_getSelectedIdTypeDisplayName()} Number',
-                                controller: _idNumberController,
-                                hintText:
-                                    'Enter your ${_getSelectedIdTypeDisplayName()} number',
-                                keyboardType: TextInputType.text,
-                                textCapitalization:
-                                    TextCapitalization.characters,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter your ${_getSelectedIdTypeDisplayName()} number';
-                                  }
-                                  return null;
+                              _buildRadioOption(
+                                value: 'No',
+                                groupValue: _hasGhanaCard,
+                                label: 'No',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasGhanaCard = value;
+                                    _idPictureConsent = null;
+                                    _idImagePath = null;
+                                  });
                                 },
                               ),
-                            ),
-
-                          // Consent Question
-                          if ((_hasGhanaCard == 'Yes' &&
-                                  _hasGhanaCard != null) ||
-                              (_hasGhanaCard == 'No' &&
-                                  _selectedIdType != null))
-                            _buildQuestionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Do you consent to us taking a picture of your national ID and taking ID number?',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  Wrap(
-                                    spacing: 20,
-                                    children: [
-                                      _buildRadioOption(
-                                        value: 'Yes',
-                                        groupValue: _idPictureConsent,
-                                        label: 'Yes',
-                                        onChanged: (value) {
-                                          setState(
-                                              () => _idPictureConsent = value);
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'No',
-                                        groupValue: _idPictureConsent,
-                                        label: 'No',
-                                        onChanged: (value) {
-                                          setState(
-                                              () => _idPictureConsent = value);
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // Reason for No Consent
-                          if (_idPictureConsent == 'No')
-                            _buildQuestionCard(
-                              child: _buildTextField(
-                                label: 'Please specify reason',
-                                controller: _reasonController,
-                                hintText: 'Enter reason for not consenting',
-                                maxLines: 2,
-                                validator: (value) {
-                                  if (_idPictureConsent == 'No' &&
-                                      (value == null || value.trim().isEmpty)) {
-                                    return 'Please specify a reason';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-
-                          // ID Picture Capture
-                          if (_idPictureConsent == 'Yes')
-                            _buildQuestionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'ID Picture',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  Container(
-                                    width: double.infinity,
-                                    height: 200,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.grey.shade300),
-                                      borderRadius: BorderRadius.circular(8),
-                                      color: Colors.grey[100],
-                                    ),
-                                    child: _idImagePath == null
-                                        ? Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.photo_camera,
-                                                size: 48,
-                                                color: Colors.grey.shade400,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'No image captured',
-                                                style: GoogleFonts.inter(
-                                                  color: Colors.grey.shade600,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                        : ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            child: Image.file(
-                                              File(_idImagePath!),
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                            ),
-                                          ),
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _takeIdPicture,
-                                      icon: const Icon(Icons.camera_alt,
-                                          size: 20),
-                                      label: Text(
-                                        _idImagePath == null
-                                            ? 'Take Picture of ID'
-                                            : 'Retake Picture',
-                                        style: GoogleFonts.inter(fontSize: 14),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green.shade600,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 12),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // Contact Number
-                          _buildQuestionCard(
-                            child: _buildTextField(
-                              label: 'Contact Number',
-                              controller: _contactNumberController,
-                              hintText: 'Enter 10-digit phone number',
-                              keyboardType: TextInputType.phone,
-                              maxLength: 10,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter contact number';
-                                }
-                                if (value.length != 10) {
-                                  return 'Please enter a valid 10-digit number';
-                                }
-                                return null;
-                              },
-                            ),
+                            ],
                           ),
-
-                          // Number of Children
-                          _buildQuestionCard(
-                            child: _buildTextField(
-                              label: 'Number of Children (Aged 5-17)',
-                              controller: _childrenCountController,
-                              hintText: 'Enter number of children',
-                              keyboardType: TextInputType.number,
-                              onChanged: (value) {
-                                final count = int.tryParse(value) ?? 0;
-                                _updateChildrenList(count);
-                                setState(() {});
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter number of children';
-                                }
-                                final number = int.tryParse(value);
-                                if (number == null) {
-                                  return 'Please enter a valid number';
-                                }
-                                if (number < 0) {
-                                  return 'Number cannot be negative';
-                                }
-                                if (number > 20) {
-                                  return 'Please enter a reasonable number';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-
-                          // Children Details
-                          if (childrenCount > 0)
-                            _buildQuestionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.child_care,
-                                          color: Colors.green.shade600),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Farmer\'s Children (Aged 5-17)',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  Text(
-                                    'Total Children: ${_childrenCountController.text.isEmpty ? "0" : _childrenCountController.text}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      color: isDark
-                                          ? Colors.white60
-                                          : Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: _Spacing.sm),
-                                  ...List.generate(
-                                    childrenCount,
-                                    (index) {
-                                      final childNumber = index + 1;
-                                      // Create controllers for each child field
-                                      final firstNameController =
-                                          TextEditingController();
-                                      final surnameController =
-                                          TextEditingController();
-
-                                      // Set initial values if they exist
-                                      if (index < _children.length) {
-                                        firstNameController.text =
-                                            _children[index].firstName;
-                                        surnameController.text =
-                                            _children[index].surname;
-                                      }
-
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const SizedBox(height: _Spacing.lg),
-                                          Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.grey[800]
-                                                  : Colors.grey[100],
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Child $childNumber Details',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 12),
-                                                // First Name Field
-                                                _buildTextField(
-                                                  label:
-                                                      'Enter first name of child No. $childNumber',
-                                                  controller:
-                                                      firstNameController,
-                                                  hintText: 'First name',
-                                                  onChanged: (value) =>
-                                                      _updateChildName(index,
-                                                          'firstName', value),
-                                                ),
-                                                const SizedBox(height: 16),
-                                                // Surname Field
-                                                _buildTextField(
-                                                  label:
-                                                      'Enter surname of child No. $childNumber',
-                                                  controller: surnameController,
-                                                  hintText: 'Surname',
-                                                  onChanged: (value) =>
-                                                      _updateChildName(index,
-                                                          'surname', value),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          const SizedBox(height: 80),
                         ],
                       ),
                     ),
-                  ),
+
+                    // Alternative ID Options (only show if no Ghana Card)
+                    if (_hasGhanaCard == 'No')
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Which other national id card is available?',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: _Spacing.md),
+                            Column(
+                              children: [
+                                _buildRadioOption(
+                                  value: 'voter_id',
+                                  groupValue: _selectedIdType,
+                                  label: 'Voter ID',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedIdType = value;
+                                      _idPictureConsent = null;
+                                      _idImagePath = null;
+                                    });
+                                  },
+                                ),
+                                _buildRadioOption(
+                                  value: 'drivers_license',
+                                  groupValue: _selectedIdType,
+                                  label: 'Driver\'s License',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedIdType = value;
+                                      _idPictureConsent = null;
+                                      _idImagePath = null;
+                                    });
+                                  },
+                                ),
+                                _buildRadioOption(
+                                  value: 'nhis_card',
+                                  groupValue: _selectedIdType,
+                                  label: 'NHIS Card',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedIdType = value;
+                                      _idPictureConsent = null;
+                                      _idImagePath = null;
+                                    });
+                                  },
+                                ),
+                                _buildRadioOption(
+                                  value: 'passport',
+                                  groupValue: _selectedIdType,
+                                  label: 'Passport',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedIdType = value;
+                                      _idPictureConsent = null;
+                                      _idImagePath = null;
+                                    });
+                                  },
+                                ),
+                                _buildRadioOption(
+                                  value: 'ssnit',
+                                  groupValue: _selectedIdType,
+                                  label: 'SSNIT',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedIdType = value;
+                                      _idPictureConsent = null;
+                                      _idImagePath = null;
+                                    });
+                                  },
+                                ),
+                                _buildRadioOption(
+                                  value: 'birth_certificate',
+                                  groupValue: _selectedIdType,
+                                  label: 'Birth Certificate',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedIdType = value;
+                                      _idPictureConsent = null;
+                                      _idImagePath = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // CONSENT QUESTION - Show after Ghana Card selection OR alternative ID selection
+                    if ((_hasGhanaCard == 'Yes') ||
+                        (_hasGhanaCard == 'No' && _selectedIdType != null))
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _hasGhanaCard == 'Yes'
+                                  ? 'Do you consent to us taking a picture of your Ghana Card and recording the card number?'
+                                  : 'Do you consent to us taking a picture of your ${_getSelectedIdTypeDisplayName()} and recording the ID number?',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: _Spacing.md),
+                            Wrap(
+                              spacing: 20,
+                              children: [
+                                _buildRadioOption(
+                                  value: 'Yes',
+                                  groupValue: _idPictureConsent,
+                                  label: 'Yes',
+                                  onChanged: (value) {
+                                    setState(() => _idPictureConsent = value);
+                                  },
+                                ),
+                                _buildRadioOption(
+                                  value: 'No',
+                                  groupValue: _idPictureConsent,
+                                  label: 'No',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _idPictureConsent = value;
+                                      _idImagePath = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Ghana Card Number Field (only show if they have Ghana Card AND consent)
+                    if (_hasGhanaCard == 'Yes' && _idPictureConsent == 'Yes')
+                      _buildQuestionCard(
+                        child: _buildTextField(
+                          label: 'Ghana Card Number',
+                          controller: _ghanaCardNumberController,
+                          hintText: 'Enter your Ghana Card number',
+                          keyboardType: TextInputType.text,
+                          textCapitalization: TextCapitalization.characters,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter your Ghana Card number';
+                            }
+                            if (value.trim().length < 6) {
+                              return 'Please enter a valid Ghana Card number';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+
+                    // Alternative ID Number Field (only show if no Ghana Card AND consent)
+                    if (_hasGhanaCard == 'No' &&
+                        _selectedIdType != null &&
+                        _idPictureConsent == 'Yes')
+                      _buildQuestionCard(
+                        child: _buildTextField(
+                          label: '${_getSelectedIdTypeDisplayName()} Number',
+                          controller: _idNumberController,
+                          hintText: 'Enter your ${_getSelectedIdTypeDisplayName()} number',
+                          keyboardType: TextInputType.text,
+                          textCapitalization: TextCapitalization.characters,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter your ${_getSelectedIdTypeDisplayName()} number';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+
+                    // ID Picture Capture (only show if consented)
+                    if (_idPictureConsent == 'Yes')
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _hasGhanaCard == 'Yes'
+                                  ? 'Ghana Card Picture'
+                                  : '${_getSelectedIdTypeDisplayName()} Picture',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: _Spacing.md),
+                            Container(
+                              width: double.infinity,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.grey[100],
+                              ),
+                              child: _idImagePath == null
+                                  ? Column(
+                                mainAxisAlignment:
+                                MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.photo_camera,
+                                    size: 48,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'No image captured',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              )
+                                  : ClipRRect(
+                                borderRadius:
+                                BorderRadius.circular(8),
+                                child: Image.file(
+                                  File(_idImagePath!),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: _Spacing.md),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _takeIdPicture,
+                                icon: const Icon(Icons.camera_alt,
+                                    size: 20),
+                                label: Text(
+                                  _idImagePath == null
+                                      ? 'Take Picture of ID'
+                                      : 'Retake Picture',
+                                  style: GoogleFonts.inter(fontSize: 14),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green.shade600,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Reason for No Consent (only show if declined consent)
+                    if (_idPictureConsent == 'No')
+                      _buildQuestionCard(
+                        child: _buildTextField(
+                          label: 'Please specify reason',
+                          controller: _reasonController,
+                          hintText: 'Enter reason for not consenting',
+                          maxLines: 2,
+                          validator: (value) {
+                            if (_idPictureConsent == 'No' &&
+                                (value == null || value.trim().isEmpty)) {
+                              return 'Please specify a reason';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+
+                    // Contact Number
+                    _buildQuestionCard(
+                      child: _buildTextField(
+                        label: 'Contact Number',
+                        controller: _contactNumberController,
+                        hintText: 'Enter 10-digit phone number',
+                        keyboardType: TextInputType.phone,
+                        maxLength: 10,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter contact number';
+                          }
+                          if (value.length != 10) {
+                            return 'Please enter a valid 10-digit number';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+
+                    // Number of Children
+                    _buildQuestionCard(
+                      child: _buildTextField(
+                        label: 'Number of Children (Aged 5-17)',
+                        controller: _childrenCountController,
+                        hintText: 'Enter number of children',
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final count = int.tryParse(value) ?? 0;
+                          _updateChildrenList(count);
+                          setState(() {});
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter number of children';
+                          }
+                          final number = int.tryParse(value);
+                          if (number == null) {
+                            return 'Please enter a valid number';
+                          }
+                          if (number < 0) {
+                            return 'Number cannot be negative';
+                          }
+                          if (number > 20) {
+                            return 'Please enter a reasonable number';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+
+                    // Children Details
+                    if (childrenCount > 0)
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.child_care,
+                                    color: Colors.green.shade600),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Farmer\'s Children (Aged 5-17)',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: _Spacing.md),
+                            Text(
+                              'Total Children: ${_childrenCountController.text.isEmpty ? "0" : _childrenCountController.text}',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: isDark
+                                    ? Colors.white60
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: _Spacing.sm),
+                            ...List.generate(
+                              childrenCount,
+                                  (index) {
+                                final childNumber = index + 1;
+                                // Create controllers for each child field
+                                final firstNameController =
+                                TextEditingController();
+                                final surnameController =
+                                TextEditingController();
+
+                                // Set initial values if they exist
+                                if (index < _children.length) {
+                                  firstNameController.text =
+                                      _children[index].firstName;
+                                  surnameController.text =
+                                      _children[index].surname;
+                                }
+
+                                return Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: _Spacing.lg),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.grey[800]
+                                            : Colors.grey[100],
+                                        borderRadius:
+                                        BorderRadius.circular(8),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Child $childNumber Details',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          // First Name Field
+                                          _buildTextField(
+                                            label:
+                                            'Enter first name of child No. $childNumber',
+                                            controller:
+                                            firstNameController,
+                                            hintText: 'First name',
+                                            onChanged: (value) =>
+                                                _updateChildName(index,
+                                                    'firstName', value),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          // Surname Field
+                                          _buildTextField(
+                                            label:
+                                            'Enter surname of child No. $childNumber',
+                                            controller: surnameController,
+                                            hintText: 'Surname',
+                                            onChanged: (value) =>
+                                                _updateChildName(index,
+                                                    'surname', value),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 80),
+                  ],
                 ),
-              ],
+              ),
             ),
+          ),
+        ],
+      ),
     );
   }
 }

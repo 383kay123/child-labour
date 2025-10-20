@@ -571,7 +571,7 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Please specify the agreement type',
+                        'If other,please specify',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w500,
                           color: isDark
@@ -767,7 +767,7 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Other to Specify',
+                        'If other,please specify',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w500,
                           color: isDark
@@ -861,67 +861,67 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
               // Show agreement section if:
               // 1. Have recruited during the past year (Yes), or
               // 2. Haven't recruited in past year but have recruited before (Yes)
-              if (_hasRecruitedWorker == '1' || 
-                  (_hasRecruitedWorker == '0' && _everRecruitedWorker == 'Yes'))
-                ...[
-                  // Note for the respondent
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: _Spacing.lg),
-                    child: Text(
-                      'For the following section, please read the statements to the respondent, and ask him/her if he/she agrees or disagrees.',
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: isDark ? Colors.grey[400] : Colors.grey[700],
-                        fontSize: 14,
-                      ),
+              if (_hasRecruitedWorker == '1' ||
+                  (_hasRecruitedWorker == '0' &&
+                      _everRecruitedWorker == 'Yes')) ...[
+                // Note for the respondent
+                Padding(
+                  padding: const EdgeInsets.only(bottom: _Spacing.lg),
+                  child: Text(
+                    'For the following section, please read the statements to the respondent, and ask him/her if he/she agrees or disagrees.',
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      fontSize: 14,
                     ),
                   ),
+                ),
 
-                  // Agreement Statements Section - Salary and Debt
-                  _buildAgreementSection(
-                    statements: [
-                      'It is acceptable to withhold a worker\'s salary without their consent.',
-                      'It is acceptable for a person who cannot pay their debts to work for the creditor to reimburse the debt.',
-                    ],
-                    ids: ['salary_workers', 'recruit_1'],
-                  ),
+                // Agreement Statements Section - Salary and Debt
+                _buildAgreementSection(
+                  statements: [
+                    'It is acceptable to withhold a worker\'s salary without their consent.',
+                    'It is acceptable for a person who cannot pay their debts to work for the creditor to reimburse the debt.',
+                  ],
+                  ids: ['salary_workers', 'recruit_1'],
+                ),
 
-                  // Agreement Statements Section - Recruitment
-                  _buildAgreementSection(
-                    statements: [
-                      'It is acceptable for an employer not to reveal the true nature of the work during the recruitment.',
-                      'A worker is obliged to work whenever he is called upon by his employer.',
-                    ],
-                    ids: ['recruit_2', 'recruit_3'],
-                  ),
+                // Agreement Statements Section - Recruitment
+                _buildAgreementSection(
+                  statements: [
+                    'It is acceptable for an employer not to reveal the true nature of the work during the recruitment.',
+                    'A worker is obliged to work whenever he is called upon by his employer.',
+                  ],
+                  ids: ['recruit_2', 'recruit_3'],
+                ),
 
-                  // Agreement Statements Section - Working Conditions
-                  _buildAgreementSection(
-                    statements: [
-                      'A worker is not entitled to move freely.',
-                      'A worker must be free to communicate with his or her family and friends.',
-                      'A worker is obliged to adapt to any living conditions imposed by the employer.',
-                      'It is acceptable for an employer and their family to interfere in a worker\'s private life.',
-                      'A worker should not have the freedom to leave work whenever they wish.',
-                    ],
-                    ids: [
-                      'conditions_1',
-                      'conditions_2',
-                      'conditions_3',
-                      'conditions_4',
-                      'conditions_5',
-                    ],
-                  ),
+                // Agreement Statements Section - Working Conditions
+                _buildAgreementSection(
+                  statements: [
+                    'A worker is not entitled to move freely.',
+                    'A worker must be free to communicate with his or her family and friends.',
+                    'A worker is obliged to adapt to any living conditions imposed by the employer.',
+                    'It is acceptable for an employer and their family to interfere in a worker\'s private life.',
+                    'A worker should not have the freedom to leave work whenever they wish.',
+                  ],
+                  ids: [
+                    'conditions_1',
+                    'conditions_2',
+                    'conditions_3',
+                    'conditions_4',
+                    'conditions_5',
+                  ],
+                ),
 
-                  // Agreement Statements Section - Leaving Employment
-                  _buildAgreementSection(
-                    statements: [
-                      'A worker should be required to stay longer than expected while waiting for unpaid salary.',
-                      'A worker should not be able to leave their employer when they owe money to their employer.',
-                    ],
-                    ids: ['leaving_1', 'leaving_2'],
-                  ),
-                ],
+                // Agreement Statements Section - Leaving Employment
+                _buildAgreementSection(
+                  statements: [
+                    'A worker should be required to stay longer than expected while waiting for unpaid salary.',
+                    'A worker should not be able to leave their employer when they owe money to their employer.',
+                  ],
+                  ids: ['leaving_1', 'leaving_2'],
+                ),
+              ],
 
               const SizedBox(height: _Spacing.xxl),
             ],

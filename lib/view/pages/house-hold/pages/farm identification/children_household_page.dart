@@ -363,35 +363,83 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
 
                     const SizedBox(height: _Spacing.lg),
 
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _submitForm,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    // Navigation Buttons
+                    const SizedBox(height: _Spacing.lg),
+                    Row(
+                      children: [
+                        // Previous Button
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: BorderSide(color: Colors.green.shade600, width: 2),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.arrow_back_ios,
+                                    size: 18, color: Colors.green.shade600),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Previous',
+                                  style: TextStyle(
+                                    color: Colors.green.shade600,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        child: Text(
-                          _hasChildrenInHousehold == 'Yes' &&
-                                  int.tryParse(_children5To17Controller.text) !=
-                                      null &&
-                                  (int.tryParse(
-                                              _children5To17Controller.text) ??
-                                          0) >
-                                      0
-                              ? 'Continue to Child Details'
-                              : 'Next',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        const SizedBox(width: 16),
+                        // Next Button
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _submitForm,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _hasChildrenInHousehold == 'Yes' &&
+                                      _numberOfChildrenController.text.isNotEmpty &&
+                                      (_hasChildrenInHousehold == 'No' ||
+                                          _children5To17Controller.text.isNotEmpty)
+                                  ? Colors.green.shade600
+                                  : Colors.grey[400],
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                              shadowColor: Colors.green.shade600.withOpacity(0.3),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _hasChildrenInHousehold == 'Yes' &&
+                                          int.tryParse(_children5To17Controller.text) != null &&
+                                          (int.tryParse(_children5To17Controller.text) ?? 0) > 0
+                                      ? 'Next: Child Details'
+                                      : 'Next',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.arrow_forward_ios,
+                                    size: 18, color: Colors.white),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                     const SizedBox(height: _Spacing.lg),
                   ],

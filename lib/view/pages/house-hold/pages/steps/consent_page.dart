@@ -92,10 +92,33 @@ class _ConsentPageState extends State<ConsentPage> {
     super.initState();
     _consentGiven = widget.consentGiven;
     _declinedConsent = !widget.consentGiven;
+
+    // Debug prints for initial state
+    _debugPrintInitialState();
+  }
+
+  void _debugPrintInitialState() {
+    debugPrint('=== CONSENT PAGE INITIAL STATE ===');
+    debugPrint('Interview Start Time: ${widget.interviewStartTime}');
+    debugPrint('GPS Position: ${widget.currentPosition}');
+    debugPrint('Community Type: ${widget.communityType}');
+    debugPrint('Resides in Community: ${widget.residesInCommunityConsent}');
+    debugPrint('Farmer Available: ${widget.farmerAvailable}');
+    debugPrint('Farmer Status: ${widget.farmerStatus}');
+    debugPrint('Available Person: ${widget.availablePerson}');
+    debugPrint('Other Specification: ${widget.otherSpecification}');
+    debugPrint('Other Community Name: ${widget.otherCommunityName}');
+    debugPrint('Consent Given: ${widget.consentGiven}');
+    debugPrint('===================================');
   }
 
   void _handleConsentChange(bool? value) {
     if (value != null) {
+      debugPrint('=== QUESTION RESPONSE ===');
+      debugPrint('Question: Do you consent to participate in this interview?');
+      debugPrint('Selected: ${value ? 'Yes' : 'No'}');
+      debugPrint('Options: [Yes, No]');
+      debugPrint('=========================');
       setState(() {
         _consentGiven = value;
         _declinedConsent = !value;
@@ -106,6 +129,12 @@ class _ConsentPageState extends State<ConsentPage> {
 
   void _handleDeclineChange(bool? value) {
     if (value != null) {
+      debugPrint('=== QUESTION RESPONSE ===');
+      debugPrint('Question: Do you consent to participate in this interview?');
+      debugPrint('Selected: ${value ? 'No' : 'Yes'}');
+      debugPrint('Options: [Yes, No]');
+      debugPrint('=========================');
+      
       setState(() {
         _declinedConsent = value;
         _consentGiven = !value;
@@ -118,8 +147,125 @@ class _ConsentPageState extends State<ConsentPage> {
     }
   }
 
+  void _handleCommunityTypeChanged(String? value) {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Question: Select the type of community');
+    debugPrint('Selected: $value');
+    debugPrint('Options: [rural, urban, semi_urban]');
+    debugPrint('=========================');
+    widget.onCommunityTypeChanged(value);
+  }
+
+  void _handleResidesInCommunityChanged(String? value) {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Question: Does the farmer reside in the community stated on the cover?');
+    debugPrint('Selected: $value');
+    debugPrint('Options: [Yes, No]');
+    debugPrint('=========================');
+    widget.onResidesInCommunityChanged(value);
+  }
+
+  void _handleFarmerAvailableChanged(String? value) {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Question: Is the farmer available for the interview?');
+    debugPrint('Selected: $value');
+    debugPrint('Options: [Yes, No]');
+    debugPrint('=========================');
+    widget.onFarmerAvailableChanged(value);
+  }
+
+  Future<void> _handleFarmerStatusChanged(String? value) async {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Question: If No, for what reason?');
+    debugPrint('Selected: $value');
+    debugPrint('Options: [Non-resident, Deceased, Doesn\'t work with TOUTON anymore, Other]');
+    debugPrint('=========================');
+    
+    if (value == 'Deceased' || value == 'Doesn\'t work with TOUTON anymore') {
+      final shouldEndSurvey = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('End Survey?'),
+          content: Text(
+            'You have selected "$value" as the reason. This will end the survey. Are you sure?',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('CANCEL'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('END SURVEY'),
+            ),
+          ],
+        ),
+      ) ?? false;
+
+      if (shouldEndSurvey && mounted) {
+        if (widget.onSurveyEnd != null) {
+          widget.onSurveyEnd!();
+        }
+        return;
+      } else {
+        // If user cancels, don't update the status
+        return;
+      }
+    }
+    
+    widget.onFarmerStatusChanged(value);
+  }
+
+  void _handleAvailablePersonChanged(String? value) {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Question: Who is available for the interview?');
+    debugPrint('Selected: $value');
+    debugPrint('Options: [Caretaker, Spouse, Nobody]');
+    debugPrint('=========================');
+    widget.onAvailablePersonChanged(value);
+  }
+
+  void _handleOtherSpecChanged(String value) {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Question: If other, please specify');
+    debugPrint('Entered: $value');
+    debugPrint('Field Type: Text Input');
+    debugPrint('=========================');
+    widget.onOtherSpecChanged(value);
+  }
+
+  void _handleOtherCommunityChanged(String value) {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Question: Provide the name of the community the farmer resides in');
+    debugPrint('Entered: $value');
+    debugPrint('Field Type: Text Input');
+    debugPrint('=========================');
+    widget.onOtherCommunityChanged(value);
+  }
+
+  void _handleRecordTime() {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Action: Recorded interview start time');
+    debugPrint('Time: ${DateTime.now().toIso8601String()}');
+    debugPrint('=========================');
+    widget.onRecordTime();
+  }
+
+  void _handleGetLocation() {
+    debugPrint('=== QUESTION RESPONSE ===');
+    debugPrint('Action: Getting GPS location');
+    debugPrint('Time: ${DateTime.now().toIso8601String()}');
+    debugPrint('=========================');
+    widget.onGetLocation();
+  }
+
   Future<void> _showEndSurveyConfirmation() async {
     if (_refusalReasonController.text.trim().isEmpty) {
+      debugPrint('Refusal reason is empty - showing warning');
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -137,6 +283,7 @@ class _ConsentPageState extends State<ConsentPage> {
       return;
     }
 
+    debugPrint('Showing end survey confirmation dialog');
     final shouldEndSurvey = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -145,11 +292,17 @@ class _ConsentPageState extends State<ConsentPage> {
                 'Are you sure you want to end the survey? This action cannot be undone.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () {
+                  debugPrint('User cancelled survey end');
+                  Navigator.pop(context, false);
+                },
                 child: const Text('CANCEL'),
               ),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () {
+                  debugPrint('User confirmed survey end');
+                  Navigator.pop(context, true);
+                },
                 child: const Text('END SURVEY'),
               ),
             ],
@@ -158,8 +311,10 @@ class _ConsentPageState extends State<ConsentPage> {
         false;
 
     if (shouldEndSurvey && mounted) {
+      debugPrint('Survey ended by user');
       widget.onSurveyEnd?.call();
     } else if (mounted) {
+      debugPrint('User changed mind - keeping survey active');
       setState(() {
         _declinedConsent = true;
         _consentGiven = false;
@@ -333,6 +488,7 @@ class _ConsentPageState extends State<ConsentPage> {
   }
 
   List<Widget> _buildNonResidentFields() {
+    debugPrint('Building non-resident fields');
     return [
       _buildQuestionCard(
         child: FormFields.buildTextField(
@@ -340,7 +496,7 @@ class _ConsentPageState extends State<ConsentPage> {
           label:
               'If no, provide the name of the community the farmer resides in',
           controller: widget.otherCommunityController,
-          onChanged: widget.onOtherCommunityChanged,
+          onChanged: _handleOtherCommunityChanged,
           isRequired: true,
         ),
       ),
@@ -348,6 +504,7 @@ class _ConsentPageState extends State<ConsentPage> {
   }
 
   List<Widget> _buildFarmerNotAvailableFields() {
+    debugPrint('Building farmer not available fields');
     return [
       _buildQuestionCard(
         child: FormFields.buildRadioGroup<String>(
@@ -361,7 +518,7 @@ class _ConsentPageState extends State<ConsentPage> {
                 'Doesn\'t work with TOUTON anymore'),
             MapEntry('Other', 'Other'),
           ],
-          onChanged: widget.onFarmerStatusChanged,
+          onChanged: _handleFarmerStatusChanged,
           isRequired: true,
         ),
       ),
@@ -371,22 +528,22 @@ class _ConsentPageState extends State<ConsentPage> {
             context: context,
             label: 'If other, please specify',
             controller: widget.otherSpecController,
-            onChanged: widget.onOtherSpecChanged,
+            onChanged: _handleOtherSpecChanged,
             isRequired: true,
           ),
         ),
-      if (widget.farmerStatus == 'Non-resident' ||
-          widget.farmerStatus == 'Other')
-        _buildQuestionCard(
-          child: FormFields.buildTextField(
-            context: context,
-            label:
-                'Please specify the name of the community the farmer resides in',
-            controller: widget.otherCommunityController,
-            onChanged: widget.onOtherCommunityChanged,
-            isRequired: true,
-          ),
-        ),
+      // if (widget.farmerStatus == 'Non-resident' ||
+      //     widget.farmerStatus == 'Other')
+      //   _buildQuestionCard(
+      //     child: FormFields.buildTextField(
+      //       context: context,
+      //       label:
+      //           'Please specify the name of the community the farmer resides in',
+      //       controller: widget.otherCommunityController,
+      //       onChanged: _handleOtherCommunityChanged,
+      //       isRequired: true,
+      //     ),
+      //   ),
       if (widget.farmerStatus == 'Non-resident' ||
           widget.farmerStatus == 'Other')
         _buildQuestionCard(
@@ -399,7 +556,7 @@ class _ConsentPageState extends State<ConsentPage> {
               MapEntry('Spouse', 'Spouse'),
               MapEntry('Nobody', 'Nobody'),
             ],
-            onChanged: widget.onAvailablePersonChanged,
+            onChanged: _handleAvailablePersonChanged,
             isRequired: true,
           ),
         ),
@@ -411,21 +568,12 @@ class _ConsentPageState extends State<ConsentPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    debugPrint('=== CONSENT PAGE BUILD ===');
+    debugPrint('Should show consent: ${_shouldShowConsentSection()}');
+    debugPrint('==========================');
+
     return Scaffold(
       backgroundColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
-      // appBar: AppBar(
-      //   title: Text(
-      //     'Consent Information',
-      //     style: theme.textTheme.titleLarge?.copyWith(
-      //       color: Colors.white,
-      //       fontWeight: FontWeight.w600,
-      //     ),
-      //   ),
-      //   backgroundColor: AppTheme.primaryColor,
-      //   elevation: 0,
-      //   centerTitle: true,
-      //   automaticallyImplyLeading: false,
-      // ),
       body: Column(
         children: [
           Expanded(
@@ -441,7 +589,7 @@ class _ConsentPageState extends State<ConsentPage> {
                     value: widget.interviewStartTime != null
                         ? '${widget.interviewStartTime!.hour}:${widget.interviewStartTime!.minute.toString().padLeft(2, '0')}'
                         : null,
-                    onTap: widget.onRecordTime,
+                    onTap: _handleRecordTime,
                     icon: Icons.access_time,
                     statusText: widget.timeStatus,
                   ),
@@ -453,7 +601,7 @@ class _ConsentPageState extends State<ConsentPage> {
                     value: widget.currentPosition != null
                         ? 'Location Recorded'
                         : null,
-                    onTap: widget.onGetLocation,
+                    onTap: _handleGetLocation,
                     icon: Icons.gps_fixed,
                     isLoading: widget.isGettingLocation,
                     statusText: widget.isGettingLocation
@@ -482,19 +630,19 @@ class _ConsentPageState extends State<ConsentPage> {
                               value: 'rural',
                               groupValue: widget.communityType,
                               label: 'Rural',
-                              onChanged: widget.onCommunityTypeChanged,
+                              onChanged: _handleCommunityTypeChanged,
                             ),
                             _buildRadioOption(
                               value: 'urban',
                               groupValue: widget.communityType,
                               label: 'Urban',
-                              onChanged: widget.onCommunityTypeChanged,
+                              onChanged: _handleCommunityTypeChanged,
                             ),
                             _buildRadioOption(
                               value: 'semi_urban',
                               groupValue: widget.communityType,
                               label: 'Semi-Urban',
-                              onChanged: widget.onCommunityTypeChanged,
+                              onChanged: _handleCommunityTypeChanged,
                             ),
                           ],
                         ),
@@ -521,13 +669,13 @@ class _ConsentPageState extends State<ConsentPage> {
                               value: 'Yes',
                               groupValue: widget.residesInCommunityConsent,
                               label: 'Yes',
-                              onChanged: widget.onResidesInCommunityChanged,
+                              onChanged: _handleResidesInCommunityChanged,
                             ),
                             _buildRadioOption(
                               value: 'No',
                               groupValue: widget.residesInCommunityConsent,
                               label: 'No',
-                              onChanged: widget.onResidesInCommunityChanged,
+                              onChanged: _handleResidesInCommunityChanged,
                             ),
                           ],
                         ),
@@ -558,13 +706,13 @@ class _ConsentPageState extends State<ConsentPage> {
                               value: 'Yes',
                               groupValue: widget.farmerAvailable,
                               label: 'Yes',
-                              onChanged: widget.onFarmerAvailableChanged,
+                              onChanged: _handleFarmerAvailableChanged,
                             ),
                             _buildRadioOption(
                               value: 'No',
                               groupValue: widget.farmerAvailable,
                               label: 'No',
-                              onChanged: widget.onFarmerAvailableChanged,
+                              onChanged: _handleFarmerAvailableChanged,
                             ),
                           ],
                         ),
@@ -586,99 +734,10 @@ class _ConsentPageState extends State<ConsentPage> {
           ),
         ],
       ),
-      // bottomNavigationBar: Container(
-      //   padding: const EdgeInsets.all(_Spacing.lg),
-      //   decoration: BoxDecoration(
-      //     color: Theme.of(context).scaffoldBackgroundColor,
-      //     boxShadow: [
-      //       BoxShadow(
-      //         color: Colors.black.withOpacity(0.1),
-      //         blurRadius: 10,
-      //         offset: const Offset(0, -2),
-      //       ),
-      //     ],
-      //   ),
-      //   child: SafeArea(
-      //     child: Padding(
-      //       padding: const EdgeInsets.all(16.0),
-      //       child: Row(
-      //         children: [
-      //           // Previous Button
-      //           Expanded(
-      //             child: OutlinedButton(
-      //               onPressed: widget.onPrevious,
-      //               style: OutlinedButton.styleFrom(
-      //                 padding: const EdgeInsets.symmetric(vertical: 16),
-      //                 side: BorderSide(color: Colors.green.shade600, width: 2),
-      //                 shape: RoundedRectangleBorder(
-      //                   borderRadius: BorderRadius.circular(12),
-      //                 ),
-      //               ),
-      //               child: Row(
-      //                 mainAxisAlignment: MainAxisAlignment.center,
-      //                 children: [
-      //                   Icon(Icons.arrow_back_ios,
-      //                       size: 18, color: Colors.green.shade600),
-      //                   const SizedBox(width: 8),
-      //                   Text(
-      //                     'Previous',
-      //                     style: GoogleFonts.inter(
-      //                       color: Colors.green.shade600,
-      //                       fontWeight: FontWeight.w600,
-      //                       fontSize: 16,
-      //                     ),
-      //                   ),
-      //                 ],
-      //               ),
-      //             ),
-      //           ),
-      //           const SizedBox(width: 16),
-      //           // Next Button
-      //           Expanded(
-      //             child: ElevatedButton(
-      //               onPressed: _consentGiven ? widget.onNext : null,
-      //               style: ElevatedButton.styleFrom(
-      //                 backgroundColor: _consentGiven
-      //                     ? Colors.green.shade600
-      //                     : Colors.grey[400],
-      //                 padding: const EdgeInsets.symmetric(vertical: 16),
-      //                 shape: RoundedRectangleBorder(
-      //                   borderRadius: BorderRadius.circular(12),
-      //                 ),
-      //                 elevation: 2,
-      //                 shadowColor: Colors.green.shade600.withOpacity(0.3),
-      //               ),
-      //               child: Row(
-      //                 mainAxisAlignment: MainAxisAlignment.center,
-      //                 children: [
-      //                   Text(
-      //                     'Next',
-      //                     style: GoogleFonts.inter(
-      //                       color: Colors.white,
-      //                       fontWeight: FontWeight.w600,
-      //                       fontSize: 16,
-      //                     ),
-      //                   ),
-      //                   const SizedBox(width: 8),
-      //                   const Icon(Icons.arrow_forward_ios,
-      //                       size: 18, color: Colors.white),
-      //                 ],
-      //               ),
-      //             ),
-      //           ),
-      //         ],
-      //       ),
-      //     ),
-      //   ),
-      // ),
     );
   }
 
-  Widget _buildConsentSection() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Show consent only under these conditions:
+  bool _shouldShowConsentSection() {
     bool shouldShowConsent = false;
 
     if (widget.farmerAvailable == 'Yes') {
@@ -693,9 +752,24 @@ class _ConsentPageState extends State<ConsentPage> {
       shouldShowConsent = true;
     }
 
-    if (!shouldShowConsent) {
+    debugPrint('Consent section visibility: $shouldShowConsent');
+    debugPrint('  - Farmer Available: ${widget.farmerAvailable}');
+    debugPrint('  - Farmer Status: ${widget.farmerStatus}');
+    debugPrint('  - Available Person: ${widget.availablePerson}');
+
+    return shouldShowConsent;
+  }
+
+  Widget _buildConsentSection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    if (!_shouldShowConsentSection()) {
+      debugPrint('Skipping consent section build - conditions not met');
       return const SizedBox.shrink();
     }
+
+    debugPrint('Building consent section');
 
     return _buildQuestionCard(
       child: Column(
@@ -823,6 +897,9 @@ class _ConsentPageState extends State<ConsentPage> {
               ),
               maxLines: 3,
               textCapitalization: TextCapitalization.sentences,
+              onChanged: (value) {
+                debugPrint('Refusal reason updated: $value');
+              },
             ),
           ],
         ],
@@ -832,6 +909,7 @@ class _ConsentPageState extends State<ConsentPage> {
 
   @override
   void dispose() {
+    debugPrint('ConsentPage disposed');
     _refusalReasonController.dispose();
     _reasonFocusNode.dispose();
     super.dispose();

@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../theme/app_theme.dart';
 import 'pages/farm identification/children_household_page.dart';
-// import 'package:surveyflow/view/theme/app_theme.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
 class _Spacing {
@@ -19,11 +18,15 @@ class _Spacing {
 class ProducerDetailsPage extends StatefulWidget {
   final String personName;
   final Function(Map<String, dynamic>) onSave;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
 
   const ProducerDetailsPage({
     super.key,
     required this.personName,
     required this.onSave,
+    this.onPrevious,
+    this.onNext,
   });
 
   @override
@@ -352,7 +355,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
 
   bool get _isFormComplete {
     return _hasGhanaCard != null &&
-        _consentToTakePhoto != null &&
+        (_hasGhanaCard == 'No' || _consentToTakePhoto != null) &&
         _relationshipToRespondent != null &&
         _gender != null &&
         _nationality != null &&
@@ -361,60 +364,66 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
   }
 
   void _submitForm() {
-    // Parse year of birth safely
-    int? yearOfBirth;
-    if (_yearOfBirthController.text.trim().isNotEmpty) {
-      yearOfBirth = int.tryParse(_yearOfBirthController.text.trim());
-    }
+    if (_formKey.currentState?.validate() ?? false) {
+      // Parse year of birth safely
+      int? yearOfBirth;
+      if (_yearOfBirthController.text.trim().isNotEmpty) {
+        yearOfBirth = int.tryParse(_yearOfBirthController.text.trim());
+      }
 
-    // Determine occupation value
-    String? occupation;
-    if (_selectedOccupation == 'Other (to specify)' &&
-        _otherOccupationController.text.isNotEmpty) {
-      occupation = _otherOccupationController.text;
-    } else {
-      occupation = _selectedOccupation;
-    }
+      // Determine occupation value
+      String? occupation;
+      if (_selectedOccupation == 'Other (to specify)' &&
+          _otherOccupationController.text.isNotEmpty) {
+        occupation = _otherOccupationController.text;
+      } else {
+        occupation = _selectedOccupation;
+      }
 
-    final details = {
-      'name': widget.personName,
-      'hasGhanaCard': _hasGhanaCard == 'Yes',
-      'ghanaCardId':
-          _hasGhanaCard == 'Yes' ? _ghanaCardIdController.text : null,
-      'otherIdType': _hasGhanaCard == 'No' ? _selectedIdType : null,
-      'otherIdNumber': _hasGhanaCard == 'No' ? _otherIdController.text : null,
-      'consentToTakePhoto': _consentToTakePhoto,
-      'noConsentReason':
-          !_consentToTakePhoto ? _noConsentReasonController.text : null,
-      'idPhotoPath': _idPhoto?.path,
-      'relationshipToRespondent': _relationshipToRespondent,
-      'otherRelationship': _relationshipToRespondent == 'other'
-          ? _otherRelationshipController.text
-          : null,
-      'gender': _gender,
-      'nationality': _nationality,
-      'yearOfBirth': yearOfBirth,
-      'countryOfOrigin': _nationality == 'non_ghanaian'
-          ? (_selectedCountry == 'Other (specify)'
-              ? _otherCountryController.text
-              : _selectedCountry)
-          : null,
-      'hasBirthCertificate': _hasBirthCertificate,
-      'occupation': occupation,
-    };
+      final details = {
+        'name': widget.personName,
+        'hasGhanaCard': _hasGhanaCard == 'Yes',
+        'ghanaCardId':
+            _hasGhanaCard == 'Yes' ? _ghanaCardIdController.text : null,
+        'otherIdType': _hasGhanaCard == 'No' ? _selectedIdType : null,
+        'otherIdNumber': _hasGhanaCard == 'No' ? _otherIdController.text : null,
+        'consentToTakePhoto': _consentToTakePhoto,
+        'noConsentReason':
+            !_consentToTakePhoto ? _noConsentReasonController.text : null,
+        'idPhotoPath': _idPhoto?.path,
+        'relationshipToRespondent': _relationshipToRespondent,
+        'otherRelationship': _relationshipToRespondent == 'other'
+            ? _otherRelationshipController.text
+            : null,
+        'gender': _gender,
+        'nationality': _nationality,
+        'yearOfBirth': yearOfBirth,
+        'countryOfOrigin': _nationality == 'non_ghanaian'
+            ? (_selectedCountry == 'Other (specify)'
+                ? _otherCountryController.text
+                : _selectedCountry)
+            : null,
+        'hasBirthCertificate': _hasBirthCertificate,
+        'occupation': occupation,
+      };
 
-    // Call onSave first
-    widget.onSave(details);
+      // Call onSave first
+      widget.onSave(details);
 
-    // Then navigate
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChildrenHouseholdPage(
-          producerDetails: details,
+      // Then navigate
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChildrenHouseholdPage(
+            producerDetails: details,
+          ),
         ),
-      ),
-    );
+      );
+    }
+  }
+
+  void _goBack() {
+    Navigator.pop(context);
   }
 
   @override
@@ -498,23 +507,6 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                       ),
                     ),
 
-                    // // Ghana Card ID Field (shown when 'Yes' is selected)
-                    // if (_hasGhanaCard == 'Yes')
-                    //   _buildQuestionCard(
-                    //     child: _buildTextField(
-                    //       label: 'Ghana Card ID',
-                    //       controller: _ghanaCardIdController,
-                    //       hintText: 'Enter Ghana Card ID',
-                    //       validator: (value) {
-                    //         if (_hasGhanaCard == 'Yes' &&
-                    //             (value == null || value.isEmpty)) {
-                    //           return 'Please enter Ghana Card ID';
-                    //         }
-                    //         return null;
-                    //       },
-                    //     ),
-                    //   ),
-
                     // Other ID Card (shown when 'No' is selected)
                     if (_hasGhanaCard == 'No')
                       _buildQuestionCard(
@@ -539,73 +531,67 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                                 return null;
                               },
                             ),
-                            if (_selectedIdType != null &&
-                                _selectedIdType != 'none') ...[
-                              const SizedBox(height: _Spacing.md),
-                              _buildTextField(
-                                label: 'ID Number',
-                                controller: _otherIdController,
-                                hintText: 'Enter ID number',
-                                validator: (value) {
-                                  if (_hasGhanaCard == 'No' &&
-                                      _selectedIdType != 'none' &&
-                                      (value == null || value.isEmpty)) {
-                                    return 'Please enter ID number';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
                           ],
                         ),
                       ),
 
-                    // Consent for taking ID photo
-                    _buildQuestionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Do you consent to us taking a picture of your national ID?',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.textPrimary,
-                              fontWeight: FontWeight.w500,
+                    // Show consent question if has Ghana card or any other national ID (not 'none')
+                    if ((_hasGhanaCard == 'Yes' && _selectedIdType != 'none') ||
+                        (_hasGhanaCard == 'No' &&
+                            _selectedIdType != null &&
+                            _selectedIdType != 'none'))
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Do you consent to us taking a picture of your identification document?',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: _Spacing.md),
-                          Wrap(
-                            spacing: 20,
-                            children: [
-                              _buildRadioOption(
-                                value: 'Yes',
-                                groupValue: _consentToTakePhoto ? 'Yes' : 'No',
-                                label: 'Yes',
-                                onChanged: (value) {
-                                  setState(() {
-                                    _consentToTakePhoto = value == 'Yes';
-                                  });
-                                },
-                              ),
-                              _buildRadioOption(
-                                value: 'No',
-                                groupValue: _consentToTakePhoto ? 'Yes' : 'No',
-                                label: 'No',
-                                onChanged: (value) {
-                                  setState(() {
-                                    _consentToTakePhoto = value == 'Yes';
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
+                            const SizedBox(height: _Spacing.md),
+                            Wrap(
+                              spacing: 20,
+                              children: [
+                                _buildRadioOption(
+                                  value: 'Yes',
+                                  groupValue:
+                                      _consentToTakePhoto ? 'Yes' : 'No',
+                                  label: 'Yes',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _consentToTakePhoto = value == 'Yes';
+                                    });
+                                  },
+                                ),
+                                _buildRadioOption(
+                                  value: 'No',
+                                  groupValue:
+                                      _consentToTakePhoto ? 'Yes' : 'No',
+                                  label: 'No',
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _consentToTakePhoto = value == 'Yes';
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
 
-                    // ID Photo Section (shown when consent is given)
-                    if (_consentToTakePhoto)
+                    // ID Photo Section (shown when consent is given and has a valid ID type)
+                    if (_consentToTakePhoto &&
+                        ((_hasGhanaCard == 'Yes' &&
+                                _selectedIdType != 'none') ||
+                            (_hasGhanaCard == 'No' &&
+                                _selectedIdType != null &&
+                                _selectedIdType != 'none')))
                       _buildQuestionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,18 +674,11 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Relationship of ${widget.personName} to the respondent',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.textPrimary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
                           const SizedBox(height: _Spacing.md),
                           _buildDropdownField(
-                            label: 'Select relationship',
+                            label:
+                                'Relationship of ${widget.personName} to the '
+                                'respondent (Farmer/Manager/Cartaker)',
                             value: _relationshipToRespondent,
                             items: relationshipOptions,
                             onChanged: (value) {
@@ -834,7 +813,8 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildDropdownField(
-                              label: 'Country of Origin',
+                              label: 'If Non Ghanaian, specify country of '
+                                  'origin',
                               value: _selectedCountry,
                               items: countries
                                   .map((country) =>
@@ -849,7 +829,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                             if (_selectedCountry == 'Other (specify)') ...[
                               const SizedBox(height: _Spacing.md),
                               _buildTextField(
-                                label: 'Specify Country',
+                                label: 'If other please specify',
                                 controller: _otherCountryController,
                                 hintText: 'Enter country name',
                               ),
@@ -864,7 +844,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Year of Birth',
+                            'Year of Birth of ${widget.personName}',
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -959,18 +939,10 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Work/main occupation of ${widget.personName}',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.textPrimary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
                           const SizedBox(height: _Spacing.md),
                           _buildDropdownField(
-                            label: 'Select occupation',
+                            label:
+                                'Work/main occupation of ${widget.personName}',
                             value: _selectedOccupation,
                             items: _occupationOptions
                                 .map((occupation) =>
@@ -985,7 +957,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                           if (_selectedOccupation == 'Other (to specify)') ...[
                             const SizedBox(height: _Spacing.md),
                             _buildTextField(
-                              label: 'Please specify occupation',
+                              label: 'If other,please specify',
                               controller: _otherOccupationController,
                               hintText: 'Enter occupation',
                             ),
@@ -1014,22 +986,75 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
             ),
           ],
         ),
-        child: ElevatedButton(
-          onPressed: _submitForm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            elevation: 2,
-          ),
-          child: Text(
-            'Next: Children in Household',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Previous Button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _goBack,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Colors.green.shade600, width: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.arrow_back_ios,
+                            size: 18, color: Colors.green.shade600),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Previous',
+                          style: TextStyle(
+                            color: Colors.green.shade600,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Next Button
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isFormComplete ? _submitForm : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isFormComplete
+                          ? Colors.green.shade600
+                          : Colors.grey[400],
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                      shadowColor: Colors.green.shade600.withOpacity(0.3),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Next',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_ios,
+                            size: 18, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

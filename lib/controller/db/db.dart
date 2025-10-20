@@ -85,18 +85,18 @@ class LocalDBHelper {
 
   Future<int> insertCommunityAssessment(CommunityAssessmentModel model) async {
     final db = await instance.database;
-    return await db.insert('responses', model.toMap());
+    return await db.insert(TableNames.communityAssessmentTBL, model.toMap());
   }
 
   Future<int> updateCommunityAssessment(CommunityAssessmentModel model) async {
     final db = await instance.database;
-    return await db.update('responses', model.toMap(),
+    return await db.update(TableNames.communityAssessmentTBL, model.toMap(),
         where: 'id = ?', whereArgs: [model.id]);
   }
 
   Future<List<CommunityAssessmentModel>> getCommunityAssessment() async {
     final db = await instance.database;
-    final result = await db.query('responses');
+    final result = await db.query(TableNames.communityAssessmentTBL);
     return result
         .map((json) =>
             CommunityAssessmentModel.fromMap(Map<String, String>.from(json)))
@@ -107,8 +107,8 @@ class LocalDBHelper {
   Future<List<CommunityAssessmentModel>> getCommunityAssessmentByStatus(
       {int status = 0}) async {
     final db = await instance.database;
-    final result =
-        await db.query('responses', where: 'status = ?', whereArgs: [status]);
+    final result = await db.query(TableNames.communityAssessmentTBL,
+        where: 'status = ?', whereArgs: [status]);
     return result
         .map((json) =>
             CommunityAssessmentModel.fromMap(Map<String, String>.from(json)))
@@ -117,7 +117,7 @@ class LocalDBHelper {
 
   Future<int> deleteAllCommunityAssessment() async {
     final db = await instance.database;
-    return await db.delete('responses');
+    return await db.delete(TableNames.communityAssessmentTBL);
   }
 
   // ========================================================================================

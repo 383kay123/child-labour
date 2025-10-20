@@ -2,8 +2,18 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
+import 'package:human_rights_monitor/view/theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 // import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
+
+/// A collection of reusable spacing constants for consistent UI layout.
+class _Spacing {
+  static const double xs = 4.0;
+  static const double sm = 8.0;
+  static const double md = 16.0;
+  static const double lg = 24.0;
+  static const double xl = 32.0;
+}
 
 class _ArithmeticItem extends StatelessWidget {
   final String expression;
@@ -335,6 +345,17 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
   List<String> _notWithFamilyReasons = [];
   final TextEditingController _otherNotWithFamilyController =
       TextEditingController();
+  // Reasons why child doesn't live with family
+  final Map<String, bool> _notLivingWithFamilyReasons = {
+    'Child lives with other relatives': false,
+    'Child is an orphan': false,
+    'For education purposes': false,
+    'Family is too poor to take care of the child': false,
+    'Child is working to support family': false,
+    'Other (specify)': false,
+  };
+  final TextEditingController _otherNotLivingWithFamilyController = 
+      TextEditingController();
   bool? _childAgreedWithDecision;
   bool? _hasSpokenWithParents;
   String? _neverBeenToSchool;
@@ -585,25 +606,30 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     required ValueChanged<T?> onChanged,
     String? subtitle,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           question,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         if (subtitle != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: _Spacing.sm),
           Text(
             subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                ),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color:
+                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+            ),
           ),
         ],
-        const SizedBox(height: 12),
+        const SizedBox(height: _Spacing.md),
         ...options.map((option) => ModernRadioButton<T>(
               value: option['value'] as T,
               groupValue: groupValue,
@@ -1025,21 +1051,23 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
 
               _buildInfoCard('FARMER CHILDREN LIST'),
 
-              // Child Number Input
-              _buildModernTextField(
-                label:
-                    'Enter the number attached to the child name in the cover so we can identify the child in question:',
-                controller: _childNumberController,
-                keyboardType: TextInputType.number,
-                hintText: 'Enter child number',
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the child number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
+              // Child Number Input - Only show if child is among farmer's children
+              if (_isFarmerChild == true) ...[
+                _buildModernTextField(
+                  label:
+                      'Enter the number attached to the child name in the cover so we can identify the child in question:',
+                  controller: _childNumberController,
+                  keyboardType: TextInputType.number,
+                  hintText: 'Enter child number',
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the child number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // Survey Availability
               _buildModernRadioGroup<bool>(
@@ -1147,36 +1175,40 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
               if (_canBeSurveyedNow == true || _canBeSurveyedNow == false) ...[
                 _buildSectionHeader('PERSONAL INFORMATION'),
 
-                // Child's basic information
-                _buildModernTextField(
-                  label: 'Child\'s First Name:',
-                  controller: _nameController,
-                  hintText: 'Enter child\'s first name',
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter the child\'s first name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
+                // Show child's name fields only if not a farmer's child
+                if (_isFarmerChild == false) ...[
+                  // Child's basic information
+                  _buildModernTextField(
+                    label: 'Child\'s First Name:',
+                    controller: _nameController,
+                    hintText: 'Enter child\'s first name',
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter the child\'s first name';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
 
-                _buildModernTextField(
-                  label: 'Child\'s Surname:',
-                  controller: _surnameController,
-                  hintText: 'Enter child\'s surname',
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter the child\'s surname';
-                    }
-                    return null;
-                  },
-                ),
+                  _buildModernTextField(
+                    label: 'Child\'s Surname:',
+                    controller: _surnameController,
+                    hintText: 'Enter child\'s surname',
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter the child\'s surname';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 const SizedBox(height: 16),
 
                 // Child's Gender
                 _buildModernRadioGroup<String>(
-                  question: 'Child\'s Gender:',
+                  question: 'Gender of the child',
                   groupValue: _gender,
                   onChanged: (value) {
                     setState(() {
@@ -1380,6 +1412,48 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                       return null;
                     },
                   ),
+                ],
+
+                // Show this question if child is not a direct family member
+                if ((_relationshipToHead == 'Child of the worker' || 
+                     _relationshipToHead == 'Child of the farm owner (only if the respondent is the caretaker)' ||
+                     _relationshipToHead == 'Other (please specify)') && 
+                    _isFarmerChild == false) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Why does the child [${widget.childNumber}] not live with his/her family?',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._notLivingWithFamilyReasons.entries.map((entry) {
+                    return ModernCheckbox(
+                      value: entry.value,
+                      onChanged: (bool? selected) {
+                        setState(() {
+                          _notLivingWithFamilyReasons[entry.key] = selected ?? false;
+                        });
+                      },
+                      title: entry.key,
+                    );
+                  }).toList(),
+                  if (_notLivingWithFamilyReasons['Other (specify)'] == true) ...[
+                    const SizedBox(height: 8),
+                    _buildModernTextField(
+                      label: 'Please specify other reason',
+                      controller: _otherNotLivingWithFamilyController,
+                      validator: (value) {
+                        if (_notLivingWithFamilyReasons['Other (specify)'] == true &&
+                            (value == null || value.trim().isEmpty)) {
+                          return 'Please specify the reason';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 16),
                 ],
 
                 // Family Information Section
@@ -3917,55 +3991,94 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                 _buildPhotoSection(),
               ],
 
-              // Submit button with modern design
+              // Navigation buttons
               const SizedBox(height: 32),
-              Container(
-                width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.8),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      _submitForm();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SensitizationPage(),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Center(
-                      child: Text(
-                        'NEXT:SENSITIZATION',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
+              Row(
+                children: [
+                  // Previous button
+                  Expanded(
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Theme.of(context).primaryColor),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Center(
+                            child: Text(
+                              'PREVIOUS',
+                              style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  // Next button
+                  Expanded(
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).primaryColor,
+                            Theme.of(context).primaryColor.withOpacity(0.8),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).primaryColor.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            if (_formKey.currentState?.validate() ?? false) {
+                              _submitForm();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SensitizationPage(),
+                                ),
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: const Center(
+                            child: Text(
+                              'NEXT',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
             ],
