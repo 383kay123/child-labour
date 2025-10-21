@@ -59,7 +59,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
       TextEditingController();
   String? _hasGhanaCard;
   String? _selectedIdType;
-  bool _consentToTakePhoto = false;
+  bool? _consentToTakePhoto;
   File? _idPhoto;
   String? _relationshipToRespondent;
   String? _hasBirthCertificate;
@@ -388,8 +388,9 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
         'otherIdType': _hasGhanaCard == 'No' ? _selectedIdType : null,
         'otherIdNumber': _hasGhanaCard == 'No' ? _otherIdController.text : null,
         'consentToTakePhoto': _consentToTakePhoto,
-        'noConsentReason':
-            !_consentToTakePhoto ? _noConsentReasonController.text : null,
+        'noConsentReason': _consentToTakePhoto == false
+            ? _noConsentReasonController.text
+            : null,
         'idPhotoPath': _idPhoto?.path,
         'relationshipToRespondent': _relationshipToRespondent,
         'otherRelationship': _relationshipToRespondent == 'other'
@@ -482,6 +483,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                                 onChanged: (value) {
                                   setState(() {
                                     _hasGhanaCard = value;
+                                    _selectedIdType = null;
                                     _otherIdController.clear();
                                   });
                                 },
@@ -495,8 +497,6 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                                     _hasGhanaCard = value;
                                     if (_hasGhanaCard == 'No') {
                                       _ghanaCardIdController.clear();
-                                    } else {
-                                      _selectedIdType = null;
                                     }
                                   });
                                 },
@@ -559,8 +559,9 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                               children: [
                                 _buildRadioOption(
                                   value: 'Yes',
-                                  groupValue:
-                                      _consentToTakePhoto ? 'Yes' : 'No',
+                                  groupValue: _consentToTakePhoto == null
+                                      ? null
+                                      : (_consentToTakePhoto! ? 'Yes' : 'No'),
                                   label: 'Yes',
                                   onChanged: (value) {
                                     setState(() {
@@ -570,8 +571,9 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                                 ),
                                 _buildRadioOption(
                                   value: 'No',
-                                  groupValue:
-                                      _consentToTakePhoto ? 'Yes' : 'No',
+                                  groupValue: _consentToTakePhoto == null
+                                      ? null
+                                      : (_consentToTakePhoto! ? 'Yes' : 'No'),
                                   label: 'No',
                                   onChanged: (value) {
                                     setState(() {
@@ -586,7 +588,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                       ),
 
                     // ID Photo Section (shown when consent is given and has a valid ID type)
-                    if (_consentToTakePhoto &&
+                    if (_consentToTakePhoto == true &&
                         ((_hasGhanaCard == 'Yes' &&
                                 _selectedIdType != 'none') ||
                             (_hasGhanaCard == 'No' &&
@@ -659,7 +661,7 @@ class _ProducerDetailsPageState extends State<ProducerDetailsPage> {
                       ),
 
                     // No Consent Reason (shown when consent is not given)
-                    if (!_consentToTakePhoto)
+                    if (_consentToTakePhoto == false)
                       _buildQuestionCard(
                         child: _buildTextField(
                           label: 'Reason for not providing photo',

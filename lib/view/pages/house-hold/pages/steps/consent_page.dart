@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get/get.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/house_hold_controller.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../form_fields.dart';
@@ -134,7 +136,7 @@ class _ConsentPageState extends State<ConsentPage> {
       debugPrint('Selected: ${value ? 'No' : 'Yes'}');
       debugPrint('Options: [Yes, No]');
       debugPrint('=========================');
-      
+
       setState(() {
         _declinedConsent = value;
         _consentGiven = !value;
@@ -158,7 +160,8 @@ class _ConsentPageState extends State<ConsentPage> {
 
   void _handleResidesInCommunityChanged(String? value) {
     debugPrint('=== QUESTION RESPONSE ===');
-    debugPrint('Question: Does the farmer reside in the community stated on the cover?');
+    debugPrint(
+        'Question: Does the farmer reside in the community stated on the cover?');
     debugPrint('Selected: $value');
     debugPrint('Options: [Yes, No]');
     debugPrint('=========================');
@@ -178,33 +181,35 @@ class _ConsentPageState extends State<ConsentPage> {
     debugPrint('=== QUESTION RESPONSE ===');
     debugPrint('Question: If No, for what reason?');
     debugPrint('Selected: $value');
-    debugPrint('Options: [Non-resident, Deceased, Doesn\'t work with TOUTON anymore, Other]');
+    debugPrint(
+        'Options: [Non-resident, Deceased, Doesn\'t work with TOUTON anymore, Other]');
     debugPrint('=========================');
-    
+
     if (value == 'Deceased' || value == 'Doesn\'t work with TOUTON anymore') {
       final shouldEndSurvey = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('End Survey?'),
-          content: Text(
-            'You have selected "$value" as the reason. This will end the survey. Are you sure?',
-            style: const TextStyle(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('CANCEL'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('End Survey?'),
+              content: Text(
+                'You have selected "$value" as the reason. This will end the survey. Are you sure?',
+                style: const TextStyle(fontSize: 16),
               ),
-              child: const Text('END SURVEY'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('CANCEL'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                  child: const Text('END SURVEY'),
+                ),
+              ],
             ),
-          ],
-        ),
-      ) ?? false;
+          ) ??
+          false;
 
       if (shouldEndSurvey && mounted) {
         if (widget.onSurveyEnd != null) {
@@ -216,7 +221,7 @@ class _ConsentPageState extends State<ConsentPage> {
         return;
       }
     }
-    
+
     widget.onFarmerStatusChanged(value);
   }
 
@@ -240,7 +245,8 @@ class _ConsentPageState extends State<ConsentPage> {
 
   void _handleOtherCommunityChanged(String value) {
     debugPrint('=== QUESTION RESPONSE ===');
-    debugPrint('Question: Provide the name of the community the farmer resides in');
+    debugPrint(
+        'Question: Provide the name of the community the farmer resides in');
     debugPrint('Entered: $value');
     debugPrint('Field Type: Text Input');
     debugPrint('=========================');
@@ -562,6 +568,8 @@ class _ConsentPageState extends State<ConsentPage> {
         ),
     ];
   }
+
+  final controller = Get.put(HouseHoldController());
 
   @override
   Widget build(BuildContext context) {

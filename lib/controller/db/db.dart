@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:human_rights_monitor/controller/db/table_names.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../view/models/monitoring_model.dart';
 import '../models/community-assessment-model.dart';
+import '../models/cover_model.dart';
 
 class LocalDBHelper {
   static final LocalDBHelper instance = LocalDBHelper._init();
@@ -32,6 +35,31 @@ class LocalDBHelper {
         communityScore INTEGER,
         q1 TEXT, q2 TEXT, q3 TEXT, q4 TEXT, q5 TEXT,
         q6 TEXT, q7a INTEGER, q7b TEXT, q7c TEXT, q8 TEXT, q9 TEXT, q10 TEXT, status INTEGER
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE ${TableNames.consentTBL}(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        interviewStartTime TEXT,
+        timeStatus TEXT,
+        latitude REAL,
+        longitude REAL,
+        locationStatus TEXT,
+        isGettingLocation INTEGER,
+        communityType TEXT,
+        residesInCommunityConsent TEXT,
+        farmerAvailable TEXT,
+        farmerStatus TEXT,
+        availablePerson TEXT,
+        otherSpecification TEXT,
+        otherCommunityName TEXT,
+        consentGiven INTEGER,
+        refusalReason TEXT,
+        consentTimestamp TEXT,
+        syncStatus INTEGER DEFAULT 0,
+        createdAt TEXT,
+        updatedAt TEXT
       )
     ''');
 
@@ -81,7 +109,22 @@ class LocalDBHelper {
         updatedAt TEXT
       )
     ''');
-  }
+
+    // COVER PAGE TABLE - FIXED: This was outside the method
+    await db.execute('''
+      CREATE TABLE ${TableNames.coverPageTBL}(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        selectedTown TEXT,
+        selectedTownName TEXT,
+        selectedFarmer TEXT,
+        selectedFarmerName TEXT,
+        createdAt TEXT,
+        updatedAt TEXT,
+        status INTEGER DEFAULT 0,
+        syncStatus INTEGER DEFAULT 0
+      )
+    ''');
+  } // Added missing closing brace for _createDB method
 
   Future<int> insertCommunityAssessment(CommunityAssessmentModel model) async {
     final db = await instance.database;
@@ -106,7 +149,7 @@ class LocalDBHelper {
   // get response by status
   Future<List<CommunityAssessmentModel>> getCommunityAssessmentByStatus(
       {int status = 0}) async {
-    final db = await instance.database;
+    final db = await database;
     final result = await db.query(TableNames.communityAssessmentTBL,
         where: 'status = ?', whereArgs: [status]);
     return result
@@ -125,9 +168,6 @@ class LocalDBHelper {
 
   Future<int> insertIntoMonitoringTable(MonitoringModel form) async {
     final db = await database;
-    // form.cr = DateTime.now().toString();
-    // form.updatedAt = DateTime.now().toString();
-
     return await db.insert(TableNames.monitoringTBL, form.toMap());
   }
 
@@ -168,8 +208,6 @@ class LocalDBHelper {
 
   Future<int> updateMonitoringTable(MonitoringModel form) async {
     final db = await database;
-    // form.updatedAt = DateTime.now().toString();
-
     return await db.update(
       TableNames.monitoringTBL,
       form.toMap(),
@@ -191,5 +229,207 @@ class LocalDBHelper {
     final db = await database;
     await db.delete(TableNames.monitoringTBL);
   }
+
   // ========================================================================================
+  // COVER PAGE TABLE QUERIES - FIXED: These were outside the class
+
+  Future<int> insertCoverPageData(CoverPageModel coverData) async {
+    final db = await database;
+    coverData.createdAt = DateTime.now().toString();
+    coverData.updatedAt = DateTime.now().toString();
+
+    return await db.insert(TableNames.coverPageTBL, coverData.toMap());
+  }
+
+  Future<List<CoverPageModel>> getAllCoverPageData() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps =
+        await db.query(TableNames.coverPageTBL);
+    return List.generate(maps.length, (i) {
+      return CoverPageModel.fromMap(maps[i]);
+    });
+  }
+
+  Future<CoverPageModel?> getCoverPageData(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      TableNames.coverPageTBL,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return CoverPageModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<List<CoverPageModel>> getCoverPageDataByStatus(int status) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      TableNames.coverPageTBL,
+      where: 'status = ?',
+      whereArgs: [status],
+    );
+    return List.generate(maps.length, (i) {
+      return CoverPageModel.fromMap(maps[i]);
+    });
+  }
+
+  Future<int> updateCoverPageData(CoverPageModel coverData) async {
+    final db = await database;
+    coverData.updatedAt = DateTime.now().toString();
+
+    return await db.update(
+      TableNames.coverPageTBL,
+      coverData.toMap(),
+      where: 'id = ?',
+      whereArgs: [coverData.id],
+    );
+  }
+
+  Future<int> deleteCoverPageData(int id) async {
+    final db = await database;
+    return await db.delete(
+      TableNames.coverPageTBL,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Get the latest cover page data
+  Future<CoverPageModel?> getLatestCoverPageData() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      TableNames.coverPageTBL,
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+    if (maps.isNotEmpty) {
+      return CoverPageModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  // Check if cover page data exists for a specific town and farmer
+  Future<bool> coverPageDataExists(String townCode, String farmerCode) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      TableNames.coverPageTBL,
+      where: 'selectedTown = ? AND selectedFarmer = ?',
+      whereArgs: [townCode, farmerCode],
+    );
+    return maps.isNotEmpty;
+  }
+// ========================================================================================
 }
+
+//
+// // ========================================================================================
+// // CONSENT TABLE QUERIES
+//
+// Future<int> insertConsentData(ConsentModel consentData) async {
+//   final db = await database;
+//
+//   // Ensure timestamps are set
+//   final modelWithTimestamps = consentData.copyWith(
+//     createdAt: consentData.createdAt ?? DateTime.now(),
+//     updatedAt: DateTime.now(),
+//   );
+//
+//   return await db.insert(TableNames.consentTBL, modelWithTimestamps.toMap());
+// }
+//
+// Future<List<ConsentModel>> getAllConsentData() async {
+//   final db = await database;
+//   final List<Map<String, dynamic>> maps = await db.query(TableNames.consentTBL);
+//   return List.generate(maps.length, (i) {
+//     return ConsentModel.fromMap(maps[i]);
+//   });
+// }
+//
+// Future<ConsentModel?> getConsentData(int id) async {
+//   final db = await database;
+//   final List<Map<String, dynamic>> maps = await db.query(
+//     TableNames.consentTBL,
+//     where: 'id = ?',
+//     whereArgs: [id],
+//   );
+//   if (maps.isNotEmpty) {
+//     return ConsentModel.fromMap(maps.first);
+//   }
+//   return null;
+// }
+//
+// Future<List<ConsentModel>> getConsentDataBySyncStatus(int syncStatus) async {
+//   final db = await database;
+//   final List<Map<String, dynamic>> maps = await db.query(
+//     TableNames.consentTBL,
+//     where: 'syncStatus = ?',
+//     whereArgs: [syncStatus],
+//   );
+//   return List.generate(maps.length, (i) {
+//     return ConsentModel.fromMap(maps[i]);
+//   });
+// }
+//
+// Future<int> updateConsentData(ConsentModel consentData) async {
+//   final db = await database;
+//
+//   final modelWithUpdateTime = consentData.copyWith(
+//     updatedAt: DateTime.now(),
+//   );
+//
+//   return await db.update(
+//     TableNames.consentTBL,
+//     modelWithUpdateTime.toMap(),
+//     where: 'id = ?',
+//     whereArgs: [consentData.id],
+//   );
+// }
+//
+// Future<int> deleteConsentData(int id) async {
+//   final db = await database;
+//   return await db.delete(
+//     TableNames.consentTBL,
+//     where: 'id = ?',
+//     whereArgs: [id],
+//   );
+// }
+//
+// Future<void> clearAllConsentData() async {
+//   final db = await database;
+//   await db.delete(TableNames.consentTBL);
+// }
+//
+// // Get the latest consent data
+// Future<ConsentModel?> getLatestConsentData() async {
+//   final db = await database;
+//   final List<Map<String, dynamic>> maps = await db.query(
+//     TableNames.consentTBL,
+//     orderBy: 'id DESC',
+//     limit: 1,
+//   );
+//   if (maps.isNotEmpty) {
+//     return ConsentModel.fromMap(maps.first);
+//   }
+//   return null;
+// }
+//
+// // Mark consent as synced
+// Future<int> markConsentAsSynced(int id) async {
+//   final db = await database;
+//   return await db.update(
+//     TableNames.consentTBL,
+//     {
+//       'syncStatus': 1,
+//       'updatedAt': DateTime.now().toIso8601String(),
+//     },
+//     where: 'id = ?',
+//     whereArgs: [id],
+//   );
+// }
+//
+// // Get unsynced consent data
+// Future<List<ConsentModel>> getUnsyncedConsentData() async {
+//   return await getConsentDataBySyncStatus(0);
+// }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../theme/app_theme.dart';
 import 'Startsurvey.dart';
 
 class Homepage extends StatelessWidget {
@@ -10,19 +9,19 @@ class Homepage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: AppTheme.primaryColor,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Human Rights Monitoring',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        centerTitle: true,
-      ),
+      // backgroundColor: const Color(0xFFF8F9FA),
+      // appBar: AppBar(
+      //   backgroundColor: AppTheme.primaryColor,
+      //   automaticallyImplyLeading: false,
+      //   title: Text(
+      //     'Human Rights Monitoring',
+      //     style: Theme.of(context).textTheme.titleLarge?.copyWith(
+      //           color: Colors.white,
+      //           fontWeight: FontWeight.w600,
+      //         ),
+      //   ),
+      //   centerTitle: true,
+      // ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
