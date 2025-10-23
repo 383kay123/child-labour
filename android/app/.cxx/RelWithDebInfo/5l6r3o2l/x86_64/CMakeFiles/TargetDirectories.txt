@@ -1,0 +1,2 @@
+C:/Users/hp/child-labour/android/app/.cxx/RelWithDebInfo/5l6r3o2l/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/hp/child-labour/android/app/.cxx/RelWithDebInfo/5l6r3o2l/x86_64/CMakeFiles/rebuild_cache.dir
