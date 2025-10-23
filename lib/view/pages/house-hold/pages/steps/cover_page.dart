@@ -1,99 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../../controller/models/cover_model.dart';
+
 /// A widget that represents the cover page for the household survey.
 /// This page allows users to select a society and farmer before proceeding with the survey.
-
-/// A widget that displays a cover page with society and farmer selection dropdowns.
-/// 
-/// This widget is typically the first step in a multi-step form where users need to
-/// select their society (town) and farmer before proceeding with the survey.
-class CoverPage extends StatelessWidget {
-  /// Currently selected town ID
-  final String? selectedTown;
-
-  /// Currently selected farmer ID
-  final String? selectedFarmer;
-
-  /// List of available towns with their IDs and names
-  final List<Map<String, String>> towns;
-
-  /// List of available farmers with their IDs and names
-  final List<Map<String, String>> farmers;
-
-  /// Callback when a town is selected
-  final ValueChanged<String?> onTownChanged;
-
-  /// Callback when a farmer is selected
-  final ValueChanged<String?> onFarmerChanged;
-
-  /// Callback when the continue button is pressed
-  /// This is no longer used but kept for backward compatibility
+class CoverPage extends StatefulWidget {
+  final CoverPageData data;
+  final ValueChanged<CoverPageData> onDataChanged;
   final VoidCallback onNext;
 
-  /// Error message for town selection
-  final String? townError;
-
-  /// Error message for farmer selection
-  final String? farmerError;
-
-  /// Loading state for towns
-  final bool isLoadingTowns;
-
-  /// Loading state for farmers
-  final bool isLoadingFarmers;
-
-  /// Creates a [CoverPage] widget.
-  ///
-  /// The [selectedTown] and [selectedFarmer] parameters can be null if no selection has been made.
-  /// The [towns] and [farmers] lists should contain maps with 'code' and 'name' keys.
-  /// The callbacks [onTownChanged], [onFarmerChanged], and [onNext] must not be null.
-  /// Sample farmer data - in a real app, this would come from an API or database
-  static const List<Map<String, String>> defaultFarmers = [
-    {'code': 'f1', 'name': 'John Doe'},
-    {'code': 'f2', 'name': 'Jane Smith'},
-    {'code': 'f3', 'name': 'Robert Johnson'},
-    {'code': 'f4', 'name': 'Emily Davis'},
-    {'code': 'f5', 'name': 'Michael Brown'},
-  ];
-
-   CoverPage({
-    Key? key,
-    this.selectedTown,
-    this.selectedFarmer,
-    this.towns = const [],
-    List<Map<String, String>>? farmers,
-    required this.onTownChanged,
-    required this.onFarmerChanged,
+  const CoverPage({
+    super.key,
+    required this.data,
+    required this.onDataChanged,
     required this.onNext,
-    this.townError,
-    this.farmerError,
-    this.isLoadingTowns = false,
-    this.isLoadingFarmers = false,
-  }) : farmers = farmers ?? defaultFarmers,
-        super(key: key) {
-    // Validate that selected values exist in their respective lists
-    if (selectedTown != null && !_isValueValid(selectedTown, towns)) {
-      debugPrint('Warning: Selected town $selectedTown not found in towns list');
-    }
-    if (selectedFarmer != null && !_isValueValid(selectedFarmer, farmers ?? defaultFarmers)) {
-      debugPrint('Warning: Selected farmer $selectedFarmer not found in farmers list');
-    }
-  }
-
-  /// Validates if the current selected value exists in the items list
-  static bool _isValueValid(String? value, List<Map<String, String>> items) {
-    final matchingItems = items.where((item) => item['code'] == value).toList();
-    return matchingItems.length == 1; // Exactly one match is valid
-  }
+  });
 
   @override
+  State<CoverPage> createState() => _CoverPageState();
+}
+
+class _CoverPageState extends State<CoverPage> {
+  @override
   Widget build(BuildContext context) {
-    // Get the primary color from the current theme for consistent theming
     final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      // AppBar removed as requested
       body: Column(
         children: [
           // Scrollable Content
@@ -114,12 +47,14 @@ class CoverPage extends StatelessWidget {
                       icon: Icons.apartment_rounded,
                       child: _buildDropdown(
                         context: context,
-                        value: selectedTown,
-                        items: towns,
-                        onChanged: onTownChanged,
+                        value: widget.data.selectedTownCode,
+                        items: DropdownItem.toMapList(widget.data.towns),
+                        onChanged: (value) {
+                          widget.onDataChanged(widget.data.selectTown(value));
+                        },
                         hint: 'Select your society',
-                        isLoading: isLoadingTowns,
-                        error: townError,
+                        isLoading: widget.data.isLoadingTowns,
+                        error: widget.data.townError,
                       ),
                     ),
                   ),
@@ -134,37 +69,40 @@ class CoverPage extends StatelessWidget {
                       icon: Icons.person_outline_rounded,
                       child: _buildDropdown(
                         context: context,
-                        value: selectedFarmer,
-                        items: farmers,
-                        onChanged: onFarmerChanged,
+                        value: widget.data.selectedFarmerCode,
+                        items: DropdownItem.toMapList(widget.data.farmers),
+                        onChanged: (value) {
+                          widget.onDataChanged(widget.data.selectFarmer(value));
+                        },
                         hint: 'Select a farmer',
-                        isLoading: isLoadingFarmers,
-                        error: farmerError,
+                        isLoading: widget.data.isLoadingFarmers,
+                        error: widget.data.farmerError,
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // Next Button
+                  if (widget.data.isComplete)
+                    AnimatedOpacity(
+                      duration: const Duration(milliseconds: 300),
+                      opacity: widget.data.canProceed ? 1.0 : 0.6,
+                      child: _buildNextButton(
+                        context,
+                        onNext: widget.data.canProceed ? widget.onNext : null,
+                        isEnabled: widget.data.canProceed,
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
-
-          // Next Button removed as per request
-          const SizedBox.shrink(),
         ],
       ),
     );
   }
 
   /// Builds a consistent section container with a title, icon, and child widget.
-  ///
-  /// This widget creates a card-like container with a header section containing
-  /// an icon and title, followed by the provided child widget.
-  ///
-  /// - [context]: The build context
-  /// - [title]: The section title text
-  /// - [icon]: The icon to display next to the title
-  /// - [child]: The widget to display below the section header
   Widget _buildSection({
     required BuildContext context,
     required String title,
@@ -225,17 +163,6 @@ class CoverPage extends StatelessWidget {
   }
 
   /// Builds a custom styled dropdown menu.
-  ///
-  /// Creates a dropdown button with consistent styling that matches the app's design system.
-  /// The dropdown shows a list of items where each item has a 'code' and 'name'.
-  ///
-  /// - [context]: The build context
-  /// - [value]: Currently selected value (should match an item's 'code')
-  /// - [items]: List of items to display in the dropdown
-  /// - [onChanged]: Callback when a new item is selected
-  /// - [hint]: Text to show when no item is selected
-  /// - [isLoading]: Whether the dropdown is in loading state
-  /// - [error]: Error message to display below the dropdown
   Widget _buildDropdown({
     required BuildContext context,
     required String? value,
@@ -246,10 +173,6 @@ class CoverPage extends StatelessWidget {
     String? error,
   }) {
     final theme = Theme.of(context);
-
-    // Log the items for debugging
-    debugPrint('Dropdown items: $items');
-    debugPrint('Selected value: $value');
 
     // Handle loading state
     if (isLoading) {
@@ -288,63 +211,97 @@ class CoverPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            width: double.infinity,
+            constraints: const BoxConstraints(
+              minHeight: 120, // Minimum height for better appearance
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300, width: 1.5),
-              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.grey.shade300,
+                width: 1.5,
+              ),
+              color: Colors.grey.shade50,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.search_off, size: 32, color: Colors.grey.shade400),
-                const SizedBox(height: 8),
-                Text(
-                  'No options available',
-                  style: GoogleFonts.inter(
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.search_off_rounded,
+                    size: 32,
                     color: Colors.grey.shade600,
-                    fontSize: 15,
                   ),
                 ),
+                const SizedBox(height: 16),
                 Text(
-                  'Please check your connection',
+                  'No Options Found',
                   style: GoogleFonts.inter(
-                    color: Colors.grey.shade500,
-                    fontSize: 12,
+                    color: Colors.grey.shade800,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Please check your internet connection\nor try refreshing the page',
+                  style: GoogleFonts.inter(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
           if (error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              error,
-              style: GoogleFonts.inter(
-                color: Colors.red,
-                fontSize: 12,
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.red.shade200, width: 1),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline,
+                      size: 16, color: Colors.red.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      error,
+                      style: GoogleFonts.inter(
+                        color: Colors.red.shade700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ],
       );
     }
-
-    // Check if the current value exists in the items list
-    // If not, set value to null to avoid the assertion error
-    String? safeValue = value;
-    if (safeValue != null) {
-      final matchingItems = items.where((item) => item['code'] == safeValue).toList();
-      if (matchingItems.isEmpty || matchingItems.length > 1) {
-        safeValue = null;
-        debugPrint('Warning: Selected value $value not found in items or has duplicates. Resetting to null.');
-      }
-    }
-
     // Remove duplicate items based on 'code' to prevent assertion errors
     final uniqueItems = _removeDuplicateItems(items);
-    if (uniqueItems.length != items.length) {
-      debugPrint('Warning: Removed ${items.length - uniqueItems.length} duplicate items from dropdown');
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +317,7 @@ class CoverPage extends StatelessWidget {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: value, // Use the original value to maintain selection state
+              value: value,
               onChanged: onChanged,
               isExpanded: true,
               icon: Container(
@@ -376,7 +333,8 @@ class CoverPage extends StatelessWidget {
                 ),
               ),
               hint: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Text(
                   hint,
                   style: GoogleFonts.inter(
@@ -386,17 +344,19 @@ class CoverPage extends StatelessWidget {
                   ),
                 ),
               ),
-              items: uniqueItems.map<DropdownMenuItem<String>>((Map<String, String> item) {
+              items: uniqueItems
+                  .map<DropdownMenuItem<String>>((Map<String, String> item) {
                 final itemCode = item['code'];
                 final itemName = item['name'] ?? 'Unnamed';
 
                 // Ensure we don't have null codes
                 if (itemCode == null) {
-                  debugPrint('Warning: Found item with null code: $item');
                   return DropdownMenuItem<String>(
-                    value: '__null_${itemName}', // Create a unique value for null codes
+                    value:
+                        '__null_${itemName}', // Create a unique value for null codes
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       child: Text(
                         itemName,
                         style: GoogleFonts.inter(
@@ -412,7 +372,8 @@ class CoverPage extends StatelessWidget {
                 return DropdownMenuItem<String>(
                   value: itemCode,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     child: Text(
                       itemName,
                       style: GoogleFonts.inter(
@@ -427,7 +388,8 @@ class CoverPage extends StatelessWidget {
               selectedItemBuilder: (BuildContext context) {
                 return uniqueItems.map<Widget>((Map<String, String> item) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     child: Text(
                       item['name'] ?? 'Unnamed',
                       style: GoogleFonts.inter(
@@ -465,7 +427,8 @@ class CoverPage extends StatelessWidget {
   }
 
   /// Helper method to remove duplicate items based on 'code'
-  List<Map<String, String>> _removeDuplicateItems(List<Map<String, String>> items) {
+  List<Map<String, String>> _removeDuplicateItems(
+      List<Map<String, String>> items) {
     final seen = <String>{};
     final uniqueItems = <Map<String, String>>[];
 
@@ -477,7 +440,6 @@ class CoverPage extends StatelessWidget {
       } else if (code == null) {
         // Handle items with null codes by adding them with a warning
         uniqueItems.add(item);
-        debugPrint('Warning: Item with null code found: $item');
       }
     }
 
@@ -485,18 +447,11 @@ class CoverPage extends StatelessWidget {
   }
 
   /// Builds a styled 'Continue' button.
-  ///
-  /// Creates a prominent button that calls [onNext] when pressed.
-  /// The button's appearance changes based on the [isEnabled] state.
-  ///
-  /// - [context]: The build context
-  /// - [onNext]: Callback when the button is pressed
-  /// - [isEnabled]: Whether the button should be enabled
   Widget _buildNextButton(
-      BuildContext context, {
-        required VoidCallback onNext,
-        bool isEnabled = true,
-      }) {
+    BuildContext context, {
+    required VoidCallback? onNext,
+    bool isEnabled = true,
+  }) {
     final primaryColor = Theme.of(context).primaryColor;
 
     return Container(
@@ -507,7 +462,7 @@ class CoverPage extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isEnabled ? onNext : null,
+          onTap: onNext,
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -538,11 +493,11 @@ class CoverPage extends StatelessWidget {
 
   /// Shows a search dialog for large lists of items
   void _showSearchDialog(
-      BuildContext context,
-      List<Map<String, String>> items,
-      ValueChanged<String?> onChanged,
-      String title,
-      ) {
+    BuildContext context,
+    List<Map<String, String>> items,
+    ValueChanged<String?> onChanged,
+    String title,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -579,23 +534,6 @@ class CoverPage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Enhanced type-safe version of dropdown items
-class DropdownItem {
-  final String code;
-  final String name;
-
-  const DropdownItem({required this.code, required this.name});
-
-  Map<String, String> toMap() => {'code': code, 'name': name};
-
-  factory DropdownItem.fromMap(Map<String, String> map) {
-    return DropdownItem(
-      code: map['code'] ?? '',
-      name: map['name'] ?? 'Unnamed',
     );
   }
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:human_rights_monitor/model/sensitization_model.dart';
 
-import '../../../../../../view/theme/app_theme.dart'; // Updated to use relative path
-import 'sensitization_questions_page.dart';
-
+/// A reusable widget that displays a section title with consistent styling.
 class SectionTitle extends StatelessWidget {
   final String title;
 
@@ -23,6 +22,7 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
+/// A reusable widget that displays a bullet point with consistent styling.
 class BulletPoint extends StatelessWidget {
   final String text;
 
@@ -50,28 +50,58 @@ class BulletPoint extends StatelessWidget {
   }
 }
 
+/// A page that displays sensitization information about child labor and safe practices.
 class SensitizationPage extends StatefulWidget {
-  const SensitizationPage({Key? key}) : super(key: key);
+  /// The current sensitization data.
+  final SensitizationData sensitizationData;
+  
+  /// Callback when the user acknowledges the information.
+  final ValueChanged<SensitizationData> onSensitizationChanged;
+
+  const SensitizationPage({
+    Key? key,
+    required this.sensitizationData,
+    required this.onSensitizationChanged,
+  }) : super(key: key);
 
   @override
   _SensitizationPageState createState() => _SensitizationPageState();
 }
 
 class _SensitizationPageState extends State<SensitizationPage> {
+  late bool _isAcknowledged;
+  bool _isCheckboxValid = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _isAcknowledged = widget.sensitizationData.isAcknowledged;
+  }
+
+  void _onCheckboxChanged(bool value) {
+    setState(() {
+      _isAcknowledged = value;
+      _isCheckboxValid = true; // Clear error when user interacts
+      widget.onSensitizationChanged(
+        widget.sensitizationData.copyWith(
+          isAcknowledged: value,
+          acknowledgedAt: value ? DateTime.now() : null,
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sensitization'),
-        elevation: 0,
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Main description
             Text(
-              'Please take a moment to understand the dangers and impact of child labour and to promote child protection and education.',
+              SensitizationContent.description,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     height: 1.5,
                     color: Theme.of(context).textTheme.bodyLarge?.color,
@@ -81,69 +111,67 @@ class _SensitizationPageState extends State<SensitizationPage> {
             const SizedBox(height: 16),
 
             // GOOD PARENTING Section
-            const SectionTitle('GOOD PARENTING'),
-            const BulletPoint(
-                'Every parent is responsible for loving, protecting, training and discipling their children.'),
-            const BulletPoint(
-                'Good parenting begins from inception. It is cheaper to get things right during early childhood than trying to fix it later.'),
-            const BulletPoint(
-                'Good parenting nurtures innovation and creative thinking in children.'),
-            const BulletPoint(
-                'Parenting a child is a one-time opportunity; there is no do-over.'),
+            SectionTitle(SensitizationContent.goodParentingTitle),
+            ...SensitizationContent.goodParentingBullets
+                .map((bullet) => BulletPoint(bullet)),
 
             // CHILD PROTECTION Section
-            const SectionTitle('CHILD PROTECTION'),
-            const BulletPoint(
-                'Children\'s rights are all about the needs of a child, all the care and the protection a child must enjoy to guarantee his/her development and full growth.'),
-            const BulletPoint(
-                'Child labour is mentally, physically, socially, morally dangerous and detrimental to children\'s development.'),
-            const BulletPoint(
-                'Socialization of children must not be an excuse for exploitation or compromise their education.'),
-            const BulletPoint(
-                'Children are more likely to have occupational accidents because they are less experienced, less aware of the risks and means to prevent them.'),
-            const BulletPoint(
-                'Child labour can have tragic consequences at individual, family, community and national levels.'),
+            SectionTitle(SensitizationContent.childProtectionTitle),
+            ...SensitizationContent.childProtectionBullets
+                .map((bullet) => BulletPoint(bullet)),
 
             // SAFE LABOUR PRACTICES Section
-            const SectionTitle('SAFE LABOUR PRACTICES'),
-            const BulletPoint(
-                'Carefully read the instructions provided for the use of the chemical product before application.'),
-            const BulletPoint(
-                'Wear the appropriate protective clothing and footwear before setting off to the farm.'),
-            const BulletPoint(
-                'Wear protective clothing during spraying of agrochemical products, fertilizer application and pruning.'),
-            const BulletPoint(
-                'Threats, harassment, assault and deprivations of all kinds are all characteristics of forced labour.'),
-            const BulletPoint(
-                'Forced/compulsory labour is an affront to children\'s rights and development.'),
-            const BulletPoint(
-                'Promote safe labour practices in cocoa cultivation among adults.'),
+            SectionTitle(SensitizationContent.safeLabourPracticesTitle),
+            ...SensitizationContent.safeLabourPracticesBullets
+                .map((bullet) => BulletPoint(bullet)),
 
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SensitizationQuestionsPage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+
+            // Checkbox with validation
+            Container(
+              decoration: BoxDecoration(
+                color:
+                    _isCheckboxValid ? Colors.transparent : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: _isCheckboxValid
+                    ? null
+                    : Border.all(color: Colors.red, width: 1),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: widget.sensitizationData.isAcknowledged ?? false,
+                    onChanged: (bool? value) {
+                      _onCheckboxChanged(value ?? false);
+                    },
                   ),
-                ),
-                child: Text(
-                  'I Understand',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                      ),
-                ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'I have read and understood the above information',
+                          style: TextStyle(
+                            color: _isCheckboxValid ? null : Colors.red,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (!_isCheckboxValid)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              'This acknowledgement is required to continue',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

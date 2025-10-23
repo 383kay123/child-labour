@@ -6,7 +6,6 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../view/models/monitoring_model.dart';
 import '../models/community-assessment-model.dart';
-import '../models/cover_model.dart';
 
 class LocalDBHelper {
   static final LocalDBHelper instance = LocalDBHelper._init();
@@ -230,99 +229,6 @@ class LocalDBHelper {
     await db.delete(TableNames.monitoringTBL);
   }
 
-  // ========================================================================================
-  // COVER PAGE TABLE QUERIES - FIXED: These were outside the class
-
-  Future<int> insertCoverPageData(CoverPageModel coverData) async {
-    final db = await database;
-    coverData.createdAt = DateTime.now().toString();
-    coverData.updatedAt = DateTime.now().toString();
-
-    return await db.insert(TableNames.coverPageTBL, coverData.toMap());
-  }
-
-  Future<List<CoverPageModel>> getAllCoverPageData() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps =
-        await db.query(TableNames.coverPageTBL);
-    return List.generate(maps.length, (i) {
-      return CoverPageModel.fromMap(maps[i]);
-    });
-  }
-
-  Future<CoverPageModel?> getCoverPageData(int id) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      TableNames.coverPageTBL,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    if (maps.isNotEmpty) {
-      return CoverPageModel.fromMap(maps.first);
-    }
-    return null;
-  }
-
-  Future<List<CoverPageModel>> getCoverPageDataByStatus(int status) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      TableNames.coverPageTBL,
-      where: 'status = ?',
-      whereArgs: [status],
-    );
-    return List.generate(maps.length, (i) {
-      return CoverPageModel.fromMap(maps[i]);
-    });
-  }
-
-  Future<int> updateCoverPageData(CoverPageModel coverData) async {
-    final db = await database;
-    coverData.updatedAt = DateTime.now().toString();
-
-    return await db.update(
-      TableNames.coverPageTBL,
-      coverData.toMap(),
-      where: 'id = ?',
-      whereArgs: [coverData.id],
-    );
-  }
-
-  Future<int> deleteCoverPageData(int id) async {
-    final db = await database;
-    return await db.delete(
-      TableNames.coverPageTBL,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  // Get the latest cover page data
-  Future<CoverPageModel?> getLatestCoverPageData() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      TableNames.coverPageTBL,
-      orderBy: 'id DESC',
-      limit: 1,
-    );
-    if (maps.isNotEmpty) {
-      return CoverPageModel.fromMap(maps.first);
-    }
-    return null;
-  }
-
-  // Check if cover page data exists for a specific town and farmer
-  Future<bool> coverPageDataExists(String townCode, String farmerCode) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      TableNames.coverPageTBL,
-      where: 'selectedTown = ? AND selectedFarmer = ?',
-      whereArgs: [townCode, farmerCode],
-    );
-    return maps.isNotEmpty;
-  }
-// ========================================================================================
-}
-
 //
 // // ========================================================================================
 // // CONSENT TABLE QUERIES
@@ -433,3 +339,4 @@ class LocalDBHelper {
 // Future<List<ConsentModel>> getUnsyncedConsentData() async {
 //   return await getConsentDataBySyncStatus(0);
 // }
+}

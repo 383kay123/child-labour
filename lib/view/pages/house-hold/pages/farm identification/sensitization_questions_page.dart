@@ -2,11 +2,9 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../theme/app_theme.dart';
-import 'end_of_collection_page.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
 class _Spacing {
@@ -387,20 +385,20 @@ class _SensitizationQuestionsPageState
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Sensitization Questions',
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 0,
-        centerTitle: true,
-      ),
+      // backgroundColor:
+      //     isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
+      // appBar: AppBar(
+      //   title: Text(
+      //     'Sensitization Questions',
+      //     style: theme.textTheme.titleLarge?.copyWith(
+      //       color: Colors.white,
+      //       fontWeight: FontWeight.w600,
+      //     ),
+      //   ),
+      //   backgroundColor: AppTheme.primaryColor,
+      //   elevation: 0,
+      //   centerTitle: true,
+      // ),
       body: Column(
         children: [
           Expanded(
@@ -664,103 +662,6 @@ class _SensitizationQuestionsPageState
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(_Spacing.lg),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                // Previous Button
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Colors.green.shade600, width: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.arrow_back_ios,
-                            size: 18, color: Colors.green.shade600),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Previous',
-                          style: GoogleFonts.inter(
-                            color: Colors.green.shade600,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Next Button
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isFormComplete
-                        ? () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const EndOfCollectionPage(),
-                              ),
-                            );
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isFormComplete
-                          ? Colors.green.shade600
-                          : Colors.grey[400],
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                      shadowColor: Colors.green.shade600.withOpacity(0.3),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Next',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_ios,
-                            size: 18, color: Colors.white),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

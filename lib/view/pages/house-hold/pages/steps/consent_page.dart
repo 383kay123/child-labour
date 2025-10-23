@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/house_hold_controller.dart';
 
+import '../../../../../controller/models/consent_model.dart';
 import '../../../../theme/app_theme.dart';
 import '../../form_fields.dart';
 
@@ -16,65 +16,23 @@ class _Spacing {
 }
 
 class ConsentPage extends StatefulWidget {
-  final DateTime? interviewStartTime;
-  final String timeStatus;
-  final Position? currentPosition;
-  final String locationStatus;
-  final bool isGettingLocation;
-  final String? communityType;
-  final String? residesInCommunityConsent;
-  final String? farmerAvailable;
-  final String? farmerStatus;
-  final String? availablePerson;
-  final String? otherSpecification;
-  final String? otherCommunityName;
-  final bool consentGiven;
-  final TextEditingController otherSpecController;
-  final TextEditingController otherCommunityController;
+  final ConsentData data;
+  final ValueChanged<ConsentData> onDataChanged;
   final VoidCallback onRecordTime;
   final VoidCallback onGetLocation;
-  final ValueChanged<String?> onCommunityTypeChanged;
-  final ValueChanged<String?> onResidesInCommunityChanged;
-  final ValueChanged<String?> onFarmerAvailableChanged;
-  final ValueChanged<String?> onFarmerStatusChanged;
-  final ValueChanged<String?> onAvailablePersonChanged;
-  final ValueChanged<bool> onConsentChanged;
-  final ValueChanged<String> onOtherSpecChanged;
-  final ValueChanged<String> onOtherCommunityChanged;
   final VoidCallback onNext;
   final VoidCallback? onPrevious;
   final VoidCallback? onSurveyEnd;
 
   const ConsentPage({
     Key? key,
-    required this.interviewStartTime,
-    required this.timeStatus,
-    required this.currentPosition,
-    required this.locationStatus,
-    required this.isGettingLocation,
-    required this.communityType,
-    required this.residesInCommunityConsent,
-    required this.farmerAvailable,
-    required this.farmerStatus,
-    required this.availablePerson,
-    required this.otherSpecification,
-    required this.otherCommunityName,
-    required this.consentGiven,
-    required this.otherSpecController,
-    required this.otherCommunityController,
+    required this.data,
+    required this.onDataChanged,
     required this.onRecordTime,
+    required this.onGetLocation,
     required this.onNext,
     this.onPrevious,
     this.onSurveyEnd,
-    required this.onGetLocation,
-    required this.onCommunityTypeChanged,
-    required this.onResidesInCommunityChanged,
-    required this.onFarmerAvailableChanged,
-    required this.onFarmerStatusChanged,
-    required this.onAvailablePersonChanged,
-    required this.onConsentChanged,
-    required this.onOtherSpecChanged,
-    required this.onOtherCommunityChanged,
   }) : super(key: key);
 
   @override
@@ -92,8 +50,8 @@ class _ConsentPageState extends State<ConsentPage> {
   @override
   void initState() {
     super.initState();
-    _consentGiven = widget.consentGiven;
-    _declinedConsent = !widget.consentGiven;
+    _consentGiven = widget.data.consentGiven;
+    _declinedConsent = !widget.data.consentGiven;
 
     // Debug prints for initial state
     _debugPrintInitialState();
@@ -101,16 +59,17 @@ class _ConsentPageState extends State<ConsentPage> {
 
   void _debugPrintInitialState() {
     debugPrint('=== CONSENT PAGE INITIAL STATE ===');
-    debugPrint('Interview Start Time: ${widget.interviewStartTime}');
-    debugPrint('GPS Position: ${widget.currentPosition}');
-    debugPrint('Community Type: ${widget.communityType}');
-    debugPrint('Resides in Community: ${widget.residesInCommunityConsent}');
-    debugPrint('Farmer Available: ${widget.farmerAvailable}');
-    debugPrint('Farmer Status: ${widget.farmerStatus}');
-    debugPrint('Available Person: ${widget.availablePerson}');
-    debugPrint('Other Specification: ${widget.otherSpecification}');
-    debugPrint('Other Community Name: ${widget.otherCommunityName}');
-    debugPrint('Consent Given: ${widget.consentGiven}');
+    debugPrint('Interview Start Time: ${widget.data.interviewStartTime}');
+    debugPrint('GPS Position: ${widget.data.currentPosition}');
+    debugPrint('Community Type: ${widget.data.communityType}');
+    debugPrint(
+        'Resides in Community: ${widget.data.residesInCommunityConsent}');
+    debugPrint('Farmer Available: ${widget.data.farmerAvailable}');
+    debugPrint('Farmer Status: ${widget.data.farmerStatus}');
+    debugPrint('Available Person: ${widget.data.availablePerson}');
+    debugPrint('Other Specification: ${widget.data.otherSpecification}');
+    debugPrint('Other Community Name: ${widget.data.otherCommunityName}');
+    debugPrint('Consent Given: ${widget.data.consentGiven}');
     debugPrint('===================================');
   }
 
@@ -121,11 +80,14 @@ class _ConsentPageState extends State<ConsentPage> {
       debugPrint('Selected: ${value ? 'Yes' : 'No'}');
       debugPrint('Options: [Yes, No]');
       debugPrint('=========================');
+
       setState(() {
         _consentGiven = value;
         _declinedConsent = !value;
       });
-      widget.onConsentChanged(value);
+
+      // Update model
+      widget.onDataChanged(widget.data.updateConsent(value));
     }
   }
 
@@ -141,7 +103,9 @@ class _ConsentPageState extends State<ConsentPage> {
         _declinedConsent = value;
         _consentGiven = !value;
       });
-      widget.onConsentChanged(!value);
+
+      // Update model
+      widget.onDataChanged(widget.data.updateConsent(!value));
 
       if (value) {
         _showEndSurveyConfirmation();
@@ -155,7 +119,9 @@ class _ConsentPageState extends State<ConsentPage> {
     debugPrint('Selected: $value');
     debugPrint('Options: [rural, urban, semi_urban]');
     debugPrint('=========================');
-    widget.onCommunityTypeChanged(value);
+
+    // Update model
+    widget.onDataChanged(widget.data.updateCommunityType(value));
   }
 
   void _handleResidesInCommunityChanged(String? value) {
@@ -165,7 +131,9 @@ class _ConsentPageState extends State<ConsentPage> {
     debugPrint('Selected: $value');
     debugPrint('Options: [Yes, No]');
     debugPrint('=========================');
-    widget.onResidesInCommunityChanged(value);
+
+    // Update model
+    widget.onDataChanged(widget.data.updateResidesInCommunity(value));
   }
 
   void _handleFarmerAvailableChanged(String? value) {
@@ -174,7 +142,9 @@ class _ConsentPageState extends State<ConsentPage> {
     debugPrint('Selected: $value');
     debugPrint('Options: [Yes, No]');
     debugPrint('=========================');
-    widget.onFarmerAvailableChanged(value);
+
+    // Update model
+    widget.onDataChanged(widget.data.updateFarmerAvailable(value));
   }
 
   Future<void> _handleFarmerStatusChanged(String? value) async {
@@ -222,7 +192,8 @@ class _ConsentPageState extends State<ConsentPage> {
       }
     }
 
-    widget.onFarmerStatusChanged(value);
+    // Update model
+    widget.onDataChanged(widget.data.updateFarmerStatus(value));
   }
 
   void _handleAvailablePersonChanged(String? value) {
@@ -231,7 +202,9 @@ class _ConsentPageState extends State<ConsentPage> {
     debugPrint('Selected: $value');
     debugPrint('Options: [Caretaker, Spouse, Nobody]');
     debugPrint('=========================');
-    widget.onAvailablePersonChanged(value);
+
+    // Update model
+    widget.onDataChanged(widget.data.updateAvailablePerson(value));
   }
 
   void _handleOtherSpecChanged(String value) {
@@ -240,7 +213,9 @@ class _ConsentPageState extends State<ConsentPage> {
     debugPrint('Entered: $value');
     debugPrint('Field Type: Text Input');
     debugPrint('=========================');
-    widget.onOtherSpecChanged(value);
+
+    // Update model
+    widget.onDataChanged(widget.data.updateOtherSpecification(value));
   }
 
   void _handleOtherCommunityChanged(String value) {
@@ -250,7 +225,9 @@ class _ConsentPageState extends State<ConsentPage> {
     debugPrint('Entered: $value');
     debugPrint('Field Type: Text Input');
     debugPrint('=========================');
-    widget.onOtherCommunityChanged(value);
+
+    // Update model
+    widget.onDataChanged(widget.data.updateOtherCommunityName(value));
   }
 
   void _handleRecordTime() {
@@ -325,7 +302,8 @@ class _ConsentPageState extends State<ConsentPage> {
         _declinedConsent = true;
         _consentGiven = false;
       });
-      widget.onConsentChanged(_consentGiven);
+      // Update model
+      widget.onDataChanged(widget.data.updateConsent(_consentGiven));
     }
   }
 
@@ -501,7 +479,9 @@ class _ConsentPageState extends State<ConsentPage> {
           context: context,
           label:
               'If no, provide the name of the community the farmer resides in',
-          controller: widget.otherCommunityController,
+          controller:
+              widget.data.otherCommunityController, // Use model controller
+          hintText: 'Enter community name',
           onChanged: _handleOtherCommunityChanged,
           isRequired: true,
         ),
@@ -516,7 +496,7 @@ class _ConsentPageState extends State<ConsentPage> {
         child: FormFields.buildRadioGroup<String>(
           context: context,
           label: 'If No, for what reason?',
-          value: widget.farmerStatus,
+          value: widget.data.farmerStatus,
           items: const [
             MapEntry('Non-resident', 'Non-resident'),
             MapEntry('Deceased', 'Deceased'),
@@ -528,35 +508,24 @@ class _ConsentPageState extends State<ConsentPage> {
           isRequired: true,
         ),
       ),
-      if (widget.farmerStatus == 'Other')
+      if (widget.data.farmerStatus == 'Other')
         _buildQuestionCard(
           child: FormFields.buildTextField(
             context: context,
             label: 'If other, please specify',
-            controller: widget.otherSpecController,
+            controller: widget.data.otherSpecController, // Use model controller
+            hintText: 'Specify reason',
             onChanged: _handleOtherSpecChanged,
             isRequired: true,
           ),
         ),
-      // if (widget.farmerStatus == 'Non-resident' ||
-      //     widget.farmerStatus == 'Other')
-      //   _buildQuestionCard(
-      //     child: FormFields.buildTextField(
-      //       context: context,
-      //       label:
-      //           'Please specify the name of the community the farmer resides in',
-      //       controller: widget.otherCommunityController,
-      //       onChanged: _handleOtherCommunityChanged,
-      //       isRequired: true,
-      //     ),
-      //   ),
-      if (widget.farmerStatus == 'Non-resident' ||
-          widget.farmerStatus == 'Other')
+      if (widget.data.farmerStatus == 'Non-resident' ||
+          widget.data.farmerStatus == 'Other')
         _buildQuestionCard(
           child: FormFields.buildRadioGroup<String>(
             context: context,
             label: 'Who is available for the interview?',
-            value: widget.availablePerson,
+            value: widget.data.availablePerson,
             items: const [
               MapEntry('Caretaker', 'Caretaker'),
               MapEntry('Spouse', 'Spouse'),
@@ -594,27 +563,27 @@ class _ConsentPageState extends State<ConsentPage> {
                   _buildTapToCaptureSection(
                     title: 'Interview Start Time',
                     placeholder: 'Tap to record start time',
-                    value: widget.interviewStartTime != null
-                        ? '${widget.interviewStartTime!.hour}:${widget.interviewStartTime!.minute.toString().padLeft(2, '0')}'
+                    value: widget.data.interviewStartTime != null
+                        ? '${widget.data.interviewStartTime!.hour}:${widget.data.interviewStartTime!.minute.toString().padLeft(2, '0')}'
                         : null,
                     onTap: _handleRecordTime,
                     icon: Icons.access_time,
-                    statusText: widget.timeStatus,
+                    statusText: widget.data.timeStatus,
                   ),
 
                   // GPS Location
                   _buildTapToCaptureSection(
                     title: 'GPS Location',
                     placeholder: 'Tap to capture GPS coordinates',
-                    value: widget.currentPosition != null
+                    value: widget.data.currentPosition != null
                         ? 'Location Recorded'
                         : null,
                     onTap: _handleGetLocation,
                     icon: Icons.gps_fixed,
-                    isLoading: widget.isGettingLocation,
-                    statusText: widget.isGettingLocation
+                    isLoading: widget.data.isGettingLocation,
+                    statusText: widget.data.isGettingLocation
                         ? 'Recording...'
-                        : widget.currentPosition != null
+                        : widget.data.currentPosition != null
                             ? 'Recorded'
                             : 'Not recorded',
                   ),
@@ -636,19 +605,19 @@ class _ConsentPageState extends State<ConsentPage> {
                           children: [
                             _buildRadioOption(
                               value: 'rural',
-                              groupValue: widget.communityType,
+                              groupValue: widget.data.communityType,
                               label: 'Rural',
                               onChanged: _handleCommunityTypeChanged,
                             ),
                             _buildRadioOption(
                               value: 'urban',
-                              groupValue: widget.communityType,
+                              groupValue: widget.data.communityType,
                               label: 'Urban',
                               onChanged: _handleCommunityTypeChanged,
                             ),
                             _buildRadioOption(
                               value: 'semi_urban',
-                              groupValue: widget.communityType,
+                              groupValue: widget.data.communityType,
                               label: 'Semi-Urban',
                               onChanged: _handleCommunityTypeChanged,
                             ),
@@ -675,13 +644,13 @@ class _ConsentPageState extends State<ConsentPage> {
                           children: [
                             _buildRadioOption(
                               value: 'Yes',
-                              groupValue: widget.residesInCommunityConsent,
+                              groupValue: widget.data.residesInCommunityConsent,
                               label: 'Yes',
                               onChanged: _handleResidesInCommunityChanged,
                             ),
                             _buildRadioOption(
                               value: 'No',
-                              groupValue: widget.residesInCommunityConsent,
+                              groupValue: widget.data.residesInCommunityConsent,
                               label: 'No',
                               onChanged: _handleResidesInCommunityChanged,
                             ),
@@ -692,7 +661,7 @@ class _ConsentPageState extends State<ConsentPage> {
                   ),
 
                   // Show community name field if resident is not in this community
-                  if (widget.residesInCommunityConsent == 'No')
+                  if (widget.data.residesInCommunityConsent == 'No')
                     ..._buildNonResidentFields(),
 
                   // Farmer Availability
@@ -712,13 +681,13 @@ class _ConsentPageState extends State<ConsentPage> {
                           children: [
                             _buildRadioOption(
                               value: 'Yes',
-                              groupValue: widget.farmerAvailable,
+                              groupValue: widget.data.farmerAvailable,
                               label: 'Yes',
                               onChanged: _handleFarmerAvailableChanged,
                             ),
                             _buildRadioOption(
                               value: 'No',
-                              groupValue: widget.farmerAvailable,
+                              groupValue: widget.data.farmerAvailable,
                               label: 'No',
                               onChanged: _handleFarmerAvailableChanged,
                             ),
@@ -729,7 +698,7 @@ class _ConsentPageState extends State<ConsentPage> {
                   ),
 
                   // Farmer Not Available Fields
-                  if (widget.farmerAvailable == 'No')
+                  if (widget.data.farmerAvailable == 'No')
                     ..._buildFarmerNotAvailableFields(),
 
                   // Consent Section
@@ -748,22 +717,22 @@ class _ConsentPageState extends State<ConsentPage> {
   bool _shouldShowConsentSection() {
     bool shouldShowConsent = false;
 
-    if (widget.farmerAvailable == 'Yes') {
+    if (widget.data.farmerAvailable == 'Yes') {
       shouldShowConsent = true;
-    } else if (widget.farmerStatus == 'Non-resident' &&
-        widget.availablePerson != null &&
-        widget.availablePerson != 'Nobody') {
+    } else if (widget.data.farmerStatus == 'Non-resident' &&
+        widget.data.availablePerson != null &&
+        widget.data.availablePerson != 'Nobody') {
       shouldShowConsent = true;
-    } else if (widget.farmerStatus == 'Other' &&
-        widget.availablePerson != null &&
-        widget.availablePerson != 'Nobody') {
+    } else if (widget.data.farmerStatus == 'Other' &&
+        widget.data.availablePerson != null &&
+        widget.data.availablePerson != 'Nobody') {
       shouldShowConsent = true;
     }
 
     debugPrint('Consent section visibility: $shouldShowConsent');
-    debugPrint('  - Farmer Available: ${widget.farmerAvailable}');
-    debugPrint('  - Farmer Status: ${widget.farmerStatus}');
-    debugPrint('  - Available Person: ${widget.availablePerson}');
+    debugPrint('  - Farmer Available: ${widget.data.farmerAvailable}');
+    debugPrint('  - Farmer Status: ${widget.data.farmerStatus}');
+    debugPrint('  - Available Person: ${widget.data.availablePerson}');
 
     return shouldShowConsent;
   }
@@ -887,27 +856,19 @@ class _ConsentPageState extends State<ConsentPage> {
           ),
 
           // Refusal Reason Field
+          // In _buildConsentSection() method, replace the TextField with:
           if (_declinedConsent) ...[
             const SizedBox(height: _Spacing.lg),
-            TextField(
-              controller: _refusalReasonController,
-              focusNode: _reasonFocusNode,
-              decoration: InputDecoration(
-                labelText: 'What is your reason for refusing to participate?',
-                hintText: 'Please provide your reason',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: theme.primaryColor, width: 2),
-                ),
-              ),
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
+            FormFields.buildTextField(
+              context: context,
+              label: 'What is your reason for refusing to participate?',
+              controller: _refusalReasonController, // Keep this one local
+              hintText: 'Please provide your reason',
               onChanged: (value) {
                 debugPrint('Refusal reason updated: $value');
               },
+              maxLines: 3,
+              isRequired: true,
             ),
           ],
         ],

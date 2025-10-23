@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'sensitization_page.dart';
-
 class RemediationPage extends StatefulWidget {
   const RemediationPage({Key? key}) : super(key: key);
 
@@ -12,248 +10,451 @@ class RemediationPage extends StatefulWidget {
 
 class _RemediationPageState extends State<RemediationPage> {
   bool? hasSchoolFees;
-  bool? needsSupportToStopChildLabor;
   bool childProtectionEducation = false;
   bool schoolKitsSupport = false;
   bool igaSupport = false;
   bool otherSupport = false;
   String? communityAction;
-  final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _supportDetailsController =
-      TextEditingController();
+
   final TextEditingController _otherSupportController = TextEditingController();
   final TextEditingController _otherCommunityActionController =
       TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-
-  final List<String> communityActions = [
-    'Community education on child labour',
-    'Community school building',
-    'Community school renovation',
-    'Other (please specify)'
-  ];
 
   @override
   void dispose() {
-    _amountController.dispose();
-    _supportDetailsController.dispose();
     _otherSupportController.dispose();
     _otherCommunityActionController.dispose();
     super.dispose();
   }
 
+  Widget _buildQuestionCard({required Widget child}) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildRadioOption({
+    required String value,
+    required String? groupValue,
+    required String label,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return RadioListTile<String>(
+      title: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 15,
+          color: Colors.black87,
+        ),
+      ),
+      value: value,
+      groupValue: groupValue,
+      onChanged: onChanged,
+      activeColor: Theme.of(context).primaryColor,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+    );
+  }
+
+  Widget _buildCheckboxOption({
+    required String label,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return CheckboxListTile(
+      title: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 15,
+          color: Colors.black87,
+        ),
+      ),
+      value: value,
+      onChanged: onChanged,
+      activeColor: Theme.of(context).primaryColor,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    String hintText = '',
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: hintText,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: Theme.of(context).primaryColor,
+                width: 1.5,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+          ),
+          style: GoogleFonts.poppins(fontSize: 14),
+          onChanged: (value) {
+            setState(() {});
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
           'Remediation',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        backgroundColor: theme.primaryColor,
-        elevation: 0,
         centerTitle: true,
+        elevation: 0,
+        backgroundColor: Theme.of(context).primaryColor,
+        automaticallyImplyLeading: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // School Fees Question
-              Text(
-                'Do you owe fees for the school of the children living in your household?',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildRadioOption('Yes', true),
-                  const SizedBox(width: 20),
-                  _buildRadioOption('No', false),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // Support Options
-              Text(
-                'What support is needed to prevent child labor?',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Checkbox Options
-              _buildSupportCheckbox(
-                'Child protection and parenting education',
-                childProtectionEducation,
-                (bool? value) {
-                  setState(() {
-                    childProtectionEducation = value ?? false;
-                  });
-                },
-              ),
-              _buildSupportCheckbox(
-                'School kits support',
-                schoolKitsSupport,
-                (bool? value) {
-                  setState(() {
-                    schoolKitsSupport = value ?? false;
-                  });
-                },
-              ),
-              _buildSupportCheckbox(
-                'IGA support',
-                igaSupport,
-                (bool? value) {
-                  setState(() {
-                    igaSupport = value ?? false;
-                  });
-                },
-              ),
-              _buildSupportCheckbox(
-                'Other (please specify)',
-                otherSupport,
-                (bool? value) {
-                  setState(() {
-                    otherSupport = value ?? false;
-                    if (!otherSupport) {
-                      _otherSupportController.clear();
-                    }
-                  });
-                },
-              ),
-              if (otherSupport) ...[
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.only(left: 32.0, right: 16.0),
-                  child: TextFormField(
-                    controller: _otherSupportController,
-                    decoration: InputDecoration(
-                      hintText: 'Please specify other support needed',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                    ),
-                    minLines: 1,
-                    maxLines: 2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              const SizedBox(height: 24),
-
-              // Community Action Question
-              Text(
-                'What can be done for the community to stop involving the children in child labour?',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ...communityActions.map((action) {
-                final isOther = action == 'Other (please specify)';
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RadioListTile<String>(
-                      title: Text(
-                        action,
-                        style: GoogleFonts.poppins(fontSize: 14),
-                      ),
-                      value: action,
-                      groupValue: communityAction,
-                      onChanged: (String? value) {
-                        setState(() {
-                          communityAction = value;
-                          if (!isOther) {
-                            _otherCommunityActionController.clear();
-                          }
-                        });
-                      },
-                      activeColor: theme.primaryColor,
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                    ),
-                    if (isOther && communityAction == action)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            left: 32.0, right: 16.0, bottom: 8.0),
-                        child: TextFormField(
-                          controller: _otherCommunityActionController,
-                          decoration: InputDecoration(
-                            hintText: 'Please specify',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.0),
+                  // School Fees Question
+                  _buildQuestionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Do you owe fees for the school of the children living in your household?',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 20,
+                          children: [
+                            _buildRadioOption(
+                              value: 'Yes',
+                              groupValue: hasSchoolFees?.toString(),
+                              label: 'Yes',
+                              onChanged: (value) {
+                                setState(() {
+                                  hasSchoolFees = value == 'Yes';
+                                });
+                              },
                             ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
+                            _buildRadioOption(
+                              value: 'No',
+                              groupValue: hasSchoolFees?.toString(),
+                              label: 'No',
+                              onChanged: (value) {
+                                setState(() {
+                                  hasSchoolFees = value == 'No';
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Support Options Question
+                  if (hasSchoolFees != null)
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'What support is needed to prevent child labor?',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
                             ),
                           ),
-                          minLines: 1,
-                          maxLines: 2,
-                        ),
+                          const SizedBox(height: 12),
+                          Column(
+                            children: [
+                              _buildCheckboxOption(
+                                label:
+                                    'Child protection and parenting education',
+                                value: childProtectionEducation,
+                                onChanged: (value) {
+                                  setState(() {
+                                    childProtectionEducation = value ?? false;
+                                  });
+                                },
+                              ),
+                              _buildCheckboxOption(
+                                label: 'School kits support',
+                                value: schoolKitsSupport,
+                                onChanged: (value) {
+                                  setState(() {
+                                    schoolKitsSupport = value ?? false;
+                                  });
+                                },
+                              ),
+                              _buildCheckboxOption(
+                                label: 'IGA support',
+                                value: igaSupport,
+                                onChanged: (value) {
+                                  setState(() {
+                                    igaSupport = value ?? false;
+                                  });
+                                },
+                              ),
+                              _buildCheckboxOption(
+                                label: 'Other (please specify)',
+                                value: otherSupport,
+                                onChanged: (value) {
+                                  setState(() {
+                                    otherSupport = value ?? false;
+                                    if (!otherSupport) {
+                                      _otherSupportController.clear();
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          // Other Support Specification
+                          if (otherSupport) ...[
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              label: 'Please specify other support needed',
+                              controller: _otherSupportController,
+                              hintText: 'Enter details of other support needed',
+                            ),
+                          ],
+                        ],
                       ),
-                  ],
-                );
-              }).toList(),
+                    ),
 
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
+                  // Community Action Question
+                  if (hasSchoolFees != null &&
+                      (childProtectionEducation ||
+                          schoolKitsSupport ||
+                          igaSupport ||
+                          (otherSupport &&
+                              _otherSupportController.text.isNotEmpty)))
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'What can be done for the community to stop involving the children in child labour?',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Column(
+                            children: [
+                              _buildRadioOption(
+                                value: 'Community education on child labour',
+                                groupValue: communityAction,
+                                label: 'Community education on child labour',
+                                onChanged: (value) {
+                                  setState(() {
+                                    communityAction = value;
+                                    if (value != 'Other (please specify)') {
+                                      _otherCommunityActionController.clear();
+                                    }
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'Community school building',
+                                groupValue: communityAction,
+                                label: 'Community school building',
+                                onChanged: (value) {
+                                  setState(() {
+                                    communityAction = value;
+                                    if (value != 'Other (please specify)') {
+                                      _otherCommunityActionController.clear();
+                                    }
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'Community school renovation',
+                                groupValue: communityAction,
+                                label: 'Community school renovation',
+                                onChanged: (value) {
+                                  setState(() {
+                                    communityAction = value;
+                                    if (value != 'Other (please specify)') {
+                                      _otherCommunityActionController.clear();
+                                    }
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'Other (please specify)',
+                                groupValue: communityAction,
+                                label: 'Other (please specify)',
+                                onChanged: (value) {
+                                  setState(() {
+                                    communityAction = value;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          // Other Community Action Specification
+                          if (communityAction == 'Other (please specify)') ...[
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              label: 'Please specify other community action',
+                              controller: _otherCommunityActionController,
+                              hintText:
+                                  'Enter details of other community action',
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 80), // Space for bottom button
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              // Previous Button
+              Expanded(
+                child: OutlinedButton(
                   onPressed: () {
-                    if (_formKey.currentState?.validate() ?? false) {
-                      // Save the form data if needed
-                      // Then navigate to SensitizationPage
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SensitizationPage(),
-                        ),
-                      );
-                    }
+                    Navigator.pop(context);
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
+                  style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(color: Colors.green.shade600, width: 2),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
-                    'Save Information',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.arrow_back_ios,
+                          size: 18, color: Colors.green.shade600),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Previous',
+                        style: GoogleFonts.inter(
+                          color: Colors.green.shade600,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Next Button (Navigation removed)
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: (hasSchoolFees != null &&
+                            communityAction != null &&
+                            (communityAction != 'Other (please specify)' ||
+                                _otherCommunityActionController
+                                    .text.isNotEmpty))
+                        ? Colors.green.shade600
+                        : Colors.grey[400],
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 2,
+                    shadowColor: Colors.green.shade600.withOpacity(0.3),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Next',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_ios,
+                          size: 18, color: Colors.white),
+                    ],
                   ),
                 ),
               ),
@@ -263,56 +464,21 @@ class _RemediationPageState extends State<RemediationPage> {
       ),
     );
   }
-
-  Widget _buildRadioOption(String label, bool value) {
-    return Row(
-      children: [
-        Radio<bool>(
-          value: value,
-          groupValue: hasSchoolFees,
-          onChanged: (bool? newValue) {
-            setState(() {
-              hasSchoolFees = newValue;
-              if (newValue == false) {
-                _amountController.clear();
-              }
-            });
-          },
-          activeColor: const Color(0xFF1A5F7A),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            color: Colors.black87,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSupportCheckbox(
-      String label, bool value, ValueChanged<bool?> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Checkbox(
-            value: value,
-            onChanged: onChanged,
-            activeColor: Theme.of(context).primaryColor,
-          ),
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+
+// Removed class
+// class EndOfCollectionPage extends StatelessWidget {
+//   const EndOfCollectionPage({Key? key}) : super(key: key);
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: Text('End of Collection'),
+//       ),
+//       body: Center(
+//         child: Text('End of Collection Page'),
+//       ),
+//     );
+//   }
+// }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:human_rights_monitor/model/children_household_model.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../child_details_page.dart';
@@ -14,10 +15,16 @@ class _Spacing {
 
 class ChildrenHouseholdPage extends StatefulWidget {
   final Map<String, dynamic> producerDetails;
+  final Function(int)? onComplete;
+  final TextEditingController? children5To17Controller;
+  final ChildrenHouseholdModel? initialData;
 
   const ChildrenHouseholdPage({
     Key? key,
     required this.producerDetails,
+    this.onComplete,
+    this.children5To17Controller,
+    this.initialData,
   }) : super(key: key);
 
   @override
@@ -26,26 +33,61 @@ class ChildrenHouseholdPage extends StatefulWidget {
 
 class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
   final _formKey = GlobalKey<FormState>();
-  String? _hasChildrenInHousehold;
-  final TextEditingController _numberOfChildrenController =
-      TextEditingController();
-  final TextEditingController _children5To17Controller =
-      TextEditingController();
-  final List<Map<String, dynamic>> _childrenDetails = [];
+  late ChildrenHouseholdModel _householdData;
+  late final TextEditingController _numberOfChildrenController;
+  late final TextEditingController _children5To17Controller;
+  bool _isOwnController = false;
 
-  Future<void> _navigateToChildDetails(BuildContext context, int totalChildren,
-      {int? childNumberToEdit}) async {
-    int currentChild = childNumberToEdit ?? 1;
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize with provided data or create empty
+    _householdData = widget.initialData ?? ChildrenHouseholdModel.empty();
+
+    // Initialize controllers
+    _numberOfChildrenController = TextEditingController(
+        text: _householdData.numberOfChildren > 0
+            ? _householdData.numberOfChildren.toString()
+            : '');
+
+    _children5To17Controller = widget.children5To17Controller ??
+        TextEditingController(
+            text: _householdData.children5To17 > 0
+                ? _householdData.children5To17.toString()
+                : '');
+
+    _isOwnController = widget.children5To17Controller == null;
+  }
+
+  @override
+  void dispose() {
+    // Only dispose if we created the controller ourselves
+    if (_isOwnController) {
+      _children5To17Controller.dispose();
+    }
+    _numberOfChildrenController.dispose();
+    super.dispose();
+  }
+
+  void _updateHouseholdData(ChildrenHouseholdModel newData) {
+    setState(() {
+      _householdData = newData;
+    });
+  }
+
+  Future<void> _navigateToChildDetails(
+      BuildContext context, int totalChildren) async {
+    int currentChild = _householdData.childrenDetails.length + 1;
 
     while (currentChild <= totalChildren) {
-      // Navigate to child details page
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ChildDetailsPage(
             childNumber: currentChild,
             totalChildren: totalChildren,
-            childrenDetails: _childrenDetails,
+            childrenDetails: _householdData.childrenDetails,
           ),
         ),
       );
@@ -57,16 +99,23 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
 
       // Update or add the child data to our list
       setState(() {
-        final existingIndex = _childrenDetails.indexWhere((child) =>
-            child['childNumber'] == result['childData']['childNumber']);
+        final existingIndex = _householdData.childrenDetails.indexWhere(
+            (child) =>
+                child['childNumber'] == result['childData']['childNumber']);
+
+        final updatedChildren =
+            List<Map<String, dynamic>>.from(_householdData.childrenDetails);
 
         if (existingIndex >= 0) {
           // Update existing child data
-          _childrenDetails[existingIndex] = result['childData'];
+          updatedChildren[existingIndex] = result['childData'];
         } else {
           // Add new child data
-          _childrenDetails.add(result['childData']);
+          updatedChildren.add(result['childData']);
         }
+
+        _householdData =
+            _householdData.copyWith(childrenDetails: updatedChildren);
       });
 
       // Check if we should navigate to next child
@@ -75,23 +124,14 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
         currentChild = result['nextChildNumber'];
       } else {
         // Return to children household page
-        if (context.mounted) {
-          // Save the children data before navigating
-          final childrenData = {
-            'hasChildrenInHousehold': _hasChildrenInHousehold,
-            'numberOfChildren': _numberOfChildrenController.text.isNotEmpty
-                ? int.tryParse(_numberOfChildrenController.text) ?? 0
-                : 0,
-            'children5To17': totalChildren,
-            'childrenDetails': _childrenDetails,
-            'editingMode': childNumberToEdit != null,
-          };
-
-          // Return to the children household page
-          Navigator.pop(context, childrenData);
-        }
-        return;
+        break;
       }
+    }
+
+    // All children processed, return to parent
+    if (mounted) {
+      // Call onComplete callback if provided
+      widget.onComplete?.call(_householdData.children5To17);
     }
   }
 
@@ -206,38 +246,72 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
           style: theme.textTheme.bodyLarge?.copyWith(
             color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
           ),
-          onChanged: onChanged,
+          onChanged: (value) {
+            if (onChanged != null) {
+              onChanged(value);
+            }
+            setState(() {}); // Trigger a rebuild to update the UI
+          },
         ),
       ],
     );
   }
 
   void _submitForm() {
-    if (_hasChildrenInHousehold == 'Yes') {
-      final children5To17 = int.tryParse(_children5To17Controller.text) ?? 0;
+    // Validate form using model's validation
+    if (!_householdData.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill all required fields correctly'),
+        ),
+      );
+      return;
+    }
+
+    if (_householdData.hasChildrenInHousehold == 'Yes') {
+      // Validate number of children
+      if (_householdData.numberOfChildren <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Please enter a valid number of children (greater than 0)'),
+          ),
+        );
+        return;
+      }
+
+      // Validate children 5-17
+      if (_householdData.children5To17 < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid number of children aged 5-17'),
+          ),
+        );
+        return;
+      }
+
+      if (_householdData.children5To17 > _householdData.numberOfChildren) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Number of children aged 5-17 cannot be greater than total number of children',
+            ),
+          ),
+        );
+        return;
+      }
 
       // If there are children 5-17, navigate to child details
-      if (children5To17 > 0) {
-        _navigateToChildDetails(context, children5To17);
+      if (_householdData.children5To17 > 0) {
+        _navigateToChildDetails(context, _householdData.children5To17);
         return;
       }
     }
 
-    // If no children 5-17 or 'No' was selected, return the data
-    final childrenData = {
-      'hasChildrenInHousehold': _hasChildrenInHousehold,
-      'numberOfChildren': _hasChildrenInHousehold == 'Yes'
-          ? int.tryParse(_numberOfChildrenController.text) ?? 0
-          : 0,
-      'children5To17': _hasChildrenInHousehold == 'Yes'
-          ? int.tryParse(_children5To17Controller.text) ?? 0
-          : 0,
-      'childrenDetails': _childrenDetails,
-    };
-
-    // Return to previous screen with the collected data
+    // All validations passed, return the data
     if (mounted) {
-      Navigator.pop(context, childrenData);
+      // Call onComplete callback if provided
+      widget.onComplete?.call(_householdData.children5To17);
     }
   }
 
@@ -247,21 +321,6 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Children in Household',
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: AppTheme.primaryColor,
-        automaticallyImplyLeading: false,
-      ),
       body: Form(
         key: _formKey,
         child: Column(
@@ -292,29 +351,41 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
                             children: [
                               _buildRadioOption(
                                 value: 'Yes',
-                                groupValue: _hasChildrenInHousehold,
+                                groupValue:
+                                    _householdData.hasChildrenInHousehold,
                                 label: 'Yes',
                                 onChanged: (value) {
                                   setState(() {
-                                    _hasChildrenInHousehold = value;
-                                    if (value == 'No') {
-                                      _numberOfChildrenController.clear();
-                                      _children5To17Controller.clear();
-                                      _childrenDetails.clear();
-                                    }
+                                    _householdData = _householdData.copyWith(
+                                      hasChildrenInHousehold: value,
+                                      numberOfChildren: 0,
+                                      children5To17: 0,
+                                      childrenDetails: [],
+                                    );
+                                    _numberOfChildrenController.clear();
+                                    _children5To17Controller.clear();
+                                    // Update the main controller
+                                    widget.children5To17Controller?.clear();
                                   });
                                 },
                               ),
                               _buildRadioOption(
                                 value: 'No',
-                                groupValue: _hasChildrenInHousehold,
+                                groupValue:
+                                    _householdData.hasChildrenInHousehold,
                                 label: 'No',
                                 onChanged: (value) {
                                   setState(() {
-                                    _hasChildrenInHousehold = value;
+                                    _householdData = _householdData.copyWith(
+                                      hasChildrenInHousehold: value,
+                                      numberOfChildren: 0,
+                                      children5To17: 0,
+                                      childrenDetails: [],
+                                    );
                                     _numberOfChildrenController.clear();
                                     _children5To17Controller.clear();
-                                    _childrenDetails.clear();
+                                    // Update the main controller
+                                    widget.children5To17Controller?.clear();
                                   });
                                 },
                               ),
@@ -325,7 +396,7 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
                     ),
 
                     // Number of children field (conditional)
-                    if (_hasChildrenInHousehold == 'Yes')
+                    if (_householdData.hasChildrenInHousehold == 'Yes')
                       _buildQuestionCard(
                         child: _buildTextField(
                           label: 'How many children are in the household?',
@@ -333,114 +404,96 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
                           hintText: 'Enter number of children',
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
+                            final count = int.tryParse(value) ?? 0;
                             setState(() {
+                              _householdData = _householdData.copyWith(
+                                numberOfChildren: count,
+                                children5To17: 0,
+                                childrenDetails: [],
+                              );
                               _children5To17Controller.clear();
-                              _childrenDetails.clear();
+                              // Update the main controller when this field changes
+                              widget.children5To17Controller?.clear();
                             });
                           },
                         ),
                       ),
 
                     // Children aged 5-17 field (conditional)
-                    if (_hasChildrenInHousehold == 'Yes' &&
-                        _numberOfChildrenController.text.isNotEmpty &&
-                        int.tryParse(_numberOfChildrenController.text) !=
-                            null &&
-                        int.tryParse(_numberOfChildrenController.text)! > 0)
+                    if (_householdData.hasChildrenInHousehold == 'Yes' &&
+                        _householdData.numberOfChildren > 0)
                       _buildQuestionCard(
                         child: _buildTextField(
                           label:
-                              'Out of ${_numberOfChildrenController.text} children, how many are between 5-17 years old?',
+                              'Out of ${_householdData.numberOfChildren} children, how many are between 5-17 years old?',
                           controller: _children5To17Controller,
                           hintText: 'Enter number of children (5-17 years)',
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
-                            // Force a rebuild when the value changes
-                            setState(() {});
+                            final count = int.tryParse(value) ?? 0;
+                            setState(() {
+                              _householdData =
+                                  _householdData.copyWith(children5To17: count);
+                              // Update the main controller in real-time
+                              widget.children5To17Controller?.text = value;
+                            });
                           },
                         ),
                       ),
 
-                    const SizedBox(height: _Spacing.lg),
+                    // Progress indicator when collecting child details
+                    if (_householdData.children5To17 > 0)
+                      _buildQuestionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Child Details Progress',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: _Spacing.md),
+                            LinearProgressIndicator(
+                              value: _householdData.childrenDetails.length /
+                                  _householdData.children5To17,
+                              backgroundColor: Colors.grey.shade300,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: _Spacing.sm),
+                            Text(
+                              '${_householdData.childrenDetails.length} of ${_householdData.children5To17} children details collected',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.textSecondary,
+                              ),
+                            ),
+                            if (_householdData.childrenDetails.isNotEmpty) ...[
+                              const SizedBox(height: _Spacing.md),
+                              Wrap(
+                                spacing: 8,
+                                children:
+                                    _householdData.childrenDetails.map((child) {
+                                  return Chip(
+                                    label:
+                                        Text('Child ${child['childNumber']}'),
+                                    backgroundColor: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(0.1),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
 
-                    // Navigation Buttons
-                    const SizedBox(height: _Spacing.lg),
-                    Row(
-                      children: [
-                        // Previous Button
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: Colors.green.shade600, width: 2),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.arrow_back_ios,
-                                    size: 18, color: Colors.green.shade600),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Previous',
-                                  style: TextStyle(
-                                    color: Colors.green.shade600,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Next Button
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _submitForm,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _hasChildrenInHousehold == 'Yes' &&
-                                      _numberOfChildrenController.text.isNotEmpty &&
-                                      (_hasChildrenInHousehold == 'No' ||
-                                          _children5To17Controller.text.isNotEmpty)
-                                  ? Colors.green.shade600
-                                  : Colors.grey[400],
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
-                              shadowColor: Colors.green.shade600.withOpacity(0.3),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  _hasChildrenInHousehold == 'Yes' &&
-                                          int.tryParse(_children5To17Controller.text) != null &&
-                                          (int.tryParse(_children5To17Controller.text) ?? 0) > 0
-                                      ? 'Next: Child Details'
-                                      : 'Next',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_forward_ios,
-                                    size: 18, color: Colors.white),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: _Spacing.lg),
                   ],
                 ),

@@ -97,18 +97,47 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
         return false;
       }
     }
-    // If 'Other' is selected, check if text is provided
+
+    // Check if worker agreement type is answered (when applicable)
+    if ((_hasRecruitedWorker == '1' || _everRecruitedWorker == 'Yes') &&
+        _workerAgreementType == null) {
+      return false;
+    }
+
+    // Check if tasks clarified is answered (when applicable)
+    if ((_hasRecruitedWorker == '1' || _everRecruitedWorker == 'Yes') &&
+        _tasksClarified == null) {
+      return false;
+    }
+
+    // Check if additional tasks is answered (when applicable)
+    if ((_hasRecruitedWorker == '1' || _everRecruitedWorker == 'Yes') &&
+        _additionalTasks == null) {
+      return false;
+    }
+
+    // Check if refusal action is answered (when applicable)
+    if ((_hasRecruitedWorker == '1' || _everRecruitedWorker == 'Yes') &&
+        _refusalAction == null) {
+      return false;
+    }
+
+    // If 'Other' is selected for agreement type, check if text is provided
+    if (_workerAgreementType == 'Other (specify)' &&
+        _otherAgreementController.text.trim().isEmpty) {
+      return false;
+    }
+
+    // If 'Other' is selected for refusal action, check if text is provided
     if (_refusalAction == 'Other' &&
         _otherAgreementController.text.trim().isEmpty) {
       return false;
     }
 
-    // Check if salary payment frequency is answered
-    if (_salaryPaymentFrequency == null) return false;
-
-    // Check if all agreement statements are answered
-    for (var response in _agreementResponses.values) {
-      if (response == null) return false;
+    // Check if salary payment frequency is answered (when applicable)
+    if ((_hasRecruitedWorker == '1' || _everRecruitedWorker == 'Yes') &&
+        _salaryPaymentFrequency == null) {
+      return false;
     }
 
     return true;
@@ -144,7 +173,11 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
         ),
       ),
       value: value,
-      onChanged: onChanged,
+      onChanged: (bool? newValue) {
+        setState(() {
+          onChanged(newValue);
+        });
+      },
       activeColor: AppTheme.primaryColor,
       contentPadding: EdgeInsets.zero,
       controlAffinity: ListTileControlAffinity.leading,
@@ -158,8 +191,8 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
     required String label,
     required ValueChanged<String?> onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return RadioListTile<String>(
       title: Text(
@@ -170,7 +203,11 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
       ),
       value: value,
       groupValue: groupValue,
-      onChanged: onChanged,
+      onChanged: (newValue) {
+        setState(() {
+          onChanged(newValue);
+        });
+      },
       activeColor: AppTheme.primaryColor,
       contentPadding: EdgeInsets.zero,
       dense: true,
@@ -475,395 +512,364 @@ class _WorkersInFarmPageState extends State<WorkersInFarmPage> {
                   ),
                 ),
 
-              // Workers Recruitment Title
-              Padding(
-                padding: const EdgeInsets.only(
-                    top: _Spacing.lg, bottom: _Spacing.sm),
-                child: Text(
-                  'Workers Recruitment',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.textPrimary,
-                  ),
-                ),
-              ),
-
-              // Worker Agreement Type Card
-              _buildCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'What kind of agreement do you have with your workers?',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: _Spacing.md),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildRadioOption(
-                          value: 'Verbal agreement without witness',
-                          groupValue: _workerAgreementType,
-                          label: 'Verbal agreement without witness',
-                          onChanged: (value) {
-                            setState(() {
-                              _workerAgreementType = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Verbal agreement with witness',
-                          groupValue: _workerAgreementType,
-                          label: 'Verbal agreement with witness',
-                          onChanged: (value) {
-                            setState(() {
-                              _workerAgreementType = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Written agreement without witness',
-                          groupValue: _workerAgreementType,
-                          label: 'Written agreement without witness',
-                          onChanged: (value) {
-                            setState(() {
-                              _workerAgreementType = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Written contract with witness',
-                          groupValue: _workerAgreementType,
-                          label: 'Written contract with witness',
-                          onChanged: (value) {
-                            setState(() {
-                              _workerAgreementType = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Other (specify)',
-                          groupValue: _workerAgreementType,
-                          label: 'Other (specify)',
-                          onChanged: (value) {
-                            setState(() {
-                              _workerAgreementType = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Other Agreement Type Specification Card
-              if (_workerAgreementType == 'Other (specify)')
-                _buildCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'If other,please specify',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: _Spacing.md),
-                      TextFormField(
-                        controller: _otherAgreementController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter agreement type',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: 10.0,
-                          ),
-                        ),
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Task Clarification Card
-              _buildCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Were the tasks to be performed by the worker clarified with them during the recruitment?',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: _Spacing.md),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildRadioOption(
-                          value: 'Yes',
-                          groupValue: _tasksClarified,
-                          label: 'Yes',
-                          onChanged: (value) {
-                            setState(() {
-                              _tasksClarified = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'No',
-                          groupValue: _tasksClarified,
-                          label: 'No',
-                          onChanged: (value) {
-                            setState(() {
-                              _tasksClarified = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Additional tasks question
-              _buildCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Does the worker perform tasks for you or your family members other than those agreed upon?',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: _Spacing.md),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildRadioOption(
-                          value: 'Yes',
-                          groupValue: _additionalTasks,
-                          label: 'Yes',
-                          onChanged: (value) {
-                            setState(() {
-                              _additionalTasks = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'No',
-                          groupValue: _additionalTasks,
-                          label: 'No',
-                          onChanged: (value) {
-                            setState(() {
-                              _additionalTasks = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Refusal Action Card
-              _buildCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'What do you do when a worker refuses to perform a task?',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: _Spacing.md),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildRadioOption(
-                          value: 'I find a compromise',
-                          groupValue: _refusalAction,
-                          label: 'I find a compromise',
-                          onChanged: (value) {
-                            setState(() {
-                              _refusalAction = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'I withdraw part of their salary',
-                          groupValue: _refusalAction,
-                          label: 'I withdraw part of their salary',
-                          onChanged: (value) {
-                            setState(() {
-                              _refusalAction = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'I issue a warning',
-                          groupValue: _refusalAction,
-                          label: 'I issue a warning',
-                          onChanged: (value) {
-                            setState(() {
-                              _refusalAction = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Other',
-                          groupValue: _refusalAction,
-                          label: 'Other',
-                          onChanged: (value) {
-                            setState(() {
-                              _refusalAction = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Not applicable',
-                          groupValue: _refusalAction,
-                          label: 'Not applicable',
-                          onChanged: (value) {
-                            setState(() {
-                              _refusalAction = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Additional card for 'Other' specification
-              if (_refusalAction == 'Other')
-                _buildCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'If other,please specify',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: isDark
-                              ? AppTheme.darkTextPrimary
-                              : AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: _Spacing.md),
-                      TextFormField(
-                        controller: _otherAgreementController,
-                        decoration: InputDecoration(
-                          hintText: 'Enter your response',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10.0,
-                            vertical: 12.0,
-                          ),
-                        ),
-                        maxLines: 3,
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Salary payment frequency question
-              _buildCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Do your workers receive their full salaries?',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppTheme.darkTextPrimary
-                            : AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: _Spacing.md),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildRadioOption(
-                          value: 'Always',
-                          groupValue: _salaryPaymentFrequency,
-                          label: 'Always',
-                          onChanged: (value) {
-                            setState(() {
-                              _salaryPaymentFrequency = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Sometimes',
-                          groupValue: _salaryPaymentFrequency,
-                          label: 'Sometimes',
-                          onChanged: (value) {
-                            setState(() {
-                              _salaryPaymentFrequency = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Rarely',
-                          groupValue: _salaryPaymentFrequency,
-                          label: 'Rarely',
-                          onChanged: (value) {
-                            setState(() {
-                              _salaryPaymentFrequency = value;
-                            });
-                          },
-                        ),
-                        _buildRadioOption(
-                          value: 'Never',
-                          groupValue: _salaryPaymentFrequency,
-                          label: 'Never',
-                          onChanged: (value) {
-                            setState(() {
-                              _salaryPaymentFrequency = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Show agreement section if:
-              // 1. Have recruited during the past year (Yes), or
-              // 2. Haven't recruited in past year but have recruited before (Yes)
+              // Only show the remaining questions if user has recruited workers (current or past)
               if (_hasRecruitedWorker == '1' ||
-                  (_hasRecruitedWorker == '0' &&
-                      _everRecruitedWorker == 'Yes')) ...[
+                  _everRecruitedWorker == 'Yes') ...[
+                // Workers Recruitment Title
+                Padding(
+                  padding: const EdgeInsets.only(
+                      top: _Spacing.lg, bottom: _Spacing.sm),
+                  child: Text(
+                    'Workers Recruitment',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.textPrimary,
+                    ),
+                  ),
+                ),
+
+                // Worker Agreement Type Card
+                _buildCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'What kind of agreement do you have with your workers?',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: _Spacing.md),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRadioOption(
+                            value: 'Verbal agreement without witness',
+                            groupValue: _workerAgreementType,
+                            label: 'Verbal agreement without witness',
+                            onChanged: (value) {
+                              _workerAgreementType = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Verbal agreement with witness',
+                            groupValue: _workerAgreementType,
+                            label: 'Verbal agreement with witness',
+                            onChanged: (value) {
+                              _workerAgreementType = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Written agreement without witness',
+                            groupValue: _workerAgreementType,
+                            label: 'Written agreement without witness',
+                            onChanged: (value) {
+                              _workerAgreementType = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Written contract with witness',
+                            groupValue: _workerAgreementType,
+                            label: 'Written contract with witness',
+                            onChanged: (value) {
+                              _workerAgreementType = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Other (specify)',
+                            groupValue: _workerAgreementType,
+                            label: 'Other (specify)',
+                            onChanged: (value) {
+                              _workerAgreementType = value;
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Other Agreement Type Specification Card
+                if (_workerAgreementType == 'Other (specify)')
+                  _buildCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'If other,please specify',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        TextFormField(
+                          controller: _otherAgreementController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter agreement type',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: 10.0,
+                            ),
+                          ),
+                          maxLines: 2,
+                          onChanged: (value) {
+                            setState(
+                                () {}); // Trigger rebuild when text changes
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Task Clarification Card
+                _buildCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Were the tasks to be performed by the worker clarified with them during the recruitment?',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: _Spacing.md),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRadioOption(
+                            value: 'Yes',
+                            groupValue: _tasksClarified,
+                            label: 'Yes',
+                            onChanged: (value) {
+                              _tasksClarified = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'No',
+                            groupValue: _tasksClarified,
+                            label: 'No',
+                            onChanged: (value) {
+                              _tasksClarified = value;
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Additional tasks question
+                _buildCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Does the worker perform tasks for you or your family members other than those agreed upon?',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: _Spacing.md),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRadioOption(
+                            value: 'Yes',
+                            groupValue: _additionalTasks,
+                            label: 'Yes',
+                            onChanged: (value) {
+                              _additionalTasks = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'No',
+                            groupValue: _additionalTasks,
+                            label: 'No',
+                            onChanged: (value) {
+                              _additionalTasks = value;
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Refusal Action Card
+                _buildCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'What do you do when a worker refuses to perform a task?',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: _Spacing.md),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRadioOption(
+                            value: 'I find a compromise',
+                            groupValue: _refusalAction,
+                            label: 'I find a compromise',
+                            onChanged: (value) {
+                              _refusalAction = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'I withdraw part of their salary',
+                            groupValue: _refusalAction,
+                            label: 'I withdraw part of their salary',
+                            onChanged: (value) {
+                              _refusalAction = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'I issue a warning',
+                            groupValue: _refusalAction,
+                            label: 'I issue a warning',
+                            onChanged: (value) {
+                              _refusalAction = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Other',
+                            groupValue: _refusalAction,
+                            label: 'Other',
+                            onChanged: (value) {
+                              _refusalAction = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Not applicable',
+                            groupValue: _refusalAction,
+                            label: 'Not applicable',
+                            onChanged: (value) {
+                              _refusalAction = value;
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Additional card for 'Other' specification
+                if (_refusalAction == 'Other')
+                  _buildCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'If other,please specify',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? AppTheme.darkTextPrimary
+                                : AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        TextFormField(
+                          controller: _otherAgreementController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter your response',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10.0,
+                              vertical: 12.0,
+                            ),
+                          ),
+                          maxLines: 3,
+                          onChanged: (value) {
+                            setState(
+                                () {}); // Trigger rebuild when text changes
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Salary payment frequency question
+                _buildCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Do your workers receive their full salaries?',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? AppTheme.darkTextPrimary
+                              : AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: _Spacing.md),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRadioOption(
+                            value: 'Always',
+                            groupValue: _salaryPaymentFrequency,
+                            label: 'Always',
+                            onChanged: (value) {
+                              _salaryPaymentFrequency = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Sometimes',
+                            groupValue: _salaryPaymentFrequency,
+                            label: 'Sometimes',
+                            onChanged: (value) {
+                              _salaryPaymentFrequency = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Rarely',
+                            groupValue: _salaryPaymentFrequency,
+                            label: 'Rarely',
+                            onChanged: (value) {
+                              _salaryPaymentFrequency = value;
+                            },
+                          ),
+                          _buildRadioOption(
+                            value: 'Never',
+                            groupValue: _salaryPaymentFrequency,
+                            label: 'Never',
+                            onChanged: (value) {
+                              _salaryPaymentFrequency = value;
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
                 // Note for the respondent
                 Padding(
                   padding: const EdgeInsets.only(bottom: _Spacing.lg),

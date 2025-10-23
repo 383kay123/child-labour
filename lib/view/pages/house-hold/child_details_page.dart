@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
 import 'package:human_rights_monitor/view/theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 // import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
@@ -238,12 +237,14 @@ class ChildDetailsPage extends StatefulWidget {
   final int childNumber;
   final int totalChildren;
   final List<dynamic> childrenDetails;
+  final Function(dynamic)? onComplete;
 
   const ChildDetailsPage({
     Key? key,
     required this.childNumber,
     required this.totalChildren,
     required this.childrenDetails,
+    this.onComplete,
   }) : super(key: key);
 
   @override
@@ -1194,12 +1195,12 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Child ${widget.childNumber} of ${widget.totalChildren}'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      // appBar: AppBar(
+      //   title: Text('Child ${widget.childNumber} of ${widget.totalChildren}'),
+      //   backgroundColor: Theme.of(context).primaryColor,
+      //   foregroundColor: Colors.white,
+      //   elevation: 0,
+      // ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -2711,88 +2712,88 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
                 _buildPhotoSection(),
               ],
 
-              // ========== NAVIGATION BUTTONS ==========
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  // Previous button
-                  Expanded(
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        border:
-                            Border.all(color: Theme.of(context).primaryColor),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Center(
-                            child: Text('PREVIOUS',
-                                style: TextStyle(
-                                    color: Theme.of(context).primaryColor,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Next button
-                  Expanded(
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                            colors: [
-                              Theme.of(context).primaryColor,
-                              Theme.of(context).primaryColor.withOpacity(0.8)
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Theme.of(context)
-                                  .primaryColor
-                                  .withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4))
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            if (_formKey.currentState?.validate() ?? false) {
-                              _submitForm();
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const SensitizationPage()));
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: const Center(
-                              child: Text('NEXT',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5))),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // // ========== NAVIGATION BUTTONS ==========
+              // const SizedBox(height: 32),
+              // Row(
+              //   children: [
+              //     // Previous button
+              //     Expanded(
+              //       child: Container(
+              //         height: 56,
+              //         decoration: BoxDecoration(
+              //           border:
+              //               Border.all(color: Theme.of(context).primaryColor),
+              //           borderRadius: BorderRadius.circular(16),
+              //         ),
+              //         child: Material(
+              //           color: Colors.transparent,
+              //           child: InkWell(
+              //             onTap: () {
+              //               Navigator.pop(context);
+              //             },
+              //             borderRadius: BorderRadius.circular(16),
+              //             child: Center(
+              //               child: Text('PREVIOUS',
+              //                   style: TextStyle(
+              //                       color: Theme.of(context).primaryColor,
+              //                       fontSize: 16,
+              //                       fontWeight: FontWeight.w600,
+              //                       letterSpacing: 0.5)),
+              //             ),
+              //           ),
+              //         ),
+              //       ),
+              //     ),
+              //     const SizedBox(width: 16),
+              //     // Next button
+              //     Expanded(
+              //       child: Container(
+              //         height: 56,
+              //         decoration: BoxDecoration(
+              //           gradient: LinearGradient(
+              //               colors: [
+              //                 Theme.of(context).primaryColor,
+              //                 Theme.of(context).primaryColor.withOpacity(0.8)
+              //               ],
+              //               begin: Alignment.topLeft,
+              //               end: Alignment.bottomRight),
+              //           borderRadius: BorderRadius.circular(16),
+              //           boxShadow: [
+              //             BoxShadow(
+              //                 color: Theme.of(context)
+              //                     .primaryColor
+              //                     .withOpacity(0.3),
+              //                 blurRadius: 10,
+              //                 offset: const Offset(0, 4))
+              //           ],
+              //         ),
+              //         child: Material(
+              //           color: Colors.transparent,
+              //           child: InkWell(
+              //             onTap: () {
+              //               if (_formKey.currentState?.validate() ?? false) {
+              //                 _submitForm();
+              //                 Navigator.push(
+              //                     context,
+              //                     MaterialPageRoute(
+              //                         builder: (context) =>
+              //                             const SensitizationPage()));
+              //               }
+              //             },
+              //             borderRadius: BorderRadius.circular(16),
+              //             child: const Center(
+              //                 child: Text('NEXT',
+              //                     style: TextStyle(
+              //                         color: Colors.white,
+              //                         fontSize: 16,
+              //                         fontWeight: FontWeight.w600,
+              //                         letterSpacing: 0.5))),
+              //           ),
+              //         ),
+              //       ),
+              //     ),
+              //   ],
+              // ),
               const SizedBox(height: 16),
             ],
           ),
