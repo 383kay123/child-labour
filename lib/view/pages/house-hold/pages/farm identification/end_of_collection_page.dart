@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../../controller/db/db.dart';
 import '../survey_completion_page.dart';
 
 /// This file contains the end-of-collection form for the farm identification survey.
@@ -172,33 +172,61 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
   /// Submits the form and navigates to the completion page
   /// Logs all submitted data before navigation
   /// If the form is not complete, logs a warning and shows an error message to the user
-  void _submitForm() {
+  Future<void> _submitForm() async {
     developer.log('Form submission initiated', name: _logTag);
 
     if (_isFormComplete) {
-      // Log all submitted data
-      developer.log('Form submission data:', name: _logTag);
-      developer.log(
-          '- Respondent image: ${_respondentImage?.path ?? 'Not provided'}',
-          name: _logTag);
-      developer.log(
-          '- Signature image: ${_producerSignatureImage?.path ?? 'Not provided'}',
-          name: _logTag);
-      developer.log('- GPS Coordinates: $_gpsCoordinates', name: _logTag);
-      developer.log('- End Time: ${_endTime?.format(context) ?? 'Not set'}',
-          name: _logTag);
-      developer.log(
-          '- Additional Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'None'}',
-          name: _logTag);
+      try {
+        // Log all submitted data
+        developer.log('Form submission data:', name: _logTag);
+        developer.log(
+            '- Respondent image: ${_respondentImage?.path ?? 'Not provided'}',
+            name: _logTag);
+        developer.log(
+            '- Signature image: ${_producerSignatureImage?.path ?? 'Not provided'}',
+            name: _logTag);
+        developer.log('- GPS Coordinates: $_gpsCoordinates', name: _logTag);
+        developer.log('- End Time: ${_endTime?.format(context) ?? 'Not set'}',
+            name: _logTag);
+        developer.log(
+            '- Additional Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'None'}',
+            name: _logTag);
 
-      // Navigate to completion page
-      developer.log('Navigating to SurveyCompletionPage', name: _logTag);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const SurveyCompletionPage(),
-        ),
-      );
+        // Update the survey status to submitted (1)
+        final dbHelper = LocalDBHelper.instance;
+        final latestSurvey = await dbHelper.getLatestCoverPageData();
+
+        if (latestSurvey != null) {
+          await dbHelper.updateCoverPageStatus(
+            id: latestSurvey['id'],
+            status: 1, // 1 for submitted
+            updatedAt: DateTime.now().toIso8601String(),
+          );
+          developer.log('Updated survey status to submitted', name: _logTag);
+        }
+
+        // Navigate to completion page
+        if (mounted) {
+          developer.log('Navigating to SurveyCompletionPage', name: _logTag);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SurveyCompletionPage(),
+            ),
+          );
+        }
+      } catch (e) {
+        developer.log('Error updating survey status: $e',
+            name: _logTag, level: 1000); // ERROR
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error updating survey status. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     } else {
       developer.log(
           'Form submission failed: Not all required fields are filled',
@@ -521,19 +549,19 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
 
     return Scaffold(
       backgroundColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          'End of Collection',
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: const Color(0xFF4CAF50),
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-      ),
+      // appBar: AppBar(
+      //   title: Text(
+      //     'End of Collection',
+      //     style: theme.textTheme.titleLarge?.copyWith(
+      //       color: Colors.white,
+      //       fontWeight: FontWeight.w600,
+      //     ),
+      //   ),
+      //   backgroundColor: const Color(0xFF4CAF50),
+      //   elevation: 0,
+      //   centerTitle: true,
+      //   automaticallyImplyLeading: false,
+      // ),
       body: Column(
         children: [
           Expanded(
@@ -610,94 +638,94 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(_Spacing.lg),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                // Previous Button
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      developer.log('Previous button pressed', name: _logTag);
-                      Navigator.pop(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Colors.green.shade600, width: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.arrow_back_ios,
-                            size: 18, color: Colors.green.shade600),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Previous',
-                          style: GoogleFonts.inter(
-                            color: Colors.green.shade600,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Submit Button
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isFormComplete ? _submitForm : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isFormComplete
-                          ? Colors.green.shade600
-                          : Colors.grey[400],
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                      shadowColor: Colors.green.shade600.withOpacity(0.3),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Submit & Finish',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.check_circle,
-                            size: 18, color: Colors.white),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      // bottomNavigationBar: Container(
+      //   padding: const EdgeInsets.all(_Spacing.lg),
+      //   decoration: BoxDecoration(
+      //     color: Theme.of(context).scaffoldBackgroundColor,
+      //     boxShadow: [
+      //       BoxShadow(
+      //         color: Colors.black.withOpacity(0.1),
+      //         blurRadius: 10,
+      //         offset: const Offset(0, -2),
+      //       ),
+      //     ],
+      //   ),
+      //   child: SafeArea(
+      //     child: Padding(
+      //       padding: const EdgeInsets.all(16.0),
+      //       child: Row(
+      //         children: [
+      //           // Previous Button
+      //           Expanded(
+      //             child: OutlinedButton(
+      //               onPressed: () {
+      //                 developer.log('Previous button pressed', name: _logTag);
+      //                 Navigator.pop(context);
+      //               },
+      //               style: OutlinedButton.styleFrom(
+      //                 padding: const EdgeInsets.symmetric(vertical: 16),
+      //                 side: BorderSide(color: Colors.green.shade600, width: 2),
+      //                 shape: RoundedRectangleBorder(
+      //                   borderRadius: BorderRadius.circular(12),
+      //                 ),
+      //               ),
+      //               child: Row(
+      //                 mainAxisAlignment: MainAxisAlignment.center,
+      //                 children: [
+      //                   Icon(Icons.arrow_back_ios,
+      //                       size: 18, color: Colors.green.shade600),
+      //                   const SizedBox(width: 8),
+      //                   Text(
+      //                     'Previous',
+      //                     style: GoogleFonts.inter(
+      //                       color: Colors.green.shade600,
+      //                       fontWeight: FontWeight.w600,
+      //                       fontSize: 16,
+      //                     ),
+      //                   ),
+      //                 ],
+      //               ),
+      //             ),
+      //           ),
+      //           const SizedBox(width: 16),
+      //           // Submit Button
+      //           Expanded(
+      //             child: ElevatedButton(
+      //               onPressed: _isFormComplete ? _submitForm : null,
+      //               style: ElevatedButton.styleFrom(
+      //                 backgroundColor: _isFormComplete
+      //                     ? Colors.green.shade600
+      //                     : Colors.grey[400],
+      //                 padding: const EdgeInsets.symmetric(vertical: 16),
+      //                 shape: RoundedRectangleBorder(
+      //                   borderRadius: BorderRadius.circular(12),
+      //                 ),
+      //                 elevation: 2,
+      //                 shadowColor: Colors.green.shade600.withOpacity(0.3),
+      //               ),
+      //               child: Row(
+      //                 mainAxisAlignment: MainAxisAlignment.center,
+      //                 children: [
+      //                   Text(
+      //                     'Submit & Finish',
+      //                     style: GoogleFonts.inter(
+      //                       color: Colors.white,
+      //                       fontWeight: FontWeight.w600,
+      //                       fontSize: 16,
+      //                     ),
+      //                   ),
+      //                   const SizedBox(width: 8),
+      //                   const Icon(Icons.check_circle,
+      //                       size: 18, color: Colors.white),
+      //                 ],
+      //               ),
+      //             ),
+      //           ),
+      //         ],
+      //       ),
+      //     ),
+      //   ),
+      // ),
     );
   }
 }

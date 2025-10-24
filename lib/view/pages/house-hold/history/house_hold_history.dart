@@ -1,12 +1,10 @@
-
-
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/history/survey_data_viewer.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../controller/db/db.dart';
-import '../../../../controller/models/community-assessment-model.dart';
+import '../../../../controller/models/cover_page_model.dart';
 import '../../../theme/app_theme.dart';
 
 class HouseHoldHistory extends StatefulWidget {
@@ -16,18 +14,40 @@ class HouseHoldHistory extends StatefulWidget {
   _HouseHoldHistoryState createState() => _HouseHoldHistoryState();
 }
 
-class _HouseHoldHistoryState extends State<HouseHoldHistory> with SingleTickerProviderStateMixin {
+class _HouseHoldHistoryState extends State<HouseHoldHistory>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final LocalDBHelper _dbHelper = LocalDBHelper.instance;
-  List<CommunityAssessmentModel> _pendingAssessments = [];
-  List<CommunityAssessmentModel> _submittedAssessments = [];
+  List<CoverPageModel> _pendingSurveys = [];
+  List<CoverPageModel> _submittedSurveys = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // _loadAssessments();
+    _loadSurveys();
+  }
+
+  Future<void> _loadSurveys() async {
+    setState(() => _isLoading = true);
+    try {
+      final allSurveys = await _dbHelper.getAllCoverPageData();
+      setState(() {
+        _pendingSurveys = allSurveys
+            .where((s) => (s['status'] as int?) == 0)
+            .map((e) => CoverPageModel.fromMap(e))
+            .toList();
+        _submittedSurveys = allSurveys
+            .where((s) => (s['status'] as int?) == 1)
+            .map((e) => CoverPageModel.fromMap(e))
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading surveys: $e');
+      setState(() => _isLoading = false);
+    }
   }
 
   // Future<void> _loadAssessments() async {
@@ -79,66 +99,70 @@ class _HouseHoldHistoryState extends State<HouseHoldHistory> with SingleTickerPr
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
-        controller: _tabController,
-        children: [
-          _buildAssessmentList(_pendingAssessments, false, context),
-          _buildAssessmentList(_submittedAssessments, true, context),
-        ],
-      ),
+              controller: _tabController,
+              children: [
+                _buildSurveyList(_pendingSurveys, false, context),
+                _buildSurveyList(_submittedSurveys, true, context),
+              ],
+            ),
     );
   }
 
-  Widget _buildAssessmentList(List<CommunityAssessmentModel> assessments, bool isSubmitted, BuildContext context) {
-    if (assessments.isEmpty) {
+  Widget _buildSurveyList(
+      List<CoverPageModel> surveys, bool isSubmitted, BuildContext context) {
+    if (surveys.isEmpty) {
       return Center(
         child: Text(
-          isSubmitted ? 'No submitted assessments' : 'No pending assessments',
+          isSubmitted ? 'No submitted surveys' : 'No pending surveys',
           style: GoogleFonts.poppins(color: AppTheme.textSecondary),
         ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: (){
-        setState(() {
-
-        });
-        return Future.delayed(const Duration(seconds: 1));
-      },
-      // onRefresh: _loadAssessments,
+      onRefresh: _loadSurveys,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: assessments.length,
+        itemCount: surveys.length,
         itemBuilder: (context, index) {
-          return _buildAssessmentCard(assessments[index], context);
+          return _buildSurveyCard(surveys[index], context);
         },
       ),
     );
   }
 
-  Widget _buildAssessmentCard(CommunityAssessmentModel assessment, BuildContext context) {
-    final date = DateTime.fromMillisecondsSinceEpoch(assessment.id! * 1000);
+  Widget _buildSurveyCard(CoverPageModel survey, BuildContext context) {
+    final date = survey.createdAt != null
+        ? DateTime.parse(survey.createdAt!)
+        : DateTime.now();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        title: Text(
-          assessment.communityName ?? 'Unnamed Assessment',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
-        subtitle: Text(
-          'Score: ${assessment.communityScore ?? 'N/A'} • ${DateFormat('MMM d, y - h:mm a').format(date)}',
-          style: GoogleFonts.poppins(fontSize: 12),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {
-          // TODO: Navigate to assessment detail view
-        },
-      ),
-    );
+        child: ListTile(
+          title: Text(
+            survey.selectedTownName ?? 'Unnamed Survey',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+          ),
+          subtitle: Text(
+            '${survey.selectedFarmerName ?? 'No farmer selected'} • ${DateFormat('MMM d, y - h:mm a').format(date)}',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SurveyDataViewer(
+                  surveyData: survey.toMap(),
+                  surveyTitle: 'Household Survey Details',
+                ),
+              ),
+            );
+          },
+        ));
   }
 }

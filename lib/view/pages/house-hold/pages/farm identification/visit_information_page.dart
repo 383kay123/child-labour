@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/view/theme/app_theme.dart';
 
-import '../../../../theme/app_theme.dart';
 import 'identification_of_owner.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
@@ -14,16 +14,9 @@ class _Spacing {
 }
 
 class VisitInformationPage extends StatefulWidget {
-  const VisitInformationPage({
-    super.key,
-    this.initialData,
-    this.onPrevious,
-    this.onNext,
-  });
+  const VisitInformationPage({super.key, this.initialData});
 
   final Map<String, dynamic>? initialData;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
 
   @override
   State<VisitInformationPage> createState() => _VisitInformationPageState();
@@ -38,8 +31,6 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
 
   // Text controllers
   final TextEditingController _respondentNameController =
-      TextEditingController();
-  final TextEditingController _respondentOtherNamesController =
       TextEditingController();
   final TextEditingController _otherCountryController = TextEditingController();
 
@@ -309,8 +300,7 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Card 1: Name Confirmation Question (only show if farmer is available, non-resident, or deceased)
-
+                  // Card 1: Name Confirmation Question
                   _buildQuestionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,25 +347,16 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                     ),
                   ),
 
-// Show the name field when "No" is selected
-                  if (_respondentNameCorrect == 'No') ...[
-                    _buildQuestionCard(
-                      child: _buildTextField(
-                        label: 'If No, fill the exact surname of the producer?',
-                        controller: _respondentNameController,
-                        hintText: 'Enter surname',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                  // Card 2: Respondent's Name (only shown when 'No' is selected)
+                  if (_respondentNameCorrect == 'No')
                     _buildQuestionCard(
                       child: _buildTextField(
                         label:
-                            'If No, fill the exact first and other names of the producer?',
-                        controller: _respondentOtherNamesController,
-                        hintText: 'Enter first and other names',
+                            'If No, fill in the exact name and surname of the producer',
+                        controller: _respondentNameController,
+                        hintText: 'Enter full name',
                       ),
                     ),
-                  ],
 
                   // Card 3: Nationality Question
                   if ((_respondentNameCorrect == 'Yes' ||
@@ -386,7 +367,7 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'What is the nationality of the respondent ?',
+                            'Is the respondent Ghanaian?',
                             style: theme.textTheme.titleMedium?.copyWith(
                               color: isDark
                                   ? AppTheme.darkTextSecondary
@@ -450,7 +431,7 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                       _countryOfOrigin == 'Other')
                     _buildQuestionCard(
                       child: _buildTextField(
-                        label: 'If Other, please specify',
+                        label: 'Other to specify',
                         controller: _otherCountryController,
                         hintText: 'Enter country name',
                       ),
@@ -515,7 +496,7 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                     ),
 
                   // Card 7: Farm Ownership Type (shown when respondent is the farm owner)
-                  if (_isFarmOwner == 'Yes' || _isFarmOwner == 'No')
+                  if (_isFarmOwner == 'Yes')
                     _buildQuestionCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,59 +549,59 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                       ),
                     ),
 
-                  // // Card 8: Non-owner Farm Role
-                  // if (_isFarmOwner == 'No')
-                  //   _buildQuestionCard(
-                  //     child: Column(
-                  //       crossAxisAlignment: CrossAxisAlignment.start,
-                  //       children: [
-                  //         Text(
-                  //           'What is your relationship with the farm owner?',
-                  //           style: theme.textTheme.titleMedium?.copyWith(
-                  //             color: isDark
-                  //                 ? AppTheme.darkTextSecondary
-                  //                 : AppTheme.textPrimary,
-                  //             fontWeight: FontWeight.w500,
-                  //           ),
-                  //         ),
-                  //         const SizedBox(height: _Spacing.md),
-                  //         Column(
-                  //           children: [
-                  //             _buildRadioOption(
-                  //               value: 'Family Member',
-                  //               groupValue: _farmOwnershipType,
-                  //               label: 'Family Member',
-                  //               onChanged: (value) {
-                  //                 setState(() {
-                  //                   _farmOwnershipType = value;
-                  //                 });
-                  //               },
-                  //             ),
-                  //             _buildRadioOption(
-                  //               value: 'Renting',
-                  //               groupValue: _farmOwnershipType,
-                  //               label: 'Renting',
-                  //               onChanged: (value) {
-                  //                 setState(() {
-                  //                   _farmOwnershipType = value;
-                  //                 });
-                  //               },
-                  //             ),
-                  //             _buildRadioOption(
-                  //               value: 'Other',
-                  //               groupValue: _farmOwnershipType,
-                  //               label: 'Other',
-                  //               onChanged: (value) {
-                  //                 setState(() {
-                  //                   _farmOwnershipType = value;
-                  //                 });
-                  //               },
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ],
-                  //     ),
-                  //   ),
+                  // Card 8: Non-owner Farm Role
+                  if (_isFarmOwner == 'No')
+                    _buildQuestionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'What is your relationship with the farm owner?',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: _Spacing.md),
+                          Column(
+                            children: [
+                              _buildRadioOption(
+                                value: 'Family Member',
+                                groupValue: _farmOwnershipType,
+                                label: 'Family Member',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _farmOwnershipType = value;
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'Renting',
+                                groupValue: _farmOwnershipType,
+                                label: 'Renting',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _farmOwnershipType = value;
+                                  });
+                                },
+                              ),
+                              _buildRadioOption(
+                                value: 'Other',
+                                groupValue: _farmOwnershipType,
+                                label: 'Other',
+                                onChanged: (value) {
+                                  setState(() {
+                                    _farmOwnershipType = value;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
 
                   const SizedBox(height: 80), // Space for bottom button
                 ],

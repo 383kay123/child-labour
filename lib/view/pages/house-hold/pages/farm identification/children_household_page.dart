@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:human_rights_monitor/model/children_household_model.dart';
 
+
+import '../../../../../controller/models/childrenhouseholdmodel.dart';
 import '../../../../theme/app_theme.dart';
 import '../../child_details_page.dart';
 

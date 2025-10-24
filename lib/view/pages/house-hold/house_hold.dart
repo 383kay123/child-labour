@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:human_rights_monitor/model/sensitization_model.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/children_household_page.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/end_of_collection_page.dart';
-import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/farmer_identification1_page.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/farmer_identification.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/remediation_page.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/sensitization_questions_page.dart';
@@ -15,9 +14,9 @@ import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/cover_pag
 import '../../../controller/models/consent_model.dart';
 import '../../../controller/models/cover_model.dart';
 import '../../../controller/models/farmeridentification_model.dart';
+import '../../../controller/models/sensitization_model.dart';
 import 'child_details_page.dart';
 
-// ADD: Missing SurveyState class
 class SurveyState {
   bool isInterviewTimeRecorded = false;
   Position? currentPosition;
@@ -61,8 +60,7 @@ class _HouseHoldState extends State<HouseHold> {
 
   int _currentPageIndex = 0;
   int _combinedPageSubIndex = 0;
-  final int _totalPages =
-      10; // Includes: Cover, Consent, Farmer ID, Combined Pages, Children, Child Details, Sensitization, Sensitization Questions, Remediation, End of Collection
+  final int _totalPages = 10;
   final int _totalCombinedSubPages = 4;
 
   bool _isSubmitted = false;
@@ -72,7 +70,7 @@ class _HouseHoldState extends State<HouseHold> {
 
   double get _progress => (_currentPageIndex + 1) / _totalPages;
 
-  CoverPageData _coverData = CoverPageData.empty();
+  CoverPageData _coverData = CoverPageData.test();
   ConsentData _consentData = ConsentData.empty();
   FarmerIdentificationData _farmerData = FarmerIdentificationData(
     ghanaCardNumberController: TextEditingController(),
@@ -82,7 +80,6 @@ class _HouseHoldState extends State<HouseHold> {
     childrenCountController: TextEditingController(),
   );
 
-  // Track child details
   int _currentChildNumber = 1;
   int _totalChildren5To17 = 0;
   List<dynamic> _childrenDetails = [];
@@ -90,8 +87,20 @@ class _HouseHoldState extends State<HouseHold> {
   @override
   void initState() {
     super.initState();
-    _recordInterviewTime();
-    _getCurrentLocation();
+  }
+
+  Future<bool> _saveCoverPageData() async {
+    if (_coverData.selectedTownCode == null ||
+        _coverData.selectedFarmerCode == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Please select both society and farmer')),
+        );
+      }
+      return false;
+    }
+    return true;
   }
 
   void _onConsentDataChanged(ConsentData newData) {
@@ -119,21 +128,17 @@ class _HouseHoldState extends State<HouseHold> {
 
   void _onPrevious() {
     if (_isOnCombinedPage && _combinedPageSubIndex > 0) {
-      // If we're on a combined page and not on the first sub-page, go to previous sub-page
       setState(() {
         _combinedPageSubIndex--;
       });
     } else if (_currentPageIndex == 5 && _currentChildNumber > 1) {
-      // On ChildDetailsPage with multiple children - go to previous child
       setState(() {
         _currentChildNumber--;
-        // Remove the last child data since we're going back
         if (_childrenDetails.isNotEmpty) {
           _childrenDetails.removeLast();
         }
       });
     } else if (_currentPageIndex > 0) {
-      // Otherwise, go to the previous main page
       final previousPageIndex = _currentPageIndex - 1;
       _pageController.animateToPage(
         previousPageIndex,
@@ -143,29 +148,64 @@ class _HouseHoldState extends State<HouseHold> {
     }
   }
 
-  void _onNext() {
+  bool _validateConsentData() {
+    if (_currentPageIndex == 1) {
+      // Consent page index is 1
+      if (_consentData.consentGiven == null) {
+        // No selection made yet
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Please either accept or decline the consent')),
+        );
+        return false;
+      }
+
+      if (_consentData.consentGiven == false &&
+          (_consentData.otherSpecification?.trim().isEmpty ?? true)) {
+        // If declined, require a reason
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Please provide a reason for declining')),
+        );
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> _onNext() async {
+    final currentPage = _pageController.positions.isNotEmpty
+        ? _pageController.page?.round() ?? _currentPageIndex
+        : _currentPageIndex;
+
+    if (currentPage == 0) {
+      final success = await _saveCoverPageData();
+      if (!success) return;
+    }
+
+    // Validate consent form if on consent page
+    if (currentPage == 1 && !_validateConsentData()) {
+      return;
+    }
+
     if (_isOnCombinedPage &&
         _combinedPageSubIndex < _totalCombinedSubPages - 1) {
-      // If we're on a combined page and there are more sub-pages, navigate to the next sub-page
       setState(() {
         _combinedPageSubIndex++;
       });
     } else if (_currentPageIndex == 7) {
-      // On Sensitization Questions Page, navigate to Remediation Page
       _pageController.animateToPage(
-        8, // Index of Remediation Page
+        8,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else if (_currentPageIndex == 8) {
-      // On Remediation Page, navigate to End of Collection Page
       _pageController.animateToPage(
-        9, // Index of End of Collection Page
+        9,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else if (_currentPageIndex == 4) {
-      // This is the ChildrenHouseholdPage - handle navigation based on children count
       String childrenCountText =
           _farmerData.childrenCountController.text.trim();
       print('=== DEBUG: Children Count Check ===');
@@ -178,19 +218,17 @@ class _HouseHoldState extends State<HouseHold> {
       if (_totalChildren5To17 > 0) {
         print(
             'DEBUG: Navigating to ChildDetailsPage for $_totalChildren5To17 children');
-        // Navigate to ChildDetailsPage for the first child
         setState(() {
           _currentChildNumber = 1;
           _childrenDetails = [];
         });
         _pageController.animateToPage(
-          5, // ChildDetailsPage index
+          5,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
       } else {
         print('DEBUG: No children 5-17, navigating to final page');
-        // No children 5-17, go to next page (final page)
         _pageController.animateToPage(
           _totalPages - 1,
           duration: const Duration(milliseconds: 300),
@@ -198,20 +236,20 @@ class _HouseHoldState extends State<HouseHold> {
         );
       }
     } else if (_currentPageIndex < _totalPages - 1) {
-      // Navigate to next main page for all other pages
       _navigateToNextPage();
     }
   }
 
   Widget _buildDebugInfo() {
     return Container(
-      padding: EdgeInsets.all(8),
-      margin: EdgeInsets.all(8),
+      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.all(8),
       color: Colors.yellow[100],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('DEBUG INFO:', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('DEBUG INFO:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           Text(
               'Children Count Controller Text: "${_farmerData.childrenCountController.text}"'),
           Text(
@@ -223,20 +261,15 @@ class _HouseHoldState extends State<HouseHold> {
   }
 
   void _handleChildDetailsComplete(dynamic childData) {
-    // Store the child data
     _childrenDetails.add(childData);
 
-    // Check if we need to collect details for more children
     if (_currentChildNumber < _totalChildren5To17) {
-      // Move to next child but stay on ChildDetailsPage
       setState(() {
         _currentChildNumber++;
       });
-      // The page will rebuild with the new child number due to the key change
     } else {
-      // All children processed, move to sensitization page
       _pageController.animateToPage(
-        6, // Sensitization page index
+        6,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -373,7 +406,6 @@ class _HouseHoldState extends State<HouseHold> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
               );
-              // Navigate to final page after submission
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
                   _pageController
@@ -383,7 +415,6 @@ class _HouseHoldState extends State<HouseHold> {
                     curve: Curves.easeInOut,
                   )
                       .then((_) {
-                    // Call onComplete callback if provided
                     if (widget.onComplete != null) {
                       widget.onComplete!();
                     }
@@ -405,9 +436,8 @@ class _HouseHoldState extends State<HouseHold> {
   }
 
   void _handleCombinedPageSubmit() {
-    // When user submits from CombinedFarmIdentificationPage, navigate to ChildrenHouseholdPage
     _pageController.animateToPage(
-      4, // ChildrenHouseholdPage index
+      4,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
@@ -426,6 +456,12 @@ class _HouseHoldState extends State<HouseHold> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
         title: Column(
           children: [
             Text(
@@ -471,13 +507,12 @@ class _HouseHoldState extends State<HouseHold> {
               onPageChanged: (index) {
                 setState(() {
                   _currentPageIndex = index;
-                  // Reset sub-page index when leaving the combined page
                   if (!_isOnCombinedPage) _combinedPageSubIndex = 0;
                 });
               },
               children: [
-                // Page 0: Cover Page
                 CoverPage(
+                  key: const ValueKey('cover_page'),
                   data: _coverData,
                   onDataChanged: (newData) {
                     setState(() {
@@ -485,9 +520,8 @@ class _HouseHoldState extends State<HouseHold> {
                     });
                   },
                   onNext: _onNext,
+                  onNextPressed: _saveCoverPageData,
                 ),
-
-                // Page 1: Consent Page
                 ConsentPage(
                   key: const ValueKey('consent_page'),
                   data: _consentData,
@@ -498,8 +532,6 @@ class _HouseHoldState extends State<HouseHold> {
                   onPrevious: _onPrevious,
                   onSurveyEnd: _onSurveyEnd,
                 ),
-
-                // Page 2: Farmer Identification 1 Page
                 FarmerIdentification1Page(
                   key: const ValueKey('farmer_identification_page'),
                   data: _farmerData,
@@ -509,8 +541,6 @@ class _HouseHoldState extends State<HouseHold> {
                     _onNext();
                   },
                 ),
-
-                // Page 3: Combined Farm Identification Page
                 CombinedFarmIdentificationPage(
                   key: ValueKey('combined_page_$_combinedPageSubIndex'),
                   initialPageIndex: _combinedPageSubIndex,
@@ -523,8 +553,6 @@ class _HouseHoldState extends State<HouseHold> {
                   onNext: _onNext,
                   onSubmit: _handleCombinedPageSubmit,
                 ),
-
-                // Page 4: Children Household Page
                 ChildrenHouseholdPage(
                   key: const ValueKey('children_household_page'),
                   producerDetails: {
@@ -542,21 +570,19 @@ class _HouseHoldState extends State<HouseHold> {
                     if (children5To17 > 0) {
                       print(
                           'DEBUG: Navigating to ChildDetailsPage for $children5To17 children');
-                      // Navigate to ChildDetailsPage for the first child
                       setState(() {
                         _totalChildren5To17 = children5To17;
                         _currentChildNumber = 1;
                         _childrenDetails = [];
                       });
                       _pageController.animateToPage(
-                        5, // ChildDetailsPage index
+                        5,
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       );
                     } else {
                       print(
                           'DEBUG: No children 5-17, navigating to final page');
-                      // No children 5-17, go to final page
                       _pageController.animateToPage(
                         _totalPages - 1,
                         duration: const Duration(milliseconds: 300),
@@ -565,8 +591,6 @@ class _HouseHoldState extends State<HouseHold> {
                     }
                   },
                 ),
-
-                // Page 5: Child Details Page
                 ChildDetailsPage(
                   key: ValueKey('child_details_page_$_currentChildNumber'),
                   childNumber: _currentChildNumber,
@@ -574,12 +598,9 @@ class _HouseHoldState extends State<HouseHold> {
                   childrenDetails: _childrenDetails,
                   onComplete: _handleChildDetailsComplete,
                 ),
-
-                // Page 6: Sensitization Page
                 SensitizationPage(
                   sensitizationData: SensitizationData(
                     isAcknowledged: _isSensitizationChecked,
-                    // Add other required SensitizationData fields here
                   ),
                   onSensitizationChanged: (SensitizationData data) {
                     setState(() {
@@ -587,64 +608,13 @@ class _HouseHoldState extends State<HouseHold> {
                     });
                   },
                 ),
-
-                // Page 7: Sensitization Questions Page
                 const SensitizationQuestionsPage(),
-
-                // Page 8: Remediation Page
                 const RemediationPage(),
-
-                // Page 9: End of Collection Page
                 const EndOfCollectionPage(),
               ],
             ),
           ),
           _buildNavigationButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFinalPage() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.check_circle,
-            size: 80,
-            color: Colors.green.shade600,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Survey Complete',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: Colors.green.shade700,
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _submitForm,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              'Submit Survey',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -706,11 +676,19 @@ class _HouseHoldState extends State<HouseHold> {
               child: ElevatedButton(
                 onPressed: isLastPage
                     ? _submitForm
-                    : () {
-                        // Add validation for SensitizationPage
+                    : () async {
+                        final currentPage = _pageController.positions.isNotEmpty
+                            ? _pageController.page?.round() ?? _currentPageIndex
+                            : _currentPageIndex;
+
+                        if (currentPage == 0) {
+                          final success = await _saveCoverPageData();
+                          if (!success) return;
+                        }
+
                         if (isSensitizationPage && !_isSensitizationChecked) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                               content: Text(
                                   'Please acknowledge that you have read and understood the sensitization information'),
                               backgroundColor: Colors.red,
@@ -720,13 +698,12 @@ class _HouseHoldState extends State<HouseHold> {
                           return;
                         }
 
-                        // Add validation for ChildrenHouseholdPage
                         if (isChildrenHouseholdPage) {
                           String childrenCountText =
                               _farmerData.childrenCountController.text.trim();
                           if (childrenCountText.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
+                              const SnackBar(
                                 content: Text(
                                     'Please enter the number of children aged 5-17'),
                                 backgroundColor: Colors.red,
@@ -736,7 +713,7 @@ class _HouseHoldState extends State<HouseHold> {
                           }
                           if (int.tryParse(childrenCountText) == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
+                              const SnackBar(
                                 content: Text(
                                     'Please enter a valid number for children count'),
                                 backgroundColor: Colors.red,
@@ -745,6 +722,7 @@ class _HouseHoldState extends State<HouseHold> {
                             return;
                           }
                         }
+
                         _onNext();
                       },
                 style: ElevatedButton.styleFrom(
@@ -768,7 +746,7 @@ class _HouseHoldState extends State<HouseHold> {
                     ),
                     if (!isLastPage) ...[
                       const SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_ios,
+                      const Icon(Icons.arrow_forward_ios,
                           size: 18, color: Colors.white),
                     ],
                   ],
@@ -794,7 +772,7 @@ class _HouseHoldState extends State<HouseHold> {
       case 4:
         return 'Children Information';
       case 5:
-        return 'Child ${_currentChildNumber} of $_totalChildren5To17 Details';
+        return 'Child $_currentChildNumber of $_totalChildren5To17 Details';
       case 6:
         return 'Sensitization';
       case 7:

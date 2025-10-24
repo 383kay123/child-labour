@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:human_rights_monitor/view/theme/app_theme.dart';
+
 import 'package:image_picker/image_picker.dart';
+
+import '../../theme/app_theme.dart';
 // import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.

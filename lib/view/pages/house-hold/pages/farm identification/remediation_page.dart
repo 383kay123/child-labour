@@ -59,7 +59,11 @@ class _RemediationPageState extends State<RemediationPage> {
       ),
       value: value,
       groupValue: groupValue,
-      onChanged: onChanged,
+      onChanged: (String? newValue) {
+        if (newValue != null) {
+          onChanged(newValue);
+        }
+      },
       activeColor: Theme.of(context).primaryColor,
       contentPadding: EdgeInsets.zero,
       dense: true,
@@ -142,21 +146,21 @@ class _RemediationPageState extends State<RemediationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          'Remediation',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
-        automaticallyImplyLeading: false,
-      ),
+      // backgroundColor: Colors.grey.shade50,
+      // appBar: AppBar(
+      //   title: Text(
+      //     'Remediation',
+      //     style: GoogleFonts.poppins(
+      //       fontSize: 20,
+      //       fontWeight: FontWeight.w600,
+      //       color: Colors.white,
+      //     ),
+      //   ),
+      //   centerTitle: true,
+      //   elevation: 0,
+      //   backgroundColor: Theme.of(context).primaryColor,
+      //   automaticallyImplyLeading: false,
+      // ),
       body: Column(
         children: [
           Expanded(
@@ -184,7 +188,7 @@ class _RemediationPageState extends State<RemediationPage> {
                           children: [
                             _buildRadioOption(
                               value: 'Yes',
-                              groupValue: hasSchoolFees?.toString(),
+                              groupValue: hasSchoolFees == true ? 'Yes' : hasSchoolFees == false ? 'No' : null,
                               label: 'Yes',
                               onChanged: (value) {
                                 setState(() {
@@ -194,11 +198,11 @@ class _RemediationPageState extends State<RemediationPage> {
                             ),
                             _buildRadioOption(
                               value: 'No',
-                              groupValue: hasSchoolFees?.toString(),
+                              groupValue: hasSchoolFees == true ? 'Yes' : hasSchoolFees == false ? 'No' : null,
                               label: 'No',
                               onChanged: (value) {
                                 setState(() {
-                                  hasSchoolFees = value == 'No';
+                                  hasSchoolFees = value == 'Yes';
                                 });
                               },
                             ),
@@ -374,94 +378,94 @@ class _RemediationPageState extends State<RemediationPage> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              // Previous Button
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: BorderSide(color: Colors.green.shade600, width: 2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.arrow_back_ios,
-                          size: 18, color: Colors.green.shade600),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Previous',
-                        style: GoogleFonts.inter(
-                          color: Colors.green.shade600,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Next Button (Navigation removed)
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: (hasSchoolFees != null &&
-                            communityAction != null &&
-                            (communityAction != 'Other (please specify)' ||
-                                _otherCommunityActionController
-                                    .text.isNotEmpty))
-                        ? Colors.green.shade600
-                        : Colors.grey[400],
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                    shadowColor: Colors.green.shade600.withOpacity(0.3),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Next',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward_ios,
-                          size: 18, color: Colors.white),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      // bottomNavigationBar: Container(
+      //   padding: const EdgeInsets.all(16),
+      //   decoration: BoxDecoration(
+      //     color: Colors.white,
+      //     boxShadow: [
+      //       BoxShadow(
+      //         color: Colors.black.withOpacity(0.1),
+      //         blurRadius: 10,
+      //         offset: const Offset(0, -2),
+      //       ),
+      //     ],
+      //   ),
+      //   child: SafeArea(
+      //     child: Row(
+      //       children: [
+      //         // Previous Button
+      //         Expanded(
+      //           child: OutlinedButton(
+      //             onPressed: () {
+      //               Navigator.pop(context);
+      //             },
+      //             style: OutlinedButton.styleFrom(
+      //               padding: const EdgeInsets.symmetric(vertical: 16),
+      //               side: BorderSide(color: Colors.green.shade600, width: 2),
+      //               shape: RoundedRectangleBorder(
+      //                 borderRadius: BorderRadius.circular(12),
+      //               ),
+      //             ),
+      //             child: Row(
+      //               mainAxisAlignment: MainAxisAlignment.center,
+      //               children: [
+      //                 Icon(Icons.arrow_back_ios,
+      //                     size: 18, color: Colors.green.shade600),
+      //                 const SizedBox(width: 8),
+      //                 Text(
+      //                   'Previous',
+      //                   style: GoogleFonts.inter(
+      //                     color: Colors.green.shade600,
+      //                     fontWeight: FontWeight.w600,
+      //                     fontSize: 16,
+      //                   ),
+      //                 ),
+      //               ],
+      //             ),
+      //           ),
+      //         ),
+      //         const SizedBox(width: 16),
+      //         // Next Button (Navigation removed)
+      //         Expanded(
+      //           child: ElevatedButton(
+      //             onPressed: null,
+      //             style: ElevatedButton.styleFrom(
+      //               backgroundColor: (hasSchoolFees != null &&
+      //                       communityAction != null &&
+      //                       (communityAction != 'Other (please specify)' ||
+      //                           _otherCommunityActionController
+      //                               .text.isNotEmpty))
+      //                   ? Colors.green.shade600
+      //                   : Colors.grey[400],
+      //               padding: const EdgeInsets.symmetric(vertical: 16),
+      //               shape: RoundedRectangleBorder(
+      //                 borderRadius: BorderRadius.circular(12),
+      //               ),
+      //               elevation: 2,
+      //               shadowColor: Colors.green.shade600.withOpacity(0.3),
+      //             ),
+      //             child: Row(
+      //               mainAxisAlignment: MainAxisAlignment.center,
+      //               children: [
+      //                 Text(
+      //                   'Next',
+      //                   style: GoogleFonts.inter(
+      //                     color: Colors.white,
+      //                     fontWeight: FontWeight.w600,
+      //                     fontSize: 16,
+      //                   ),
+      //                 ),
+      //                 const SizedBox(width: 8),
+      //                 const Icon(Icons.arrow_forward_ios,
+      //                     size: 18, color: Colors.white),
+      //               ],
+      //             ),
+      //           ),
+      //         ),
+      //       ],
+      //     ),
+      //   ),
+      // ),
     );
   }
 }

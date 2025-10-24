@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../../controller/db/db.dart';
 import '../../../../../controller/models/cover_model.dart';
 
 /// A widget that represents the cover page for the household survey.
@@ -8,13 +11,15 @@ import '../../../../../controller/models/cover_model.dart';
 class CoverPage extends StatefulWidget {
   final CoverPageData data;
   final ValueChanged<CoverPageData> onDataChanged;
-  final VoidCallback onNext;
+  final VoidCallback? onNext;
+  final Future<bool> Function()? onNextPressed;
 
   const CoverPage({
     super.key,
     required this.data,
     required this.onDataChanged,
     required this.onNext,
+    this.onNextPressed,
   });
 
   @override
@@ -22,82 +27,190 @@ class CoverPage extends StatefulWidget {
 }
 
 class _CoverPageState extends State<CoverPage> {
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedData();
+
+    // Notify parent that this page needs to handle next button
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onDataChanged(widget.data);
+    });
+  }
+
+  Future<void> _loadSavedData() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final dbHelper = LocalDBHelper.instance;
+      final savedData = await dbHelper.getLatestCoverPageData();
+
+      if (savedData != null && mounted) {
+        widget.onDataChanged(
+          widget.data.copyWith(
+            selectedTownCode: savedData['selectedTown'],
+            selectedFarmerCode: savedData['selectedFarmer'],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading saved data: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<bool> _saveData() async {
+    if (!widget.data.isComplete) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill in all required fields'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return false;
+    }
+
+    try {
+      setState(() => _isLoading = true);
+      final dbHelper = LocalDBHelper.instance;
+
+      // Check if this is an update to an existing record
+      final existingData = await dbHelper.getLatestCoverPageData();
+
+      final coverData = {
+        if (existingData != null) 'id': existingData['id'],
+        'selectedTown': widget.data.selectedTownCode ?? '',
+        'selectedTownName': widget.data.towns
+            .firstWhere(
+              (town) => town.code == widget.data.selectedTownCode,
+              orElse: () => const DropdownItem(code: '', name: ''),
+            )
+            .name,
+        'selectedFarmer': widget.data.selectedFarmerCode ?? '',
+        'selectedFarmerName': widget.data.farmers
+            .firstWhere(
+              (farmer) => farmer.code == widget.data.selectedFarmerCode,
+              orElse: () => const DropdownItem(code: '', name: ''),
+            )
+            .name,
+        'status': 1, // Mark as completed
+        'createdAt':
+            existingData?['createdAt'] ?? DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+        'syncStatus': 0, // Not synced
+      };
+
+      await dbHelper.insertCoverPageData(coverData);
+      return true;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving data: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<bool> _onWillPop() async {
+    // Navigation is handled by the parent widget
+    // Add any custom back button logic here if needed
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
-    return Scaffold(
-      body: Column(
-        children: [
-          // Scrollable Content
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Society Selection
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 300),
-                    child: _buildSection(
-                      context: context,
-                      title: 'Select Society',
-                      icon: Icons.apartment_rounded,
-                      child: _buildDropdown(
-                        context: context,
-                        value: widget.data.selectedTownCode,
-                        items: DropdownItem.toMapList(widget.data.towns),
-                        onChanged: (value) {
-                          widget.onDataChanged(widget.data.selectTown(value));
-                        },
-                        hint: 'Select your society',
-                        isLoading: widget.data.isLoadingTowns,
-                        error: widget.data.townError,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Farmer Selection
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 300),
-                    child: _buildSection(
-                      context: context,
-                      title: 'Select Farmer',
-                      icon: Icons.person_outline_rounded,
-                      child: _buildDropdown(
-                        context: context,
-                        value: widget.data.selectedFarmerCode,
-                        items: DropdownItem.toMapList(widget.data.farmers),
-                        onChanged: (value) {
-                          widget.onDataChanged(widget.data.selectFarmer(value));
-                        },
-                        hint: 'Select a farmer',
-                        isLoading: widget.data.isLoadingFarmers,
-                        error: widget.data.farmerError,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Next Button
-                  if (widget.data.isComplete)
-                    AnimatedOpacity(
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        body: Column(
+          children: [
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Society Selection
+                    AnimatedSize(
                       duration: const Duration(milliseconds: 300),
-                      opacity: widget.data.canProceed ? 1.0 : 0.6,
-                      child: _buildNextButton(
-                        context,
-                        onNext: widget.data.canProceed ? widget.onNext : null,
-                        isEnabled: widget.data.canProceed,
+                      child: _buildSection(
+                        context: context,
+                        title: 'Select Society',
+                        icon: Icons.apartment_rounded,
+                        child: _buildDropdown(
+                          context: context,
+                          value: widget.data.selectedTownCode,
+                          items: DropdownItem.toMapList(widget.data.towns),
+                          onChanged: (value) {
+                            widget.onDataChanged(widget.data.selectTown(value));
+                          },
+                          hint: 'Select your society',
+                          isLoading: widget.data.isLoadingTowns,
+                          error: widget.data.townError,
+                        ),
                       ),
                     ),
-                ],
+                    const SizedBox(height: 20),
+
+                    // Farmer Selection
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 300),
+                      child: _buildSection(
+                        context: context,
+                        title: 'Select Farmer',
+                        icon: Icons.person_outline_rounded,
+                        child: _buildDropdown(
+                          context: context,
+                          value: widget.data.selectedFarmerCode,
+                          items: DropdownItem.toMapList(widget.data.farmers),
+                          onChanged: (value) {
+                            widget
+                                .onDataChanged(widget.data.selectFarmer(value));
+                          },
+                          hint: 'Select a farmer',
+                          isLoading: widget.data.isLoadingFarmers,
+                          error: widget.data.farmerError,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -300,6 +413,7 @@ class _CoverPageState extends State<CoverPage> {
         ],
       );
     }
+
     // Remove duplicate items based on 'code' to prevent assertion errors
     final uniqueItems = _removeDuplicateItems(items);
 
@@ -444,51 +558,6 @@ class _CoverPageState extends State<CoverPage> {
     }
 
     return uniqueItems;
-  }
-
-  /// Builds a styled 'Continue' button.
-  Widget _buildNextButton(
-    BuildContext context, {
-    required VoidCallback? onNext,
-    bool isEnabled = true,
-  }) {
-    final primaryColor = Theme.of(context).primaryColor;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isEnabled ? primaryColor : Colors.grey.shade400,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onNext,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Continue',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 20,
-                  color: Colors.white,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   /// Shows a search dialog for large lists of items

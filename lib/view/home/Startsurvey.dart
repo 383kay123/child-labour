@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-// import 'package:surveyflow/view/pages/house-hold/house_hold.dart';
+import 'package:human_rights_monitor/controller/db/db.dart';
 
 import '../pages/Monitoring/monitoring_assessment_form.dart';
 import '../pages/community-assessment/assessment-form.dart';
@@ -9,11 +8,47 @@ import '../pages/community-assessment/history/community-assessment-history.dart'
 import '../pages/house-hold/history/house_hold_history.dart';
 import '../pages/house-hold/house_hold.dart';
 
-class SurveyListPage extends StatelessWidget {
+class SurveyListPage extends StatefulWidget {
   const SurveyListPage({super.key});
 
   @override
+  State<SurveyListPage> createState() => _SurveyListPageState();
+}
+
+class _SurveyListPageState extends State<SurveyListPage> {
+  final LocalDBHelper _dbHelper = LocalDBHelper.instance;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _clearSurveyData();
+  }
+
+  Future<void> _clearSurveyData() async {
+    try {
+      await _dbHelper.clearAllSurveyData();
+    } catch (e) {
+      debugPrint('Error clearing survey data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
     // Child-friendly survey data with emojis and better descriptions
     final List<Map<String, dynamic>> surveys = [
       {

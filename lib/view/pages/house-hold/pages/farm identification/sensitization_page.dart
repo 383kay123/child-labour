@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:human_rights_monitor/model/sensitization_model.dart';
+
+import '../../../../../controller/models/sensitization_model.dart';
 
 /// A reusable widget that displays a section title with consistent styling.
 class SectionTitle extends StatelessWidget {
@@ -54,7 +55,7 @@ class BulletPoint extends StatelessWidget {
 class SensitizationPage extends StatefulWidget {
   /// The current sensitization data.
   final SensitizationData sensitizationData;
-  
+
   /// Callback when the user acknowledges the information.
   final ValueChanged<SensitizationData> onSensitizationChanged;
 
