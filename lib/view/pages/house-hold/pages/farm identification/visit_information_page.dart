@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:surveyflow/view/theme/app_theme.dart';
 
+import '../../../../theme/app_theme.dart';
 import 'identification_of_owner.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
@@ -14,9 +14,16 @@ class _Spacing {
 }
 
 class VisitInformationPage extends StatefulWidget {
-  const VisitInformationPage({super.key, this.initialData});
+  const VisitInformationPage({
+    super.key,
+    this.initialData,
+    this.onPrevious,
+    this.onNext,
+  });
 
   final Map<String, dynamic>? initialData;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
 
   @override
   State<VisitInformationPage> createState() => _VisitInformationPageState();
@@ -30,7 +37,10 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
   String? _farmOwnershipType;
 
   // Text controllers
-  final TextEditingController _respondentNameController = TextEditingController();
+  final TextEditingController _respondentNameController =
+      TextEditingController();
+  final TextEditingController _respondentOtherNamesController =
+      TextEditingController();
   final TextEditingController _otherCountryController = TextEditingController();
 
   // Country list
@@ -75,7 +85,8 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
         _farmOwnershipType = widget.initialData!['farmOwnershipType'];
 
         if (widget.initialData!['correctedRespondentName'] != null) {
-          _respondentNameController.text = widget.initialData!['correctedRespondentName'];
+          _respondentNameController.text =
+              widget.initialData!['correctedRespondentName'];
         }
         if (widget.initialData!['otherCountry'] != null) {
           _otherCountryController.text = widget.initialData!['otherCountry'];
@@ -167,7 +178,8 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+              color:
+                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
@@ -254,7 +266,9 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                   child: Text(
                     item['display']!,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
+                      color: isDark
+                          ? AppTheme.darkTextPrimary
+                          : AppTheme.textPrimary,
                     ),
                   ),
                 );
@@ -272,7 +286,8 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
+      backgroundColor:
+          isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text(
           'Information on the Visit',
@@ -294,7 +309,8 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Card 1: Name Confirmation Question
+                  // Card 1: Name Confirmation Question (only show if farmer is available, non-resident, or deceased)
+
                   _buildQuestionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,7 +318,9 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                         Text(
                           "Is the respondent's name correct?",
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.textPrimary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -339,27 +357,40 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                     ),
                   ),
 
-                  // Card 2: Respondent's Name (only shown when 'No' is selected)
-                  if (_respondentNameCorrect == 'No')
+// Show the name field when "No" is selected
+                  if (_respondentNameCorrect == 'No') ...[
                     _buildQuestionCard(
                       child: _buildTextField(
-                        label: 'If No, fill in the exact name and surname of the producer',
+                        label: 'If No, fill the exact surname of the producer?',
                         controller: _respondentNameController,
-                        hintText: 'Enter full name',
+                        hintText: 'Enter surname',
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    _buildQuestionCard(
+                      child: _buildTextField(
+                        label:
+                            'If No, fill the exact first and other names of the producer?',
+                        controller: _respondentOtherNamesController,
+                        hintText: 'Enter first and other names',
+                      ),
+                    ),
+                  ],
 
                   // Card 3: Nationality Question
                   if ((_respondentNameCorrect == 'Yes' ||
-                      (_respondentNameCorrect == 'No' && _respondentNameController.text.isNotEmpty)))
+                      (_respondentNameCorrect == 'No' &&
+                          _respondentNameController.text.isNotEmpty)))
                     _buildQuestionCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Is the respondent Ghanaian?',
+                            'What is the nationality of the respondent ?',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.textPrimary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -415,10 +446,11 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                     ),
 
                   // Card 5: Other Country Specification
-                  if (_respondentNationality == 'Non-Ghanaian' && _countryOfOrigin == 'Other')
+                  if (_respondentNationality == 'Non-Ghanaian' &&
+                      _countryOfOrigin == 'Other')
                     _buildQuestionCard(
                       child: _buildTextField(
-                        label: 'Other to specify',
+                        label: 'If Other, please specify',
                         controller: _otherCountryController,
                         hintText: 'Enter country name',
                       ),
@@ -429,7 +461,8 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                       (_respondentNationality == 'Ghanaian' ||
                           (_respondentNationality == 'Non-Ghanaian' &&
                               _countryOfOrigin != null &&
-                              (_countryOfOrigin != 'Other' || _otherCountryController.text.isNotEmpty))))
+                              (_countryOfOrigin != 'Other' ||
+                                  _otherCountryController.text.isNotEmpty))))
                     _buildQuestionCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +470,9 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                           Text(
                             'Is the respondent the owner of this farm?',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.textPrimary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -480,7 +515,7 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                     ),
 
                   // Card 7: Farm Ownership Type (shown when respondent is the farm owner)
-                  if (_isFarmOwner == 'Yes')
+                  if (_isFarmOwner == 'Yes' || _isFarmOwner == 'No')
                     _buildQuestionCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,7 +523,9 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                           Text(
                             'Which of these best describes you?',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
+                              color: isDark
+                                  ? AppTheme.darkTextSecondary
+                                  : AppTheme.textPrimary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -531,57 +568,59 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                       ),
                     ),
 
-                  // Card 8: Non-owner Farm Role
-                  if (_isFarmOwner == 'No')
-                    _buildQuestionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'What is your relationship with the farm owner?',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: _Spacing.md),
-                          Column(
-                            children: [
-                              _buildRadioOption(
-                                value: 'Family Member',
-                                groupValue: _farmOwnershipType,
-                                label: 'Family Member',
-                                onChanged: (value) {
-                                  setState(() {
-                                    _farmOwnershipType = value;
-                                  });
-                                },
-                              ),
-                              _buildRadioOption(
-                                value: 'Renting',
-                                groupValue: _farmOwnershipType,
-                                label: 'Renting',
-                                onChanged: (value) {
-                                  setState(() {
-                                    _farmOwnershipType = value;
-                                  });
-                                },
-                              ),
-                              _buildRadioOption(
-                                value: 'Other',
-                                groupValue: _farmOwnershipType,
-                                label: 'Other',
-                                onChanged: (value) {
-                                  setState(() {
-                                    _farmOwnershipType = value;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                  // // Card 8: Non-owner Farm Role
+                  // if (_isFarmOwner == 'No')
+                  //   _buildQuestionCard(
+                  //     child: Column(
+                  //       crossAxisAlignment: CrossAxisAlignment.start,
+                  //       children: [
+                  //         Text(
+                  //           'What is your relationship with the farm owner?',
+                  //           style: theme.textTheme.titleMedium?.copyWith(
+                  //             color: isDark
+                  //                 ? AppTheme.darkTextSecondary
+                  //                 : AppTheme.textPrimary,
+                  //             fontWeight: FontWeight.w500,
+                  //           ),
+                  //         ),
+                  //         const SizedBox(height: _Spacing.md),
+                  //         Column(
+                  //           children: [
+                  //             _buildRadioOption(
+                  //               value: 'Family Member',
+                  //               groupValue: _farmOwnershipType,
+                  //               label: 'Family Member',
+                  //               onChanged: (value) {
+                  //                 setState(() {
+                  //                   _farmOwnershipType = value;
+                  //                 });
+                  //               },
+                  //             ),
+                  //             _buildRadioOption(
+                  //               value: 'Renting',
+                  //               groupValue: _farmOwnershipType,
+                  //               label: 'Renting',
+                  //               onChanged: (value) {
+                  //                 setState(() {
+                  //                   _farmOwnershipType = value;
+                  //                 });
+                  //               },
+                  //             ),
+                  //             _buildRadioOption(
+                  //               value: 'Other',
+                  //               groupValue: _farmOwnershipType,
+                  //               label: 'Other',
+                  //               onChanged: (value) {
+                  //                 setState(() {
+                  //                   _farmOwnershipType = value;
+                  //                 });
+                  //               },
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
 
                   const SizedBox(height: 80), // Space for bottom button
                 ],
@@ -642,30 +681,34 @@ class _VisitInformationPageState extends State<VisitInformationPage> {
                 // Next Button
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _isFormComplete ? () {
-                      try {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const IdentificationOfOwnerPage(),
-                          ),
-                        );
-                      } catch (e) {
-                        debugPrint('Navigation error: $e');
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Could not navigate. Please try again.'),
-                              backgroundColor: Colors.red.shade600,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          );
-                        }
-                      }
-                    } : null,
+                    onPressed: _isFormComplete
+                        ? () {
+                            try {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const IdentificationOfOwnerPage(),
+                                ),
+                              );
+                            } catch (e) {
+                              debugPrint('Navigation error: $e');
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text(
+                                        'Could not navigate. Please try again.'),
+                                    backgroundColor: Colors.red.shade600,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isFormComplete
                           ? Colors.green.shade600

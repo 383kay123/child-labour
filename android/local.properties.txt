@@ -1,2 +1,0 @@
-sdk.dir=C\:\\Users\\ADMIN\\AppData\\Local\\Android\\sdk
-flutter.sdk=C\:\\Users\\ADMIN\\Downloads\\flutter_windows_3.35.3-stable\\flutter
