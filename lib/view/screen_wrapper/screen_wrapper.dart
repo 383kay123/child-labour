@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-
-// import 'package:surveyflow/view/pages/community/community_list_screen.dart';
-// import 'package:surveyflow/view/pages/farmers/farmer_list_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:surveyflow/view/pages/community/community_list_screen.dart';
+import 'package:surveyflow/view/pages/farmers/farmer_list_screen.dart';
 
 import '../home/home.dart';
-import '../pages/community/community_list_screen.dart';
-import '../pages/farmers/farmer_list_screen.dart';
 import '../profile/profile.dart';
 
 class ScreenWrapper extends StatefulWidget {

@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-// import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/workers_in_farm_page.dart';
+import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/workers_in_farm_page.dart';
 
 import '../farm identification/adults_information_page.dart';
 import '../farm identification/identification_of_owner.dart';
 import '../farm identification/visit_information_page.dart';
-import '../farm identification/workers_in_farm_page.dart';
 
 class FarmerIdentificationPage extends StatefulWidget {
   final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
 
-  const FarmerIdentificationPage({super.key, this.onPrevious, this.onNext});
+  const FarmerIdentificationPage({super.key, this.onPrevious});
 
   @override
   State<FarmerIdentificationPage> createState() =>

@@ -51,12 +51,7 @@ class SurveyCompletionPage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Navigate to home screen and remove all previous routes
-                    Navigator.pushNamedAndRemoveUntil(
-                      context, 
-                      '/home',  // Make sure this route is defined in your app
-                      (route) => false,  // Remove all previous routes
-                    );
+                    Navigator.popUntil(context, (route) => route.isFirst);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1A5F7A),
