@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +12,8 @@ import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identifi
 import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/combined_farmer_identification.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/consent_page.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/cover_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../controller/db/db.dart';
 
 import '../../../controller/models/consent_model.dart';
 import '../../../controller/models/cover_model.dart';
@@ -44,10 +48,13 @@ class SurveyState {
 
 class HouseHold extends StatefulWidget {
   final VoidCallback? onComplete;
+  final VoidCallback? onNext;
+
 
   const HouseHold({
     Key? key,
     this.onComplete,
+    this.onNext,
   }) : super(key: key);
 
   @override
@@ -56,9 +63,11 @@ class HouseHold extends StatefulWidget {
 
 class _HouseHoldState extends State<HouseHold> {
   final _surveyState = SurveyState();
-  final PageController _pageController = PageController();
-
+  late final PageController _pageController;
   int _currentPageIndex = 0;
+  final GlobalKey<ConsentPageState> _consentPageKey = GlobalKey<ConsentPageState>();
+  final GlobalKey<FarmerIdentification1PageState> _farmerPageKey = GlobalKey<FarmerIdentification1PageState>();
+  final GlobalKey<CombinedFarmIdentificationPageState> _combinedPageKey = GlobalKey<CombinedFarmIdentificationPageState>();
   int _combinedPageSubIndex = 0;
   final int _totalPages = 10;
   final int _totalCombinedSubPages = 4;
@@ -70,15 +79,9 @@ class _HouseHoldState extends State<HouseHold> {
 
   double get _progress => (_currentPageIndex + 1) / _totalPages;
 
-  CoverPageData _coverData = CoverPageData.test();
+  CoverPageData _coverData = CoverPageData.empty();
   ConsentData _consentData = ConsentData.empty();
-  FarmerIdentificationData _farmerData = FarmerIdentificationData(
-    ghanaCardNumberController: TextEditingController(),
-    reasonController: TextEditingController(),
-    idNumberController: TextEditingController(),
-    contactNumberController: TextEditingController(),
-    childrenCountController: TextEditingController(),
-  );
+  late FarmerIdentificationData _farmerData;
 
   int _currentChildNumber = 1;
   int _totalChildren5To17 = 0;
@@ -87,19 +90,370 @@ class _HouseHoldState extends State<HouseHold> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _currentPageIndex);
+    _initFarmerData();
   }
 
-  Future<bool> _saveCoverPageData() async {
-    if (_coverData.selectedTownCode == null ||
-        _coverData.selectedFarmerCode == null) {
+  void _initFarmerData() {
+    _farmerData = FarmerIdentificationData(
+      ghanaCardNumberController: TextEditingController(),
+      idNumberController: TextEditingController(),
+      contactNumberController: TextEditingController(),
+      childrenCountController: TextEditingController(),
+      noConsentReasonController: TextEditingController(),
+    );
+  }
+
+  // Reset cover page data to initial state
+  void _resetCoverData() {
+    setState(() {
+      _coverData = CoverPageData.empty();
+    });
+  }
+
+  // Get current location and update consent data
+  Future<void> _getCurrentLocation() async {
+    if (!mounted) return;
+    
+    try {
+      setState(() {
+        _surveyState.isGettingLocation = true;
+        _surveyState.locationStatus = 'Getting location...';
+      });
+
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _surveyState.locationStatus = 'Location services are disabled';
+          _surveyState.isGettingLocation = false;
+        });
+        
+        // Show a snackbar to inform the user
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Please enable location services to continue'),
+              backgroundColor: Colors.orange,
+              action: SnackBarAction(
+                label: 'SETTINGS',
+                textColor: Colors.white,
+                onPressed: () => Geolocator.openLocationSettings(),
+              ),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Check location permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _surveyState.locationStatus = 'Location permissions are denied';
+            _surveyState.isGettingLocation = false;
+          });
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Location permission is required to continue. Please grant permission.'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _surveyState.locationStatus = 'Location permissions are permanently denied';
+          _surveyState.isGettingLocation = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Location permissions are permanently denied. Please enable them in app settings.'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 6),
+              action: SnackBarAction(
+                label: 'SETTINGS',
+                textColor: Colors.white,
+                onPressed: () => Geolocator.openAppSettings(),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get the current position with timeout and high accuracy
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
+      );
+
+      if (mounted) {
+        setState(() {
+          _surveyState.currentPosition = position;
+          _surveyState.locationStatus = 'Location captured';
+          _surveyState.isGettingLocation = false;
+          
+          // Update consent data with the new position
+          final updatedConsentData = _consentData.copyWith(
+            currentPosition: position,
+            locationStatus: 'Location captured (${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)})',
+          );
+          
+          // Update the state and notify listeners
+          setState(() {
+            _consentData = updatedConsentData;
+          });
+          
+          // Notify parent of the data change
+          _onConsentDataChanged(updatedConsentData);
+        });
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Location captured! Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } on TimeoutException {
+      setState(() {
+        _surveyState.locationStatus = 'Location request timed out';
+        _surveyState.isGettingLocation = false;
+      });
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Please select both society and farmer')),
+            content: Text('Location request timed out. Please try again in an open area.'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _surveyState.locationStatus = 'Error: ${e.toString()}';
+        _surveyState.isGettingLocation = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  // Add this method to handle combined page navigation
+Future<void> _handleCombinedPageNavigation() async {
+  if (!mounted) return;
+  
+  // Add a small delay to ensure the widget is built
+  await Future.delayed(const Duration(milliseconds: 100));
+  if (!mounted) return;
+  
+  debugPrint('=== COMBINED PAGE NAVIGATION ===');
+  debugPrint('Current sub-page index: $_combinedPageSubIndex');
+  debugPrint('Total sub-pages: $_totalCombinedSubPages');
+  
+  // Get the combined page state
+  final combinedPageState = _combinedPageKey.currentState;
+  
+  if (combinedPageState == null || !mounted) {
+    debugPrint('ERROR: Combined page state is null or widget is not mounted!');
+    
+    // Try one more time after a short delay
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    
+    final retryState = _combinedPageKey.currentState;
+    if (retryState == null || !mounted) {
+      debugPrint('ERROR: Still unable to get combined page state after retry');
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Form is not ready. Please try again in a moment.'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                margin: EdgeInsets.all(16),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        });
+      }
+      return;
+    }
+    
+    // If we get here, the retry was successful
+    await _handleCombinedPageNavigation();
+    return;
+  }
+  
+  // Validate the current sub-page with error handling
+  debugPrint('Validating current sub-page...');
+  bool isValid = false;
+  try {
+    isValid = combinedPageState.validateCurrentPage();
+    debugPrint('Validation result: $isValid');
+  } catch (e, stackTrace) {
+    debugPrint('Error during validation: $e');
+    debugPrint('Stack trace: $stackTrace');
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Validation error. Please check your input.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      });
+    }
+    return;
+  }
+  
+  if (!isValid) {
+    // Show the first error from validation
+    final errors = combinedPageState.getCurrentPageErrors();
+    if (errors.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errors.first),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+      return;
+    }
+    
+    if (_combinedPageSubIndex < _totalCombinedSubPages - 1) {
+      // Navigate to next sub-page within combined page
+      debugPrint('Moving to next sub-page: ${_combinedPageSubIndex + 1}');
+      setState(() {
+        _combinedPageSubIndex++;
+      });
+      
+      // Animate the combined page's internal PageView with error handling
+      if (combinedPageState.mounted && combinedPageState.pageController.hasClients) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (combinedPageState.mounted && combinedPageState.pageController.hasClients) {
+            try {
+              combinedPageState.pageController.animateToPage(
+                _combinedPageSubIndex,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            } catch (e) {
+              debugPrint('Error animating to page: $e');
+            }
+          }
+        });
+      }
+    } else {
+      // We're on the last sub-page, move to next main page
+      debugPrint('Last sub-page reached, moving to next main page');
+      if (mounted) {
+        _pageController.animateToPage(
+          4, // Next main page (Children Household Page)
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+  }
+
+  // Record interview start time
+  void _recordInterviewTime() {
+    final now = DateTime.now();
+    setState(() {
+      _surveyState.interviewStartTime = now;
+      _surveyState.timeStatus = 'Started at ${_surveyState.formatTime(now)}';
+      
+      // Update consent data with the interview time
+      _consentData = _consentData.copyWith(
+        interviewStartTime: now,
+        timeStatus: 'Started at ${_surveyState.formatTime(now)}',
+      );
+    });
+  }
+
+  Future<bool> _saveCoverPageData() async {
+    // List to collect all validation errors
+    final List<String> errors = [];
+
+    // Validate required fields
+    if (_coverData.selectedTownCode == null) {
+      errors.add('Please select a society');
+    }
+    
+    if (_coverData.selectedFarmerCode == null) {
+      errors.add('Please select a farmer');
+    }
+
+    // // Validate basic member details
+    // if (_coverData.member?['gender'] == null) {
+    //   errors.add('Please specify gender for household member');
+    // }
+
+    // If there are validation errors, show them and return false
+    if (errors.isNotEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Please fix the following issues:', 
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                ...errors.map((error) => Text('• $error')).toList(),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         );
       }
       return false;
     }
+
+    // If we get here, all validations passed
     return true;
   }
 
@@ -126,139 +480,201 @@ class _HouseHoldState extends State<HouseHold> {
     }
   }
 
-  void _onPrevious() {
-    if (_isOnCombinedPage && _combinedPageSubIndex > 0) {
+ // Update the _onPrevious method
+void _onPrevious() {
+  if (!mounted) return;
+  
+  // Handle combined page sub-navigation
+  if (_isOnCombinedPage && _combinedPageSubIndex > 0) {
+    // Go to previous sub-page within combined page
+    if (_combinedPageKey.currentState != null) {
       setState(() {
         _combinedPageSubIndex--;
       });
-    } else if (_currentPageIndex == 5 && _currentChildNumber > 1) {
-      setState(() {
-        _currentChildNumber--;
-        if (_childrenDetails.isNotEmpty) {
-          _childrenDetails.removeLast();
-        }
-      });
-    } else if (_currentPageIndex > 0) {
-      final previousPageIndex = _currentPageIndex - 1;
-      _pageController.animateToPage(
-        previousPageIndex,
+      _combinedPageKey.currentState!.pageController.animateToPage(
+        _combinedPageSubIndex,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     }
-  }
-
-  bool _validateConsentData() {
-    if (_currentPageIndex == 1) {
-      // Consent page index is 1
-      if (_consentData.consentGiven == null) {
-        // No selection made yet
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Please either accept or decline the consent')),
-        );
-        return false;
-      }
-
-      if (_consentData.consentGiven == false &&
-          (_consentData.otherSpecification?.trim().isEmpty ?? true)) {
-        // If declined, require a reason
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Please provide a reason for declining')),
-        );
-        return false;
-      }
-    }
-    return true;
-  }
-
-  Future<void> _onNext() async {
-    final currentPage = _pageController.positions.isNotEmpty
-        ? _pageController.page?.round() ?? _currentPageIndex
-        : _currentPageIndex;
-
-    if (currentPage == 0) {
-      final success = await _saveCoverPageData();
-      if (!success) return;
-    }
-
-    // Validate consent form if on consent page
-    if (currentPage == 1 && !_validateConsentData()) {
-      return;
-    }
-
-    if (_isOnCombinedPage &&
-        _combinedPageSubIndex < _totalCombinedSubPages - 1) {
-      setState(() {
-        _combinedPageSubIndex++;
-      });
-    } else if (_currentPageIndex == 7) {
-      _pageController.animateToPage(
-        8,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    } else if (_currentPageIndex == 8) {
-      _pageController.animateToPage(
-        9,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    } else if (_currentPageIndex == 4) {
-      String childrenCountText =
-          _farmerData.childrenCountController.text.trim();
-      print('=== DEBUG: Children Count Check ===');
-      print('Text: "$childrenCountText"');
-      print('Is empty: ${childrenCountText.isEmpty}');
-      print('Is valid number: ${int.tryParse(childrenCountText) != null}');
-
-      _totalChildren5To17 = int.tryParse(childrenCountText) ?? 0;
-
-      if (_totalChildren5To17 > 0) {
-        print(
-            'DEBUG: Navigating to ChildDetailsPage for $_totalChildren5To17 children');
-        setState(() {
-          _currentChildNumber = 1;
-          _childrenDetails = [];
-        });
-        _pageController.animateToPage(
-          5,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      } else {
-        print('DEBUG: No children 5-17, navigating to final page');
-        _pageController.animateToPage(
-          _totalPages - 1,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    } else if (_currentPageIndex < _totalPages - 1) {
-      _navigateToNextPage();
-    }
-  }
-
-  Widget _buildDebugInfo() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      margin: const EdgeInsets.all(8),
-      color: Colors.yellow[100],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('DEBUG INFO:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          Text(
-              'Children Count Controller Text: "${_farmerData.childrenCountController.text}"'),
-          Text(
-              'Parsed Number: ${int.tryParse(_farmerData.childrenCountController.text) ?? "Invalid"}'),
-          Text('Current Page: $_currentPageIndex'),
-        ],
-      ),
+  } else if (_currentPageIndex > 0) {
+    // Go to previous main page
+    final previousPageIndex = _currentPageIndex - 1;
+    _pageController.animateToPage(
+      previousPageIndex,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
     );
   }
+}
+
+// Get the current page title with sub-page info
+String _getPageTitle(int index) {
+  // Special case for combined page view
+  if (index == 3 && _isOnCombinedPage) {
+    final subPageTitles = [
+      'Visit Information',
+      'Owner Identification',
+      'Workers in Farm',
+      'Adults Information'
+    ];
+    return 'Farm Details - ${subPageTitles[_combinedPageSubIndex]} (${_combinedPageSubIndex + 1}/4)';
+  }
+  
+  // Default page titles for the main survey flow
+  final titles = [
+    'Cover Page',
+    'Consent Form',
+    'Farmer Identification',
+    'Children Information',
+    'Children in Household',
+    'Child $_currentChildNumber of $_totalChildren5To17 Details',
+    'Sensitization',
+    'Sensitization Questions',
+    'Remediation',
+    'End of Collection'
+  ];
+  
+  if (index >= 0 && index < titles.length) {
+    return titles[index];
+  }
+  return 'Household Survey';
+}
+
+  bool _validateConsentData() {
+    // Call the validateForm method from the consent page
+    if (_consentPageKey.currentState != null) {
+      final validationError = _consentPageKey.currentState!.validateForm();
+      if (validationError != null) {
+        // Show the first error from the consent page
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(validationError),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+        }
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // Update the _onNext method
+Future<void> _onNext() async {
+  if (!mounted) return;
+  
+  final currentPage = _pageController.positions.isNotEmpty
+      ? _pageController.page?.round() ?? _currentPageIndex
+      : _currentPageIndex;
+
+  debugPrint('=== NAVIGATION REQUEST ===');
+  debugPrint('Current page: $currentPage');
+  debugPrint('Is on combined page: $_isOnCombinedPage');
+  debugPrint('Combined sub-page index: $_combinedPageSubIndex');
+  debugPrint('Current children 5-17: $_totalChildren5To17');
+  debugPrint('Children count controller text: ${_farmerData.childrenCountController.text}');
+
+  bool canProceed = true;
+  String? errorMessage;
+
+  // Page-specific validations
+  switch (currentPage) {
+    case 0: // Cover page
+      canProceed = await _saveCoverPageData();
+      errorMessage = 'Please complete all required fields on the cover page';
+      break;
+      
+    case 1: // Consent page
+      canProceed = _validateConsentData();
+      errorMessage = 'Please complete all required fields on the consent form';
+      break;
+      
+    case 4: // Children Household page
+      // Update _totalChildren5To17 from the controller when Next is pressed
+      final childrenCount = int.tryParse(_farmerData.childrenCountController.text) ?? 0;
+      setState(() {
+        _totalChildren5To17 = childrenCount;
+        _currentChildNumber = 1;
+        _childrenDetails = [];
+      });
+      debugPrint('Updated children 5-17 to: $_totalChildren5To17');
+      break;
+      
+    case 2: // Farmer Identification page
+      if (_farmerPageKey.currentState != null) {
+        final form = _farmerPageKey.currentState!.formKey.currentState;
+        if (form != null) {
+          form.save();
+        }
+        canProceed = _farmerPageKey.currentState!.validateForm();
+        if (!canProceed) {
+          final firstError = _farmerPageKey.currentState!.validationErrors.values.firstOrNull;
+          errorMessage = firstError ?? 'Please complete all required fields in the farmer identification form';
+        }
+      } else {
+        canProceed = false;
+        errorMessage = 'Validation not available';
+      }
+      break;
+      
+    case 3: // Combined Farm Identification Page (with sub-pages)
+      // Handle combined page navigation separately
+      await _handleCombinedPageNavigation();
+      return; // Early return after handling combined page navigation
+      
+    // ... rest of the cases remain the same
+  }
+
+  // Show error if validation failed
+  if (!canProceed && errorMessage != null && mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+    return;
+  }
+
+  // If we get here, validation passed - proceed with standard navigation
+  if (_currentPageIndex < _totalPages - 1) {
+    _navigateToNextPage();
+  }
+}
+
+
+  // Widget _buildDebugInfo() {
+  //   return Container(
+  //     padding: const EdgeInsets.all(8),
+  //     margin: const EdgeInsets.all(8),
+  //     color: Colors.yellow[100],
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         const Text('DEBUG INFO:',
+  //             style: TextStyle(fontWeight: FontWeight.bold)),
+  //         Text(
+  //             'Children Count Controller Text: "${_farmerData.childrenCountController.text}"'),
+  //         Text(
+  //             'Parsed Number: ${int.tryParse(_farmerData.childrenCountController.text) ?? "Invalid"}'),
+  //         Text('Current Page: $_currentPageIndex'),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   void _handleChildDetailsComplete(dynamic childData) {
     _childrenDetails.add(childData);
@@ -278,101 +694,6 @@ class _HouseHoldState extends State<HouseHold> {
 
   void _onSurveyEnd() {
     Navigator.of(context).pop();
-  }
-
-  void _recordInterviewTime() {
-    if (!_surveyState.isInterviewTimeRecorded) {
-      setState(() {
-        _surveyState.interviewStartTime = DateTime.now();
-        _surveyState.timeStatus =
-            '${_surveyState.formatTime(_surveyState.interviewStartTime!)} (${_surveyState.formatTimeAgo(_surveyState.interviewStartTime!)})';
-        _surveyState.isInterviewTimeRecorded = true;
-        _consentData = _consentData.updateSurveyState(
-          interviewStartTime: _surveyState.interviewStartTime,
-          timeStatus: _surveyState.timeStatus,
-        );
-      });
-    }
-  }
-
-  Future<void> _getCurrentLocation() async {
-    setState(() {
-      _surveyState.isGettingLocation = true;
-      _surveyState.locationStatus = 'Getting location...';
-      _consentData = _consentData.updateSurveyState(
-        locationStatus: _surveyState.locationStatus,
-        isGettingLocation: _surveyState.isGettingLocation,
-      );
-    });
-
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() {
-          _surveyState.locationStatus = 'Location services are disabled.';
-          _surveyState.isGettingLocation = false;
-          _consentData = _consentData.updateSurveyState(
-            locationStatus: _surveyState.locationStatus,
-            isGettingLocation: _surveyState.isGettingLocation,
-          );
-        });
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() {
-            _surveyState.locationStatus = 'Location permissions are denied';
-            _surveyState.isGettingLocation = false;
-            _consentData = _consentData.updateSurveyState(
-              locationStatus: _surveyState.locationStatus,
-              isGettingLocation: _surveyState.isGettingLocation,
-            );
-          });
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        setState(() {
-          _surveyState.locationStatus =
-              'Location permissions are permanently denied';
-          _surveyState.isGettingLocation = false;
-          _consentData = _consentData.updateSurveyState(
-            locationStatus: _surveyState.locationStatus,
-            isGettingLocation: _surveyState.isGettingLocation,
-          );
-        });
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      setState(() {
-        _surveyState.currentPosition = position;
-        _surveyState.locationStatus =
-            '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
-        _surveyState.isGettingLocation = false;
-        _consentData = _consentData.updateSurveyState(
-          currentPosition: _surveyState.currentPosition,
-          locationStatus: _surveyState.locationStatus,
-          isGettingLocation: _surveyState.isGettingLocation,
-        );
-      });
-    } catch (e) {
-      setState(() {
-        _surveyState.locationStatus = 'Error getting location: $e';
-        _surveyState.isGettingLocation = false;
-        _consentData = _consentData.updateSurveyState(
-          locationStatus: _surveyState.locationStatus,
-          isGettingLocation: _surveyState.isGettingLocation,
-        );
-      });
-    }
   }
 
   void _submitForm() {
@@ -443,74 +764,137 @@ class _HouseHoldState extends State<HouseHold> {
     );
   }
 
+  // Reset all form data
+  Future<void> _resetFormData() async {
+    try {
+      // Clear the database entries
+      final dbHelper = LocalDBHelper.instance;
+      await dbHelper.clearAllSurveyData();
+      
+      // Reset all form data
+      _coverData = CoverPageData.test();
+      _consentData = ConsentData.empty();
+      _farmerData.ghanaCardNumberController.clear();
+      _farmerData.idNumberController.clear();
+      _farmerData.contactNumberController.clear();
+      _farmerData.childrenCountController.clear();
+      _farmerData.noConsentReasonController.clear();
+      _currentPageIndex = 0;
+      _combinedPageSubIndex = 0;
+      _currentChildNumber = 1;
+      _totalChildren5To17 = 0;
+      _childrenDetails = [];
+      _isSensitizationChecked = false;
+      _isSubmitted = false;
+      
+      // Clear shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('selected_town');
+      await prefs.remove('selected_farmer');
+    } catch (e) {
+      debugPrint('Error resetting form data: $e');
+    }
+  }
+
   @override
   void dispose() {
+    // Reset form data and clean up when navigating away
+    _resetFormData();
+    
+    // Dispose controllers
     _pageController.dispose();
     _consentData.dispose();
+    _farmerData.ghanaCardNumberController.dispose();
+    _farmerData.idNumberController.dispose();
+    _farmerData.contactNumberController.dispose();
+    _farmerData.childrenCountController.dispose();
+    _farmerData.noConsentReasonController.dispose();
+    
     super.dispose();
+  }
+  
+  // Override didUpdateWidget to handle widget updates
+  @override
+  void didUpdateWidget(covariant HouseHold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset the form if the widget is being recreated
+    if (widget.onComplete != oldWidget.onComplete) {
+      _resetFormData();
+    }
+  }
+  
+  // Handle back button press
+  Future<bool> _onWillPop() async {
+    // Reset form data when navigating back
+    await _resetFormData();
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        title: Column(
-          children: [
-            Text(
-              'Household Survey',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                fontSize: 20,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () async {
+              await _onWillPop();
+              if (mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+          title: Column(
+            children: [
+              Text(
+                'Household Survey',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _getPageTitle(_currentPageIndex),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 14,
+              const SizedBox(height: 2),
+              Text(
+                _getPageTitle(_currentPageIndex),
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
               ),
+            ],
+          ),
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.green.shade600,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(4.0),
+            child: LinearProgressIndicator(
+              value: _progress,
+              backgroundColor: Colors.green.shade400,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              minHeight: 4.0,
             ),
-          ],
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.green.shade600,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4.0),
-          child: LinearProgressIndicator(
-            value: _progress,
-            backgroundColor: Colors.green.shade400,
-            valueColor:
-                AlwaysStoppedAnimation<Color>(Colors.white.withOpacity(0.8)),
-            minHeight: 4.0,
           ),
         ),
-      ),
-      body: Column(
-        children: [
-          if (_currentPageIndex == 4) _buildDebugInfo(),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPageIndex = index;
-                  if (!_isOnCombinedPage) _combinedPageSubIndex = 0;
+        body: Column(
+          children: [
+            // if (_currentPageIndex == 4) _buildDebugInfo(),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPageIndex = index;
                 });
               },
               children: [
+                // Cover Page
                 CoverPage(
                   key: const ValueKey('cover_page'),
                   data: _coverData,
@@ -520,10 +904,10 @@ class _HouseHoldState extends State<HouseHold> {
                     });
                   },
                   onNext: _onNext,
-                  onNextPressed: _saveCoverPageData,
                 ),
+                // Consent Page
                 ConsentPage(
-                  key: const ValueKey('consent_page'),
+                  key: _consentPageKey,
                   data: _consentData,
                   onDataChanged: _onConsentDataChanged,
                   onRecordTime: _recordInterviewTime,
@@ -532,17 +916,20 @@ class _HouseHoldState extends State<HouseHold> {
                   onPrevious: _onPrevious,
                   onSurveyEnd: _onSurveyEnd,
                 ),
+                // Farmer Identification Page
                 FarmerIdentification1Page(
-                  key: const ValueKey('farmer_identification_page'),
+                  key: _farmerPageKey,
                   data: _farmerData,
                   onDataChanged: _onFarmerDataChanged,
+                  onNext: _onNext,
                   onComplete: (data) {
                     _onFarmerDataChanged(data);
                     _onNext();
                   },
                 ),
+                // Combined Farm Identification Page
                 CombinedFarmIdentificationPage(
-                  key: ValueKey('combined_page_$_combinedPageSubIndex'),
+                  key: _combinedPageKey,
                   initialPageIndex: _combinedPageSubIndex,
                   onPageChanged: (index) {
                     setState(() {
@@ -553,11 +940,11 @@ class _HouseHoldState extends State<HouseHold> {
                   onNext: _onNext,
                   onSubmit: _handleCombinedPageSubmit,
                 ),
+                // Children Household Page
                 ChildrenHouseholdPage(
                   key: const ValueKey('children_household_page'),
                   producerDetails: {
-                    'ghanaCardNumber':
-                        _farmerData.ghanaCardNumberController.text,
+                    'ghanaCardNumber': _farmerData.ghanaCardNumberController.text,
                     'idNumber': _farmerData.idNumberController.text,
                     'contactNumber': _farmerData.contactNumberController.text,
                     'childrenCount': _farmerData.childrenCountController.text,
@@ -567,30 +954,31 @@ class _HouseHoldState extends State<HouseHold> {
                     print('=== DEBUG: ChildrenHouseholdPage callback ===');
                     print('Children 5-17 count: $children5To17');
 
+                    // Always update the total children count, even if it's 0
+                    setState(() {
+                      _totalChildren5To17 = children5To17;
+                      _currentChildNumber = 1;
+                      _childrenDetails = [];
+                    });
+
                     if (children5To17 > 0) {
-                      print(
-                          'DEBUG: Navigating to ChildDetailsPage for $children5To17 children');
-                      setState(() {
-                        _totalChildren5To17 = children5To17;
-                        _currentChildNumber = 1;
-                        _childrenDetails = [];
-                      });
+                      print('DEBUG: Navigating to ChildDetailsPage for $children5To17 children');
                       _pageController.animateToPage(
                         5,
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      print(
-                          'DEBUG: No children 5-17, navigating to final page');
+                      print('DEBUG: No children 5-17, navigating to sensitization page');
                       _pageController.animateToPage(
-                        _totalPages - 1,
+                        6,
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       );
                     }
                   },
                 ),
+                // Child Details Page
                 ChildDetailsPage(
                   key: ValueKey('child_details_page_$_currentChildNumber'),
                   childNumber: _currentChildNumber,
@@ -598,6 +986,7 @@ class _HouseHoldState extends State<HouseHold> {
                   childrenDetails: _childrenDetails,
                   onComplete: _handleChildDetailsComplete,
                 ),
+                // Sensitization Page
                 SensitizationPage(
                   sensitizationData: SensitizationData(
                     isAcknowledged: _isSensitizationChecked,
@@ -608,181 +997,66 @@ class _HouseHoldState extends State<HouseHold> {
                     });
                   },
                 ),
-                const SensitizationQuestionsPage(),
-                const RemediationPage(),
-                const EndOfCollectionPage(),
-              ],
-            ),
-          ),
-          _buildNavigationButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavigationButtons() {
-    final isLastPage = _currentPageIndex == _totalPages - 1;
-    final isChildrenHouseholdPage = _currentPageIndex == 4;
-    final isSensitizationPage = _currentPageIndex == 6;
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _onPrevious,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: Colors.green.shade600, width: 2),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.arrow_back_ios,
-                        size: 18, color: Colors.green.shade600),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Previous',
-                      style: GoogleFonts.inter(
-                        color: Colors.green.shade600,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
+                // Other Pages
+                  const SensitizationQuestionsPage(),
+                  const RemediationPage(),
+                  const EndOfCollectionPage(),
+                ],
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: isLastPage
-                    ? _submitForm
-                    : () async {
-                        final currentPage = _pageController.positions.isNotEmpty
-                            ? _pageController.page?.round() ?? _currentPageIndex
-                            : _currentPageIndex;
-
-                        if (currentPage == 0) {
-                          final success = await _saveCoverPageData();
-                          if (!success) return;
-                        }
-
-                        if (isSensitizationPage && !_isSensitizationChecked) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Please acknowledge that you have read and understood the sensitization information'),
-                              backgroundColor: Colors.red,
-                              duration: Duration(seconds: 3),
-                            ),
-                          );
-                          return;
-                        }
-
-                        if (isChildrenHouseholdPage) {
-                          String childrenCountText =
-                              _farmerData.childrenCountController.text.trim();
-                          if (childrenCountText.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Please enter the number of children aged 5-17'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-                          if (int.tryParse(childrenCountText) == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Please enter a valid number for children count'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-                        }
-
-                        _onNext();
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                  shadowColor: Colors.green.shade600.withOpacity(0.3),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      isLastPage ? 'Submit' : 'Next',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    if (!isLastPage) ...[
-                      const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward_ios,
-                          size: 18, color: Colors.white),
-                    ],
-                  ],
-                ),
-              ),
-            ),
+            _buildNavigationButtons(),
           ],
         ),
       ),
     );
   }
 
-  String _getPageTitle(int index) {
-    switch (index) {
-      case 0:
-        return 'Cover Page';
-      case 1:
-        return 'Consent Form';
-      case 2:
-        return 'Farmer Identification';
-      case 3:
-        return 'Farm Details';
-      case 4:
-        return 'Children Information';
-      case 5:
-        return 'Child $_currentChildNumber of $_totalChildren5To17 Details';
-      case 6:
-        return 'Sensitization';
-      case 7:
-        return 'Sensitization Questions';
-      case 8:
-        return 'Remediation';
-      case 9:
-        return 'End of Collection';
-      default:
-        return 'Household Survey';
-    }
+  Widget _buildNavigationButtons() {
+    final isLastPage = _currentPageIndex == _totalPages - 1;
+    final isLastSubPage = _isOnCombinedPage && _combinedPageSubIndex == _totalCombinedSubPages - 1;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Previous button
+        if (_currentPageIndex > 0 || (_isOnCombinedPage && _combinedPageSubIndex > 0))
+          ElevatedButton(
+            onPressed: _onPrevious,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade300,
+              foregroundColor: Colors.black87,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Previous'),
+          )
+        else
+          const SizedBox(width: 100), // Spacer for alignment
+
+        // Next/Submit button
+        ElevatedButton(
+          onPressed: _onNext,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green.shade600,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: Text(
+            isLastPage
+                ? 'Submit'
+                : _isOnCombinedPage
+                    ? isLastSubPage
+                        ? 'Next Page'
+                        : 'Next (${_combinedPageSubIndex + 2}/4)'
+                    : 'Next',
+          ),
+        ),
+      ],
+    );
   }
 }

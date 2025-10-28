@@ -111,7 +111,7 @@ class ModernRadioButton<T> extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: isSelected ? primaryColor : Colors.grey[800],
                         ),
@@ -706,7 +706,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
           question,
           style: theme.textTheme.titleMedium?.copyWith(
             color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w500,fontSize: 14
           ),
         ),
         if (subtitle != null) ...[
@@ -715,7 +715,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
             subtitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               color:
-                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,fontSize: 13
             ),
           ),
         ],
@@ -743,7 +743,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
         Text(
           question,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w600,fontSize: 14
               ),
         ),
         if (subtitle != null) ...[
@@ -751,7 +751,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
+                  color: Colors.grey[600],fontSize: 13
                 ),
           ),
         ],
@@ -779,7 +779,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w500,fontSize: 14   
               ),
         ),
         const SizedBox(height: 8),
@@ -825,7 +825,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w500,fontSize: 14
               ),
         ),
         const SizedBox(height: 8),

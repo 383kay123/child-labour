@@ -6,9 +6,25 @@ import 'package:human_rights_monitor/view/screen_wrapper/screen_wrapper.dart';
 import 'package:human_rights_monitor/view/splash/splash_screen.dart';
 import 'package:human_rights_monitor/view/theme/app_theme.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
+import 'package:human_rights_monitor/controller/household_controller.dart';
+import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/database/household_survey_db.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Clear all persisted data on app start to prevent selections from persisting across restarts
+  try {
+    await LocalDBHelper.instance.clearAllSurveyData();
+    await HouseholdSurveyDB().clearDatabase();
+  } catch (e) {
+    debugPrint('Error clearing database on startup: $e');
+  }
+  
+  // Initialize GetX
+  Get.put(HouseHoldController());
+  
   runApp(const HumanRightsMonitor());
 }
 

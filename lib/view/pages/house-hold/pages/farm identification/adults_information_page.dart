@@ -806,7 +806,15 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
     _otherOccupationController.text = widget.details.otherOccupation ?? '';
     _otherRelationshipController.text = widget.details.otherRelationship ?? '';
 
-    _hasGhanaCard = widget.details.ghanaCardId != null ? 'Yes' : 'No';
+    // Initialize Ghana Card state
+    if (widget.details.ghanaCardId != null && widget.details.ghanaCardId!.isNotEmpty) {
+      _hasGhanaCard = 'Yes';
+    } else if (widget.details.otherIdType != null) {
+      _hasGhanaCard = 'No';
+    } else {
+      _hasGhanaCard = null; // Start with no selection
+    }
+    
     _selectedIdType = widget.details.otherIdType;
     _consentToTakePhoto = widget.details.consentToTakePhoto;
     _idPhoto = widget.details.idPhoto;
@@ -1070,17 +1078,41 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
+              hint: Text(
+                'Select an option',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isDark 
+                      ? Colors.grey.shade400 
+                      : Colors.grey.shade600,
+                ),
+              ),
               icon: Icon(Icons.arrow_drop_down, color: theme.primaryColor),
               iconSize: 20,
               elevation: 16,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
               ),
-              onChanged: (value) {
-                onChanged(value);
-                _updateParentDetails();
+              onChanged: (newValue) {
+                // Only update if the value has actually changed
+                if (newValue != value) {
+                  onChanged(newValue);
+                }
               },
               dropdownColor: isDark ? AppTheme.darkCard : Colors.white,
+              selectedItemBuilder: (BuildContext context) {
+                return items.map<Widget>((Map<String, String> item) {
+                  return Text(
+                    items.firstWhere(
+                      (element) => element['value'] == value,
+                      orElse: () => {'label': 'Select an option'},
+                    )['label']!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                }).toList();
+              },
               items: items
                   .map<DropdownMenuItem<String>>((Map<String, String> item) {
                 return DropdownMenuItem<String>(
@@ -1101,7 +1133,6 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
       ],
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Form(
@@ -1121,31 +1152,34 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                       ),
                 ),
                 const SizedBox(height: _Spacing.sm),
-                Wrap(
-                  spacing: 20,
+                Row(
                   children: [
                     _buildRadioOption(
                       value: 'Yes',
                       groupValue: _hasGhanaCard,
                       label: 'Yes',
                       onChanged: (value) {
+                        if (value == null) return;
                         setState(() {
                           _hasGhanaCard = value;
                           _selectedIdType = null;
                           _otherIdController.clear();
+                          _ghanaCardIdController.clear();
+                          _updateParentDetails();
                         });
                       },
                     ),
+                    const SizedBox(width: 20),
                     _buildRadioOption(
                       value: 'No',
                       groupValue: _hasGhanaCard,
                       label: 'No',
                       onChanged: (value) {
+                        if (value == null) return;
                         setState(() {
                           _hasGhanaCard = value;
-                          if (_hasGhanaCard == 'No') {
-                            _ghanaCardIdController.clear();
-                          }
+                          _ghanaCardIdController.clear();
+                          _updateParentDetails();
                         });
                       },
                     ),
@@ -1177,6 +1211,8 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                     onChanged: (value) {
                       setState(() {
                         _selectedIdType = value;
+                        _otherIdController.clear(); // Clear the ID field when changing type
+                        _updateParentDetails();
                       });
                     },
                   ),

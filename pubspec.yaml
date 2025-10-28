@@ -47,6 +47,7 @@ dependencies:
   get: ^4.7.2
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.3
+  google_maps_flutter: ^2.5.0
 #  printing: ^5.11.1
 #  pdf: ^3.10.10
 #  pdf_render: 1.4.12
@@ -60,10 +61,22 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 # Configure launcher icons
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/Gemini_Generated_Image_tao8rdtao8rdtao8.png"
+  image_path: "assets/images/hrm logo.png"
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  web:
+    generate: false
+  windows:
+    generate: false
+    image_path: "assets/images/hrm logo.png"
+  macos:
+    generate: false
+    image_path: "assets/images/hrm logo.png"
+  linux:
+    generate: false
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

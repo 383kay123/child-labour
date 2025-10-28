@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 /// Model for Farmer Child data
 class FarmerChild {
   final int childNumber;
-  String firstName;
-  String surname;
+  final String firstName;
+  final String surname;
 
   FarmerChild({
     required this.childNumber,
@@ -75,10 +75,10 @@ class FarmerIdentificationData {
 
   // Controllers for form fields
   final TextEditingController ghanaCardNumberController;
-  final TextEditingController reasonController;
   final TextEditingController idNumberController;
   final TextEditingController contactNumberController;
   final TextEditingController childrenCountController;
+  final TextEditingController noConsentReasonController;
 
   FarmerIdentificationData({
     this.hasGhanaCard,
@@ -91,12 +91,39 @@ class FarmerIdentificationData {
     this.contactNumber,
     this.childrenCount = 0,
     List<FarmerChild>? children,
-    required this.ghanaCardNumberController,
-    required this.reasonController,
-    required this.idNumberController,
-    required this.contactNumberController,
-    required this.childrenCountController,
-  }) : children = children ?? [];
+    TextEditingController? ghanaCardNumberController,
+    TextEditingController? idNumberController,
+    TextEditingController? contactNumberController,
+    TextEditingController? childrenCountController,
+    TextEditingController? noConsentReasonController,
+  })  : children = children ?? [],
+        ghanaCardNumberController = ghanaCardNumberController ?? TextEditingController(),
+        idNumberController = idNumberController ?? TextEditingController(),
+        contactNumberController = contactNumberController ?? TextEditingController(),
+        childrenCountController = childrenCountController ?? TextEditingController(),
+        noConsentReasonController = noConsentReasonController ?? TextEditingController() {
+    // Initialize controller texts from field values
+    _initializeControllers();
+  }
+
+  void _initializeControllers() {
+    // Only initialize if controller is empty to preserve user input
+    if (ghanaCardNumberController.text.isEmpty && ghanaCardNumber != null) {
+      ghanaCardNumberController.text = ghanaCardNumber!;
+    }
+    if (idNumberController.text.isEmpty && idNumber != null) {
+      idNumberController.text = idNumber!;
+    }
+    if (contactNumberController.text.isEmpty && contactNumber != null) {
+      contactNumberController.text = contactNumber!;
+    }
+    if (childrenCountController.text.isEmpty && childrenCount > 0) {
+      childrenCountController.text = childrenCount.toString();
+    }
+    if (noConsentReasonController.text.isEmpty && noConsentReason != null) {
+      noConsentReasonController.text = noConsentReason!;
+    }
+  }
 
   /// Convert to Map for storage/API
   Map<String, dynamic> toMap() {
@@ -104,11 +131,11 @@ class FarmerIdentificationData {
       'hasGhanaCard': hasGhanaCard,
       'selectedIdType': selectedIdType,
       'idPictureConsent': idPictureConsent,
-      'ghanaCardNumber': ghanaCardNumber,
-      'idNumber': idNumber,
-      'noConsentReason': noConsentReason,
+      'ghanaCardNumber': ghanaCardNumberController.text.isNotEmpty ? ghanaCardNumberController.text : ghanaCardNumber,
+      'idNumber': idNumberController.text.isNotEmpty ? idNumberController.text : idNumber,
+      'noConsentReason': noConsentReasonController.text.isNotEmpty ? noConsentReasonController.text : noConsentReason,
       'idImagePath': idImagePath,
-      'contactNumber': contactNumber,
+      'contactNumber': contactNumberController.text.isNotEmpty ? contactNumberController.text : contactNumber,
       'childrenCount': childrenCount,
       'children': children.map((child) => child.toMap()).toList(),
     };
@@ -127,38 +154,298 @@ class FarmerIdentificationData {
       contactNumber: map['contactNumber']?.toString(),
       childrenCount: map['childrenCount'] as int? ?? 0,
       children: (map['children'] as List<dynamic>? ?? [])
-          .map((childMap) => FarmerChild.fromMap(childMap))
-          .toList(),
-      ghanaCardNumberController: TextEditingController(
-        text: map['ghanaCardNumber']?.toString() ?? '',
-      ),
-      reasonController: TextEditingController(
-        text: map['noConsentReason']?.toString() ?? '',
-      ),
-      idNumberController: TextEditingController(
-        text: map['idNumber']?.toString() ?? '',
-      ),
-      contactNumberController: TextEditingController(
-        text: map['contactNumber']?.toString() ?? '',
-      ),
-      childrenCountController: TextEditingController(
-        text: (map['childrenCount'] as int? ?? 0).toString(),
-      ),
+          .map((childMap) => FarmerChild.fromMap(childMap as Map<String, dynamic>)).toList(),
     );
   }
 
   /// Create empty instance
   factory FarmerIdentificationData.empty() {
-    return FarmerIdentificationData(
-      ghanaCardNumberController: TextEditingController(),
-      reasonController: TextEditingController(),
-      idNumberController: TextEditingController(),
-      contactNumberController: TextEditingController(),
-      childrenCountController: TextEditingController(),
+    return FarmerIdentificationData();
+  }
+
+  /// Update methods that return new instances - FIXED: Preserve existing controllers
+  FarmerIdentificationData updateGhanaCard(String? value) {
+    return copyWith(
+      hasGhanaCard: value,
+      selectedIdType: value == 'Yes' ? null : selectedIdType,
+      idPictureConsent: null,
+      idImagePath: null,
+      // Preserve existing controllers
+      preserveControllers: true,
     );
   }
 
-  /// Copy with method for immutability
+  FarmerIdentificationData updateIdType(String? value) {
+    return copyWith(
+      selectedIdType: value,
+      idPictureConsent: null,
+      idImagePath: null,
+      preserveControllers: true,
+    );
+  }
+
+  FarmerIdentificationData updatePictureConsent(String? value) {
+    return copyWith(
+      idPictureConsent: value,
+      idImagePath: value == 'No' ? null : idImagePath,
+      preserveControllers: true,
+    );
+  }
+
+  FarmerIdentificationData updateGhanaCardNumber(String value) {
+    // Update the controller text immediately
+    ghanaCardNumberController.text = value;
+    return copyWith(
+      ghanaCardNumber: value,
+      preserveControllers: true, // Keep the same controller
+    );
+  }
+
+  FarmerIdentificationData updateIdNumber(String value) {
+    idNumberController.text = value;
+    return copyWith(
+      idNumber: value,
+      preserveControllers: true,
+    );
+  }
+
+  FarmerIdentificationData updateNoConsentReason(String value) {
+    noConsentReasonController.text = value;
+    return copyWith(
+      noConsentReason: value,
+      preserveControllers: true,
+    );
+  }
+
+  FarmerIdentificationData updateContactNumber(String value) {
+    contactNumberController.text = value;
+    return copyWith(
+      contactNumber: value,
+      preserveControllers: true,
+    );
+  }
+
+  FarmerIdentificationData updateChildrenCount(String value) {
+    final count = int.tryParse(value) ?? 0;
+    childrenCountController.text = value;
+    return copyWith(
+      childrenCount: count,
+      preserveControllers: true,
+    );
+  }
+
+  FarmerIdentificationData updateChildName(int index, String field, String value) {
+    if (index < 0 || index >= children.length) return this;
+    
+    final updatedChildren = List<FarmerChild>.from(children);
+    final child = updatedChildren[index];
+    
+    updatedChildren[index] = child.copyWith(
+      firstName: field == 'firstName' ? value : child.firstName,
+      surname: field == 'surname' ? value : child.surname,
+    );
+    
+    return copyWith(
+      children: updatedChildren,
+      preserveControllers: true,
+    );
+  }
+
+  FarmerIdentificationData updateIdImagePath(String? path) {
+    return copyWith(
+      idImagePath: path,
+      preserveControllers: true,
+    );
+  }
+
+  // Validation methods - FIXED: Use controller text for validation
+  String? validateGhanaCardNumber() {
+    // Only validate if hasGhanaCard is 'Yes'
+    if (hasGhanaCard != 'Yes') {
+      return null;
+    }
+    
+    // Always use controller text for validation
+    final cardNumber = ghanaCardNumberController.text.trim();
+    
+    if (cardNumber.isEmpty) {
+      return 'Ghana Card number is required';
+    }
+    
+    final ghanaCardRegex = RegExp(r'^GHA-\d{9}-\d$');
+    if (!ghanaCardRegex.hasMatch(cardNumber)) {
+      return 'Enter a valid Ghana Card number (GHA-XXXXXXXXX-X)';
+    }
+    
+    return null;
+  }
+  
+  String? validateIdNumber() {
+    if (hasGhanaCard == 'Yes' || selectedIdType == null) return null;
+    
+    // Use controller text for validation
+    final idNumber = idNumberController.text.trim();
+    if (idNumber.isEmpty) {
+      return 'ID number is required';
+    }
+    
+    // Use the raw ID type values (voter_id, drivers_license, etc.)
+    switch (selectedIdType) {
+      case 'voter_id':
+        if (!RegExp(r'^\d{10,12}$').hasMatch(idNumber)) {
+          return 'Voter ID must be 10-12 digits';
+        }
+        break;
+      case 'passport':
+        if (!RegExp(r'^[A-Z0-9]{6,9}$').hasMatch(idNumber)) {
+          return 'Enter a valid passport number';
+        }
+        break;
+      case 'drivers_license':
+        if (!RegExp(r'^[A-Z0-9]{8,15}$').hasMatch(idNumber)) {
+          return 'Enter a valid driver\'s license number';
+        }
+        break;
+      default:
+        if (idNumber.length < 4) {
+          return 'ID number is too short';
+        }
+    }
+    
+    return null;
+  }
+
+  String? validateContactNumber() {
+    // Use controller text for validation
+    final contactNumber = contactNumberController.text.trim();
+    if (contactNumber.isEmpty) {
+      return 'Contact number is required';
+    }
+    
+    // More flexible Ghana phone number validation
+    final phoneRegex = RegExp(r'^(?:\+?233|0)?[23579]\d{8}$');
+    final normalizedNumber = contactNumber.replaceAll(RegExp(r'[\s\-]'), '');
+    
+    if (!phoneRegex.hasMatch(normalizedNumber)) {
+      return 'Enter a valid Ghanaian phone number (e.g., 0244123456, 233244123456)';
+    }
+    
+    return null;
+  }
+
+  String? validateChildrenCount() {
+    // Use controller text for validation
+    final childrenCountText = childrenCountController.text.trim();
+    final count = int.tryParse(childrenCountText) ?? 0;
+    
+    if (count < 0) {
+      return 'Number of children cannot be negative';
+    }
+    
+    if (count > 20) {
+      return 'Number of children seems too high. Please verify.';
+    }
+    
+    return null;
+  }
+
+  String? validateNoConsentReason() {
+    if (idPictureConsent != 'No') return null;
+    
+    // Use controller text for validation
+    final reason = noConsentReasonController.text.trim();
+    if (reason.isEmpty) {
+      return 'Please provide a reason for not providing ID picture';
+    }
+    
+    if (reason.length < 10) {
+      return 'Please provide a more detailed reason';
+    }
+    
+    return null;
+  }
+
+  Map<String, String> validateChildren() {
+    final errors = <String, String>{};
+    
+    for (int i = 0; i < children.length; i++) {
+      final child = children[i];
+      final prefix = 'child_${i + 1}';
+      
+      if (child.firstName.trim().isEmpty) {
+        errors['${prefix}_firstName'] = 'First name is required';
+      } else if (!RegExp(r'^[a-zA-Z\s-]{2,50}$').hasMatch(child.firstName)) {
+        errors['${prefix}_firstName'] = 'Enter a valid first name';
+      }
+      
+      if (child.surname.trim().isEmpty) {
+        errors['${prefix}_surname'] = 'Surname is required';
+      } else if (!RegExp(r'^[a-zA-Z\s-]{2,50}$').hasMatch(child.surname)) {
+        errors['${prefix}_surname'] = 'Enter a valid surname';
+      }
+    }
+    
+    return errors;
+  }
+
+  String? validateIdImage() {
+    if (idPictureConsent != 'Yes') return null;
+    
+    if (idImagePath == null || idImagePath!.trim().isEmpty) {
+      return 'Please capture a picture of the ID';
+    }
+    
+    return null;
+  }
+
+  Map<String, String> validateForm() {
+    final errors = <String, String>{};
+    
+    if (hasGhanaCard == null) {
+      errors['ghanaCard'] = 'Please specify if you have a Ghana Card';
+    }
+    
+    if (hasGhanaCard == 'No' && selectedIdType == null) {
+      errors['idType'] = 'Please select an alternative ID type';
+    }
+    
+    final ghanaCardError = validateGhanaCardNumber();
+    if (ghanaCardError != null) {
+      errors['ghanaCardNumber'] = ghanaCardError;
+    }
+    
+    final idNumberError = validateIdNumber();
+    if (idNumberError != null) {
+      errors['idNumber'] = idNumberError;
+    }
+    
+    final contactError = validateContactNumber();
+    if (contactError != null) {
+      errors['contactNumber'] = contactError;
+    }
+    
+    final childrenCountError = validateChildrenCount();
+    if (childrenCountError != null) {
+      errors['childrenCount'] = childrenCountError;
+    }
+    
+    final childrenErrors = validateChildren();
+    errors.addAll(childrenErrors);
+    
+    final idImageError = validateIdImage();
+    if (idImageError != null) {
+      errors['idImage'] = idImageError;
+    }
+    
+    final noConsentReasonError = validateNoConsentReason();
+    if (noConsentReasonError != null) {
+      errors['noConsentReason'] = noConsentReasonError;
+    }
+    
+    return errors;
+  }
+
+  /// Enhanced copyWith that can preserve existing controllers
   FarmerIdentificationData copyWith({
     String? hasGhanaCard,
     String? selectedIdType,
@@ -170,344 +457,78 @@ class FarmerIdentificationData {
     String? contactNumber,
     int? childrenCount,
     List<FarmerChild>? children,
-    TextEditingController? ghanaCardNumberController,
-    TextEditingController? reasonController,
-    TextEditingController? idNumberController,
-    TextEditingController? contactNumberController,
-    TextEditingController? childrenCountController,
+    bool preserveControllers = false,
   }) {
-    return FarmerIdentificationData(
-      hasGhanaCard: hasGhanaCard ?? this.hasGhanaCard,
-      selectedIdType: selectedIdType ?? this.selectedIdType,
-      idPictureConsent: idPictureConsent ?? this.idPictureConsent,
-      ghanaCardNumber: ghanaCardNumber ?? this.ghanaCardNumber,
-      idNumber: idNumber ?? this.idNumber,
-      noConsentReason: noConsentReason ?? this.noConsentReason,
-      idImagePath: idImagePath ?? this.idImagePath,
-      contactNumber: contactNumber ?? this.contactNumber,
-      childrenCount: childrenCount ?? this.childrenCount,
-      children: children ?? this.children,
-      ghanaCardNumberController:
-          ghanaCardNumberController ?? this.ghanaCardNumberController,
-      reasonController: reasonController ?? this.reasonController,
-      idNumberController: idNumberController ?? this.idNumberController,
-      contactNumberController:
-          contactNumberController ?? this.contactNumberController,
-      childrenCountController:
-          childrenCountController ?? this.childrenCountController,
-    );
-  }
-
-  /// Update Ghana Card selection
-  FarmerIdentificationData updateGhanaCard(String? value) {
-    return copyWith(
-      hasGhanaCard: value,
-      selectedIdType: value == 'Yes' ? null : selectedIdType,
-      idPictureConsent: null,
-      idImagePath: null,
-    );
-  }
-
-  /// Update ID type selection
-  FarmerIdentificationData updateIdType(String? value) {
-    return copyWith(
-      selectedIdType: value,
-      idPictureConsent: null,
-      idImagePath: null,
-    );
-  }
-
-  /// Update picture consent
-  FarmerIdentificationData updatePictureConsent(String? value) {
-    return copyWith(
-      idPictureConsent: value,
-      idImagePath: value == 'No' ? null : idImagePath,
-    );
-  }
-
-  /// Update Ghana Card number
-  FarmerIdentificationData updateGhanaCardNumber(String value) {
-    return copyWith(
-      ghanaCardNumber: value,
-      ghanaCardNumberController: TextEditingController(text: value),
-    );
-  }
-
-  /// Update ID number
-  FarmerIdentificationData updateIdNumber(String value) {
-    return copyWith(
-      idNumber: value,
-      idNumberController: TextEditingController(text: value),
-    );
-  }
-
-  /// Update no consent reason
-  FarmerIdentificationData updateNoConsentReason(String value) {
-    return copyWith(
-      noConsentReason: value,
-      reasonController: TextEditingController(text: value),
-    );
-  }
-
-  /// Update contact number
-  FarmerIdentificationData updateContactNumber(String value) {
-    return copyWith(
-      contactNumber: value,
-      contactNumberController: TextEditingController(text: value),
-    );
-  }
-
-  /// Update children count
-  FarmerIdentificationData updateChildrenCount(String value) {
-    final count = int.tryParse(value) ?? 0;
-    final updatedChildren = _updateChildrenList(count, children);
-
-    return copyWith(
-      childrenCount: count,
-      childrenCountController: TextEditingController(text: value),
-      children: updatedChildren,
-    );
-  }
-
-  /// Update child name
-  FarmerIdentificationData updateChildName(
-      int index, String field, String value) {
-    final updatedChildren = List<FarmerChild>.from(children);
-
-    // Ensure list is long enough
-    while (index >= updatedChildren.length) {
-      updatedChildren.add(FarmerChild(
-        childNumber: updatedChildren.length + 1,
-        firstName: '',
-        surname: '',
-      ));
-    }
-
-    // Update the specific field
-    final child = updatedChildren[index];
-    updatedChildren[index] = child.copyWith(
-      firstName: field == 'firstName' ? value : child.firstName,
-      surname: field == 'surname' ? value : child.surname,
-    );
-
-    return copyWith(children: updatedChildren);
-  }
-
-  /// Update ID image path
-  FarmerIdentificationData updateIdImagePath(String? path) {
-    return copyWith(idImagePath: path);
-  }
-
-  /// Helper method to update children list
-  List<FarmerChild> _updateChildrenList(
-      int count, List<FarmerChild> currentChildren) {
-    final updatedChildren = List<FarmerChild>.from(currentChildren);
-
-    if (count > updatedChildren.length) {
-      for (int i = updatedChildren.length; i < count; i++) {
-        updatedChildren.add(FarmerChild(
-          childNumber: i + 1,
-          firstName: '',
-          surname: '',
-        ));
-      }
-    } else if (count < updatedChildren.length) {
-      updatedChildren.removeRange(count, updatedChildren.length);
-    }
-
-    return updatedChildren;
-  }
-
-  /// Get selected ID type display name
-  String get selectedIdTypeDisplayName {
-    switch (selectedIdType) {
-      case 'voter_id':
-        return 'Voter ID';
-      case 'nhis_card':
-        return 'NHIS Card';
-      case 'passport':
-        return 'Passport';
-      case 'drivers_license':
-        return "Driver's License";
-      case 'ssnit':
-        return 'SSNIT';
-      case 'birth_certificate':
-        return 'Birth Certificate';
-      default:
-        return 'ID';
+    if (preserveControllers) {
+      // Preserve existing controllers - update their internal state if needed
+      return FarmerIdentificationData(
+        hasGhanaCard: hasGhanaCard ?? this.hasGhanaCard,
+        selectedIdType: selectedIdType ?? this.selectedIdType,
+        idPictureConsent: idPictureConsent ?? this.idPictureConsent,
+        ghanaCardNumber: ghanaCardNumber ?? this.ghanaCardNumber,
+        idNumber: idNumber ?? this.idNumber,
+        noConsentReason: noConsentReason ?? this.noConsentReason,
+        idImagePath: idImagePath ?? this.idImagePath,
+        contactNumber: contactNumber ?? this.contactNumber,
+        childrenCount: childrenCount ?? this.childrenCount,
+        children: children ?? List.from(this.children),
+        // Pass existing controllers to preserve text content
+        ghanaCardNumberController: this.ghanaCardNumberController,
+        idNumberController: this.idNumberController,
+        contactNumberController: this.contactNumberController,
+        childrenCountController: this.childrenCountController,
+        noConsentReasonController: this.noConsentReasonController,
+      );
+    } else {
+      // Create new instance with new controllers (for fresh starts)
+      return FarmerIdentificationData(
+        hasGhanaCard: hasGhanaCard ?? this.hasGhanaCard,
+        selectedIdType: selectedIdType ?? this.selectedIdType,
+        idPictureConsent: idPictureConsent ?? this.idPictureConsent,
+        ghanaCardNumber: ghanaCardNumber ?? this.ghanaCardNumber,
+        idNumber: idNumber ?? this.idNumber,
+        noConsentReason: noConsentReason ?? this.noConsentReason,
+        idImagePath: idImagePath ?? this.idImagePath,
+        contactNumber: contactNumber ?? this.contactNumber,
+        childrenCount: childrenCount ?? this.childrenCount,
+        children: children ?? List.from(this.children),
+      );
     }
   }
 
-  /// Get selected ID type value for API
-  String get selectedIdTypeValue {
-    if (selectedIdType == null) return '';
-
-    switch (selectedIdType) {
-      case 'voter_id':
-        return 'voter';
-      case 'nhis_card':
-        return 'nhis';
-      case 'passport':
-        return 'passport';
-      case 'drivers_license':
-        return 'driver';
-      case 'ssnit':
-        return 'ssnit';
-      case 'birth_certificate':
-        return 'birth';
-      default:
-        return 'other';
-    }
-  }
-
-  /// Check if form is complete
-  bool get isComplete {
-    return hasGhanaCard != null &&
-        ((hasGhanaCard == 'Yes') ||
-            (hasGhanaCard == 'No' && selectedIdType != null)) &&
-        idPictureConsent != null &&
-        contactNumber != null &&
-        contactNumber!.isNotEmpty &&
-        childrenCountController.text.isNotEmpty;
-  }
-
-  /// Validate Ghana Card number
-  String? validateGhanaCardNumber() {
-    if (hasGhanaCard == 'Yes' && idPictureConsent == 'Yes') {
-      if (ghanaCardNumber == null || ghanaCardNumber!.isEmpty) {
-        return 'Please enter your Ghana Card number';
-      }
-      if (ghanaCardNumber!.trim().length < 6) {
-        return 'Please enter a valid Ghana Card number';
-      }
-    }
-    return null;
-  }
-
-  /// Validate ID number
-  String? validateIdNumber() {
-    if (hasGhanaCard == 'No' && idPictureConsent == 'Yes') {
-      if (idNumber == null || idNumber!.isEmpty) {
-        return 'Please enter your ${selectedIdTypeDisplayName} number';
-      }
-    }
-    return null;
-  }
-
-  /// Validate contact number
-  String? validateContactNumber() {
-    if (contactNumber == null || contactNumber!.isEmpty) {
-      return 'Please enter contact number';
-    }
-    if (contactNumber!.length != 10) {
-      return 'Please enter a valid 10-digit number';
-    }
-    return null;
-  }
-
-  /// Validate children count
-  String? validateChildrenCount() {
-    if (childrenCountController.text.isEmpty) {
-      return 'Please enter number of children';
-    }
-    final number = int.tryParse(childrenCountController.text);
-    if (number == null) {
-      return 'Please enter a valid number';
-    }
-    if (number < 0) {
-      return 'Number cannot be negative';
-    }
-    if (number > 20) {
-      return 'Please enter a reasonable number';
-    }
-    return null;
-  }
-
-  /// Validate ID picture
-  String? validateIdPicture() {
-    if (idPictureConsent == 'Yes' && idImagePath == null) {
-      return 'Please take a picture of the ID';
-    }
-    return null;
-  }
-
-  /// Validate no consent reason
-  String? validateNoConsentReason() {
-    if (idPictureConsent == 'No' &&
-        (noConsentReason == null || noConsentReason!.isEmpty)) {
-      return 'Please specify a reason';
-    }
-    return null;
-  }
-
-  /// Get all validation errors
-  Map<String, String> validate() {
-    final errors = <String, String>{};
-
-    if (hasGhanaCard == null) {
-      errors['ghanaCard'] = 'Please select if farmer has Ghana Card';
-    }
-
-    if (hasGhanaCard == 'No' && selectedIdType == null) {
-      errors['idType'] = 'Please select an ID type';
-    }
-
-    if (idPictureConsent == null) {
-      errors['consent'] = 'Please provide consent for ID picture';
-    }
-
-    final ghanaCardError = validateGhanaCardNumber();
-    if (ghanaCardError != null) errors['ghanaCardNumber'] = ghanaCardError;
-
-    final idNumberError = validateIdNumber();
-    if (idNumberError != null) errors['idNumber'] = idNumberError;
-
-    final contactError = validateContactNumber();
-    if (contactError != null) errors['contactNumber'] = contactError;
-
-    final childrenError = validateChildrenCount();
-    if (childrenError != null) errors['childrenCount'] = childrenError;
-
-    final pictureError = validateIdPicture();
-    if (pictureError != null) errors['idPicture'] = pictureError;
-
-    final reasonError = validateNoConsentReason();
-    if (reasonError != null) errors['noConsentReason'] = reasonError;
-
-    return errors;
-  }
-
-  /// Prepare data for submission
+  /// Prepares the data for submission by ensuring all fields are properly formatted
   Map<String, dynamic> prepareSubmissionData() {
     return {
-      'farmer_gh_card_available': hasGhanaCard == 'Yes' ? 'yes' : 'no',
-      'farmer_nat_id_available':
-          hasGhanaCard == 'Yes' ? 'ghana_card' : selectedIdTypeValue,
-      'id_picture_consent': idPictureConsent,
-      'id_image_path': idImagePath,
-      'ghana_card_number': hasGhanaCard == 'Yes' && idPictureConsent == 'Yes'
-          ? ghanaCardNumber
-          : null,
-      'id_number':
-          hasGhanaCard == 'No' && idPictureConsent == 'Yes' ? idNumber : null,
-      'id_rejection_reason': idPictureConsent == 'No' ? noConsentReason : null,
-      'contact_number': contactNumber,
-      'children_5_17_count': childrenCount,
-      'children': children.map((child) => child.toJson()).toList(),
+      'hasGhanaCard': hasGhanaCard,
+      'selectedIdType': selectedIdType,
+      'idPictureConsent': idPictureConsent,
+      'ghanaCardNumber': ghanaCardNumberController.text,
+      'idNumber': idNumberController.text,
+      'noConsentReason': noConsentReasonController.text,
+      'idImagePath': idImagePath,
+      'contactNumber': contactNumberController.text,
+      'childrenCount': childrenCount,
+      'children': children.map((child) => child.toMap()).toList(),
     };
-  }
-
-  /// Dispose controllers
-  void dispose() {
-    ghanaCardNumberController.dispose();
-    reasonController.dispose();
-    idNumberController.dispose();
-    contactNumberController.dispose();
-    childrenCountController.dispose();
   }
 
   @override
   String toString() {
-    return 'FarmerIdentificationData(hasGhanaCard: $hasGhanaCard, selectedIdType: $selectedIdType, consent: $idPictureConsent, childrenCount: $childrenCount)';
+    return 'FarmerIdentificationData('
+        'hasGhanaCard: $hasGhanaCard, '
+        'selectedIdType: $selectedIdType, '
+        'ghanaCardNumber: ${ghanaCardNumberController.text}, '
+        'contactNumber: ${contactNumberController.text}, '
+        'childrenCount: $childrenCount'
+        ')';
+  }
+
+  /// Dispose controllers when done
+  void dispose() {
+    ghanaCardNumberController.dispose();
+    idNumberController.dispose();
+    contactNumberController.dispose();
+    childrenCountController.dispose();
+    noConsentReasonController.dispose();
   }
 }

@@ -567,10 +567,10 @@ class HouseholdModel {
   }
 
   /// Update consent decision
-  HouseholdModel updateConsent(bool given, {String? reason}) {
+  HouseholdModel updateConsent(bool given, {String? refusalReason}) {
     return copyWith(
       consentGiven: given,
-      refusalReason: reason,
+      refusalReason: refusalReason,
       consentTimestamp: given ? DateTime.now() : null,
       updatedAt: DateTime.now().toString(),
       status: given ? 1 : 0,

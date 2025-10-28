@@ -38,6 +38,7 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
   late final TextEditingController _numberOfChildrenController;
   late final TextEditingController _children5To17Controller;
   bool _isOwnController = false;
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -71,6 +72,33 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
     super.dispose();
   }
 
+// In the parent widget that shows ChildrenHouseholdPage
+void _onChildDetailsComplete(int children5To17) {
+  setState(() {
+    // Update your state with the returned data
+    _householdData = _householdData.copyWith(children5To17: children5To17);
+  });
+}
+
+// Add this method to ensure the state is updated when the widget is updated
+@override
+void didUpdateWidget(ChildrenHouseholdPage oldWidget) {
+  super.didUpdateWidget(oldWidget);
+  if (widget.initialData != oldWidget.initialData) {
+    setState(() {
+      _householdData = widget.initialData ?? ChildrenHouseholdModel.empty();
+      // Update controllers with new data
+      _numberOfChildrenController.text = _householdData.numberOfChildren > 0
+          ? _householdData.numberOfChildren.toString()
+          : '';
+      if (_isOwnController) {
+        _children5To17Controller.text = _householdData.children5To17 > 0
+            ? _householdData.children5To17.toString()
+            : '';
+      }
+    });
+  }
+}
   void _updateHouseholdData(ChildrenHouseholdModel newData) {
     setState(() {
       _householdData = newData;

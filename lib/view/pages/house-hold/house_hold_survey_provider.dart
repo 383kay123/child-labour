@@ -4,8 +4,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:uuid/uuid.dart';
-import '../../../controller/database/household_survey_db.dart';
+// Note: Database and UUID imports are commented out as they're not currently used
+// import 'package:uuid/uuid.dart';
+// import '../../../controller/database/household_survey_db.dart';
 import '../../models/household_survey.dart';
 
 class HouseHoldSurveyProvider extends ChangeNotifier {
@@ -1197,10 +1198,14 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
     {'question': 'Provide end time of survey', 'type': 'date'},
   ];
 
-  final HouseholdSurveyDB _db = HouseholdSurveyDB();
-  String _currentSurveyId = const Uuid().v4();
+  // Database and state management fields
+  // These are currently unused due to disabled persistence but kept for future implementation
+  // final HouseholdSurveyDB _db = HouseholdSurveyDB();
+  // String _currentSurveyId = const Uuid().v4();
+  // String? _currentSection;
+  
+  // Currently used state
   int _currentQuestionIndex = 0;
-  String? _currentSection;
   final Map<String, dynamic> _responses = {};
   bool _isLoading = true;
 
@@ -1214,25 +1219,17 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
   dynamic getCurrentResponse(String questionId) => _responses[questionId];
 
   // Initialize survey
-  Future<void> initializeSurvey({String? surveyId, bool isNewSurvey = true}) async {
+  Future<void> initializeSurvey({bool isNewSurvey = true}) async {
     _isLoading = true;
-    _currentSurveyId = surveyId ?? const Uuid().v4();
     
-    if (!isNewSurvey) {
-      final progress = await _db.getProgress(_currentSurveyId);
-      if (progress != null) {
-        _currentQuestionIndex = progress.currentQuestionIndex;
-        _currentSection = progress.currentSection;
-      }
+    // Reset state for new survey
+    if (isNewSurvey) {
+      _currentQuestionIndex = 0;
+      _responses.clear();
     }
-
-    // Load existing responses
-    final existingResponses = await _db.getResponses(_currentSurveyId);
-    _responses.clear();
-    for (var response in existingResponses) {
-      _responses[response.questionId] = response.response;
-    }
-
+    // Note: Persistence across app restarts is currently disabled
+    // To re-enable, uncomment the database-related code and fields
+    
     _isLoading = false;
     notifyListeners();
   }
@@ -1256,18 +1253,19 @@ class HouseHoldSurveyProvider extends ChangeNotifier {
   Future<void> saveResponse(String questionId, dynamic value) async {
     _responses[questionId] = value;
     
-    await _db.saveResponse(SurveyResponse(
-      surveyId: _currentSurveyId,
-      questionId: questionId,
-      response: value,
-      section: _currentSection,
-    ));
+    // Disabled saving to database to prevent persistence across app restarts
+    // await _db.saveResponse(SurveyResponse(
+    //   surveyId: _currentSurveyId,
+    //   questionId: questionId,
+    //   response: value,
+    //   section: _currentSection,
+    // ));
     
-    await _db.saveProgress(SurveyProgress(
-      surveyId: int.tryParse(_currentSurveyId) ?? 0,
-      currentSection: _currentSection ?? 'general',
-      currentQuestionIndex: _currentQuestionIndex,
-    ));
+    // await _db.saveProgress(SurveyProgress(
+    //   surveyId: int.tryParse(_currentSurveyId) ?? 0,
+    //   currentSection: _currentSection ?? 'general',
+    //   currentQuestionIndex: _currentQuestionIndex,
+    // ));
     
     notifyListeners();
   }

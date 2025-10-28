@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../../controller/models/farmeridentification_model.dart';
 
-/// A collection of reusable spacing constants for consistent UI layout.
+/// A utility class for consistent spacing throughout the UI
 class _Spacing {
   static const double xs = 4.0;
   static const double sm = 8.0;
@@ -15,44 +16,360 @@ class _Spacing {
   static const double xl = 32.0;
 }
 
+/// Extension to replace firstOrNull which doesn't exist on Iterable by default
+extension IterableExtension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
+}
+
+/// A widget that displays and collects farmer identification information.
 class FarmerIdentification1Page extends StatefulWidget {
-  final Function(FarmerIdentificationData)?
-      onComplete; // Changed from Map<String, dynamic> to FarmerIdentificationData
+  final Function(FarmerIdentificationData)? onComplete;
   final FarmerIdentificationData data;
   final ValueChanged<FarmerIdentificationData> onDataChanged;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
+  final Map<String, String>? validationErrors;
 
-  const FarmerIdentification1Page({
+  FarmerIdentification1Page({
     Key? key,
     this.onComplete,
     required this.data,
     required this.onDataChanged,
     this.onPrevious,
     this.onNext,
+    this.validationErrors,
   }) : super(key: key);
 
-  @override
-  _FarmerIdentification1PageState createState() =>
-      _FarmerIdentification1PageState();
+  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+ @override
+State<FarmerIdentification1Page> createState() => FarmerIdentification1PageState();
+
+
+  /// Validates the form and returns true if all validations pass
+  bool validateForm() {
+    final isValid = formKey.currentState?.validate() ?? false;
+    // Get the state using the global key if available
+    if (formKey.currentContext != null) {
+      final state = formKey.currentContext!.findAncestorStateOfType<FarmerIdentification1PageState>();
+      if (state != null) {
+        return isValid && state.validateForm();
+      }
+    }
+    return isValid;
+  }
 }
 
-class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
-  final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
+class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
+  static const String _tag = 'FarmerIdentification1Page';
+  
+  // Map to store validation errors
+  final Map<String, String> _validationErrors = {};
+  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  
+  // Getter for validation errors
+  Map<String, String> get validationErrors => _validationErrors;
+  
+  // Form field controllers
+  late final TextEditingController _ghanaCardNumberController;
+  late final TextEditingController _idNumberController;
+  late final TextEditingController _contactNumberController;
+  late final TextEditingController _childrenCountController;
+  late final TextEditingController _noConsentReasonController;
+  
+  // For managing child inputs
+  final Map<int, TextEditingController> _childFirstNameControllers = {};
+  final Map<int, TextEditingController> _childSurnameControllers = {};
+  
+  // Focus nodes for text fields
+  late final FocusNode _ghanaCardNumberFocus;
+  late final FocusNode _idNumberFocus;
+  late final FocusNode _contactNumberFocus;
+  late final FocusNode _childrenCountFocus;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize controllers with data values
+    _ghanaCardNumberController = TextEditingController(
+      text: widget.data.ghanaCardNumber ?? ''
+    );
+    _idNumberController = TextEditingController(
+      text: widget.data.idNumber ?? ''
+    );
+    _contactNumberController = TextEditingController(
+      text: widget.data.contactNumber ?? ''
+    );
+    _childrenCountController = TextEditingController(
+      text: widget.data.childrenCount > 0 ? widget.data.childrenCount.toString() : ''
+    );
+    _noConsentReasonController = TextEditingController(
+      text: widget.data.noConsentReason ?? ''
+    );
+    
+    // Initialize focus nodes
+    _ghanaCardNumberFocus = FocusNode();
+    _idNumberFocus = FocusNode();
+    _contactNumberFocus = FocusNode();
+    _childrenCountFocus = FocusNode();
+    
+    // Add listeners for real-time validation and data updates
+    _ghanaCardNumberController.addListener(_onGhanaCardNumberChanged);
+    _idNumberController.addListener(_onIdNumberChanged);
+    _contactNumberController.addListener(_onContactNumberChanged);
+    _childrenCountController.addListener(_onChildrenCountChanged);
+    _noConsentReasonController.addListener(_onNoConsentReasonChanged);
+    
+    // Initialize child controllers
+    _initializeChildControllers();
+    
+    developer.log('[$_tag] Page initialized', name: _tag);
   }
 
   @override
   void dispose() {
+    // Dispose all controllers
+    _ghanaCardNumberController.dispose();
+    _idNumberController.dispose();
+    _contactNumberController.dispose();
+    _childrenCountController.dispose();
+    _noConsentReasonController.dispose();
+    
+    // Dispose focus nodes
+    _ghanaCardNumberFocus.dispose();
+    _idNumberFocus.dispose();
+    _contactNumberFocus.dispose();
+    _childrenCountFocus.dispose();
+    
+    // Dispose child controllers
+    for (final controller in _childFirstNameControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _childSurnameControllers.values) {
+      controller.dispose();
+    }
+    
     super.dispose();
   }
 
+  // ==================== Initialization Methods ====================
+  
+  void _initializeChildControllers() {
+    for (int i = 0; i < widget.data.children.length; i++) {
+      final child = widget.data.children[i];
+      _childFirstNameControllers[i] = TextEditingController(text: child.firstName);
+      _childSurnameControllers[i] = TextEditingController(text: child.surname);
+    }
+  }
+
+  // ==================== Validation Methods ====================
+  
+  String? _validateGhanaCardNumber(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Ghana Card number is required';
+    }
+    if (!RegExp(r'^GHA-\d{9}-\d$').hasMatch(value)) {
+      return 'Invalid Ghana Card number format (GHA-XXXXXXXXX-X)';
+    }
+    return null;
+  }
+
+  String? _validateIdNumber(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'ID number is required';
+    }
+    return null;
+  }
+
+  String? _validateContactNumber(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Contact number is required';
+    }
+    // Ghana phone numbers: must be exactly 10 digits starting with 0
+    final phoneRegex = RegExp(r'^0[0-9]{9}$');
+    if (!phoneRegex.hasMatch(value)) {
+      return 'Please enter a valid 10-digit Ghanaian phone number';
+    }
+    return null;
+  }
+
+  /// Validates the entire form and returns true if all validations pass.
+  bool validateForm() {
+    developer.log('[$_tag] Starting form validation', name: _tag);
+    _validationErrors.clear();
+
+    // First check if consent is given for ID picture
+    if (widget.data.idPictureConsent == 'No') {
+      // If no consent, skip ID validation entirely
+      developer.log('[$_tag] No consent given, skipping ID validation', name: _tag);
+    } else {
+      // Validate Ghana Card selection only if consent is given
+      if (widget.data.hasGhanaCard == null) {
+        _validationErrors['ghanaCard'] = 'Please specify if you have a Ghana Card';
+        developer.log('[$_tag] Validation failed: Ghana Card not specified', name: _tag);
+      } else if (widget.data.hasGhanaCard == 'Yes') {
+        // Validate Ghana Card number if user has a Ghana Card and consented
+        final ghanaCardError = _validateGhanaCardNumber(_ghanaCardNumberController.text);
+        if (ghanaCardError != null) {
+          _validationErrors['ghanaCardNumber'] = ghanaCardError;
+          developer.log('[$_tag] Validation failed: Invalid Ghana Card number', name: _tag);
+        }
+      } else {
+        // Validate alternative ID if no Ghana Card but consent is given
+        if (widget.data.selectedIdType == null) {
+          _validationErrors['idType'] = 'Please select an alternative ID type';
+          developer.log('[$_tag] Validation failed: No alternative ID type selected', name: _tag);
+        } else {
+          final idNumberError = _validateIdNumber(_idNumberController.text);
+          if (idNumberError != null) {
+            _validationErrors['idNumber'] = idNumberError;
+            developer.log('[$_tag] Validation failed: Invalid ID number', name: _tag);
+          }
+          
+          // Only require ID image if consent is given
+          if (widget.data.idPictureConsent == 'Yes' && widget.data.idImagePath == null) {
+            _validationErrors['idImage'] = 'Please capture a picture of the ID';
+            developer.log('[$_tag] Validation failed: ID image not captured', name: _tag);
+          }
+        }
+      }
+    }
+
+    // Validate contact number
+    final contactNumberError = _validateContactNumber(_contactNumberController.text);
+    if (contactNumberError != null) {
+      _validationErrors['contactNumber'] = contactNumberError;
+      developer.log('[$_tag] Validation failed: Invalid contact number', name: _tag);
+    }
+
+    // Validate children count
+    final childrenCount = int.tryParse(_childrenCountController.text) ?? 0;
+    if (childrenCount < 0) {
+      _validationErrors['childrenCount'] = 'Number of children cannot be negative';
+      developer.log('[$_tag] Validation failed: Invalid children count', name: _tag);
+    }
+
+    // Validate no consent reason
+    if (widget.data.idPictureConsent == 'No' && _noConsentReasonController.text.trim().isEmpty) {
+      _validationErrors['noConsentReason'] = 'Please provide a reason for not consenting';
+      developer.log('[$_tag] Validation failed: No consent reason missing', name: _tag);
+    }
+
+    final isValid = _validationErrors.isEmpty;
+    developer.log('[$_tag] Form validation ${isValid ? 'succeeded' : 'failed'}. Errors: $_validationErrors', name: _tag);
+    
+    if (mounted) {
+      setState(() {}); // Refresh UI to show validation errors
+    }
+    return isValid;
+  }
+
+  // ==================== Change Handlers ====================
+  
+  void _onGhanaCardNumberChanged() {
+    final newValue = _ghanaCardNumberController.text;
+    
+    // Update the model with the new value
+    widget.onDataChanged(
+      widget.data.copyWith(ghanaCardNumber: newValue),
+    );
+    
+    // Clear validation error when user starts typing
+    if (_validationErrors.containsKey('ghanaCardNumber')) {
+      setState(() {
+        _validationErrors.remove('ghanaCardNumber');
+      });
+    }
+  }
+
+  void _onIdNumberChanged() {
+    final newValue = _idNumberController.text.trim();
+    
+    widget.onDataChanged(
+      widget.data.copyWith(idNumber: newValue),
+    );
+    
+    // Clear validation error when user starts typing
+    if (_validationErrors.containsKey('idNumber')) {
+      setState(() {
+        _validationErrors.remove('idNumber');
+      });
+    }
+  }
+  
+  void _onContactNumberChanged() {
+    final newValue = _contactNumberController.text;
+    
+    // Update the model with the new value
+    widget.onDataChanged(
+      widget.data.copyWith(contactNumber: newValue),
+    );
+    
+    // Clear validation error when user starts typing
+    if (_validationErrors.containsKey('contactNumber')) {
+      setState(() {
+        _validationErrors.remove('contactNumber');
+      });
+    }
+  }
+  
+  void _onChildrenCountChanged() {
+    final count = int.tryParse(_childrenCountController.text) ?? 0;
+    
+    widget.onDataChanged(
+      widget.data.copyWith(childrenCount: count),
+    );
+    
+    // Update child controllers if count changes
+    if (count > _childFirstNameControllers.length) {
+      // Add new controllers
+      for (int i = _childFirstNameControllers.length; i < count; i++) {
+        _childFirstNameControllers[i] = TextEditingController();
+        _childSurnameControllers[i] = TextEditingController();
+      }
+    } else if (count < _childFirstNameControllers.length) {
+      // Remove extra controllers
+      final keysToRemove = _childFirstNameControllers.keys.where((key) => key >= count).toList();
+      for (final key in keysToRemove) {
+        _childFirstNameControllers[key]?.dispose();
+        _childSurnameControllers[key]?.dispose();
+        _childFirstNameControllers.remove(key);
+        _childSurnameControllers.remove(key);
+      }
+    }
+    
+    if (mounted) setState(() {});
+  }
+
+  void _onNoConsentReasonChanged() {
+    final newValue = _noConsentReasonController.text.trim();
+    
+    widget.onDataChanged(
+      widget.data.copyWith(noConsentReason: newValue),
+    );
+    
+    // Clear validation error when user starts typing
+    if (_validationErrors.containsKey('noConsentReason')) {
+      setState(() {
+        _validationErrors.remove('noConsentReason');
+      });
+    }
+  }
+
+  void _onChildNameChanged(int index, String field, String value) {
+    widget.onDataChanged(
+      widget.data.updateChildName(index, field, value),
+    );
+  }
+
+  // ==================== Action Handlers ====================
+
+  /// Takes a picture of the ID using the device's camera.
   Future<void> _takeIdPicture() async {
     try {
+      developer.log('[$_tag] Starting to take ID picture', name: _tag);
+      
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: ImageSource.camera,
@@ -61,61 +378,123 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       );
 
       if (image != null) {
+        developer.log('[$_tag] ID picture captured successfully', name: _tag);
         widget.onDataChanged(widget.data.updateIdImagePath(image.path));
+        // Clear image validation error
+        _validationErrors.remove('idImage');
+        setState(() {}); // Refresh UI to show new image
+      } else {
+        developer.log('[$_tag] User cancelled image capture', name: _tag);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      developer.log(
+        '[$_tag] Error taking picture: $e',
+        error: e,
+        stackTrace: stackTrace,
+        name: _tag,
+      );
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error taking picture: ${e.toString()}')),
+          SnackBar(
+            content: Text('Error taking picture: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }
   }
 
-  void _submitForm() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Validate using model methods
-      final errors = widget.data.validate();
-      if (errors.isNotEmpty) {
-        final firstError = errors.values.first;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(firstError)),
-        );
-        return;
-      }
-
-      setState(() {
-        _isLoading = true;
-      });
-
-      // Prepare the data for submission
-      widget.data.prepareSubmissionData();
+  /// Handles the next button press event.
+  /// Returns true if validation passes, false otherwise
+  bool _handleNext() {
+    developer.log('[$_tag] Next button pressed', name: _tag);
+    
+    // Run validation and check if form is valid
+    final isValid = validateForm();
+    
+    // Update the UI to show validation errors
+    if (mounted) {
+      setState(() {});
+    }
+    
+    if (!isValid) {
+      // Show first validation error
+      final firstError = _validationErrors.values.firstOrNull;
+      developer.log('[$_tag] Validation failed with errors: $_validationErrors', name: _tag);
       
-      // Pass the data object directly to the callback
+      if (mounted) {
+        // Show error message for the first validation error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(firstError ?? 'Please fill in all required fields'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'DISMISS',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
+      return false; // Validation failed
+    }
+
+    try {
+      // If we reach here, form is valid
+      developer.log('[$_tag] Form validation passed', name: _tag);
+      
+      // Prepare data and call onComplete
+      widget.data.prepareSubmissionData();
       widget.onComplete?.call(widget.data);
 
-      if (widget.onNext != null) {
-        widget.onNext!();
+      developer.log('[$_tag] Form submitted successfully', name: _tag);
+      
+      // Only proceed with navigation if we're still mounted
+      if (mounted) {
+        widget.onNext?.call();
       }
-
-      setState(() {
-        _isLoading = false;
-      });
+      return true; // Validation passed
+    } catch (e, stackTrace) {
+      developer.log(
+        '[$_tag] Error submitting form: $e',
+        error: e,
+        stackTrace: stackTrace,
+        name: _tag,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred while saving your information. Please try again.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+      return false;
     }
   }
 
-  Widget _buildQuestionCard({required Widget child}) {
+  // ==================== UI Builder Methods ====================
+
+  /// Builds a card widget to display a form question with consistent styling.
+  Widget _buildQuestionCard({required Widget child, String? errorKey}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
+    
     return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: _Spacing.lg),
+      elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(8.0),
         side: BorderSide(
           color: isDark ? Colors.grey[700]! : Colors.grey.shade200,
-          width: 1,
+          width: 1.0,
         ),
       ),
       color: isDark ? Colors.grey[900] : Colors.white,
@@ -131,6 +510,7 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
     required String? groupValue,
     required String label,
     required ValueChanged<String?> onChanged,
+    String? errorKey,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -145,7 +525,15 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       ),
       value: value,
       groupValue: groupValue,
-      onChanged: onChanged,
+      onChanged: (newValue) {
+        onChanged(newValue);
+        // Clear validation error when user makes selection
+        if (errorKey != null && _validationErrors.containsKey(errorKey)) {
+          setState(() {
+            _validationErrors.remove(errorKey);
+          });
+        }
+      },
       activeColor: Colors.green.shade600,
       contentPadding: EdgeInsets.zero,
       dense: true,
@@ -163,13 +551,16 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
     String hintText = '',
     TextInputType keyboardType = TextInputType.text,
     int? maxLength,
-    String? Function(String?)? validator,
     int maxLines = 1,
-    TextCapitalization textCapitalization = TextCapitalization.none,
     ValueChanged<String>? onChanged,
+    String? errorKey,
+    bool enabled = true,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final hasError = errorKey != null && _validationErrors.containsKey(errorKey);
+    final errorMessage = hasError ? _validationErrors[errorKey] : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,561 +569,642 @@ class _FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
           label,
           style: GoogleFonts.inter(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
             color: isDark ? Colors.white70 : Colors.black87,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: _Spacing.md),
+        const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           maxLength: maxLength,
           maxLines: maxLines,
+          enabled: enabled,
           textCapitalization: textCapitalization,
-          validator: validator,
-          onChanged: onChanged,
+          
+          // Cursor styling
+          cursorColor: isDark ? Colors.white : Colors.black87,
+          cursorWidth: 2.0,
+          
+          // Text styling for visibility
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w400,
+          ),
+          
+          onChanged: (value) {
+            if (onChanged != null) {
+              onChanged(value);
+            }
+            
+            // Clear validation error when user starts typing
+            if (errorKey != null && _validationErrors.containsKey(errorKey)) {
+              setState(() {
+                _validationErrors.remove(errorKey);
+              });
+            }
+          },
+          
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: GoogleFonts.inter(
-              fontSize: 14,
-              color: isDark ? Colors.white54 : Colors.grey.shade600,
+              fontSize: 16,
+              color: isDark ? Colors.white38 : Colors.black38,
             ),
+            filled: true,
+            fillColor: isDark ? Colors.grey[850] : Colors.grey[50],
+            
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
               borderSide: BorderSide(
-                color: isDark ? Colors.grey[700]! : Colors.grey.shade300,
+                color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                width: 1.0,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
               borderSide: BorderSide(
-                color: isDark ? Colors.grey[700]! : Colors.grey.shade300,
+                color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                width: 1.0,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
               borderSide: BorderSide(
-                color: Colors.green.shade600,
-                width: 1.5,
+                color: theme.primaryColor,
+                width: 1.0,
               ),
             ),
-            filled: true,
-            fillColor: isDark ? Colors.grey[900] : Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: _Spacing.lg,
-              vertical: _Spacing.md,
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                width: 1.0,
+              ),
             ),
-          ),
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            color: isDark ? Colors.white : Colors.black87,
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8.0),
+              borderSide: BorderSide(
+                color: theme.primaryColor,
+                width: 1.0,
+              ),
+            ),
+            
+            counterText: '',
+            
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
       ],
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  // ==================== Section Builders ====================
+
+  Widget _buildGhanaCardSection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return _buildQuestionCard(
+      errorKey: 'ghanaCard',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Does the farmer have a Ghana Card?',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+          ),
+          const SizedBox(height: _Spacing.md),
+          Column(
+            children: [
+              _buildRadioOption(
+                value: 'Yes',
+                groupValue: widget.data.hasGhanaCard,
+                label: 'Yes',
+                onChanged: (value) {
+                  widget.onDataChanged(widget.data.updateGhanaCard(value));
+                },
+                errorKey: 'ghanaCard',
+              ),
+              _buildRadioOption(
+                value: 'No',
+                groupValue: widget.data.hasGhanaCard,
+                label: 'No',
+                onChanged: (value) {
+                  widget.onDataChanged(widget.data.updateGhanaCard(value));
+                },
+                errorKey: 'ghanaCard',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlternativeIdSection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    if (widget.data.hasGhanaCard != 'No') return const SizedBox.shrink();
+
+    return _buildQuestionCard(
+      errorKey: 'idType',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Which other national id card is available?',
+           style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+          ),
+          const SizedBox(height: _Spacing.md),
+          Column(
+            children: [
+              _buildRadioOption(
+                value: 'voter_id',
+                groupValue: widget.data.selectedIdType,
+                label: 'Voter ID',
+                onChanged: (value) {
+                  widget.onDataChanged(widget.data.updateIdType(value));
+                },
+                errorKey: 'idType',
+              ),
+              _buildRadioOption(
+                value: 'drivers_license',
+                groupValue: widget.data.selectedIdType,
+                label: 'Driver\'s License',
+                onChanged: (value) {
+                  widget.onDataChanged(widget.data.updateIdType(value));
+                },
+                errorKey: 'idType',
+              ),
+              _buildRadioOption(
+                value: 'nhis_card',
+                groupValue: widget.data.selectedIdType,
+                label: 'NHIS Card',
+                onChanged: (value) {
+                  widget.onDataChanged(widget.data.updateIdType(value));
+                },
+                errorKey: 'idType',
+              ),
+              _buildRadioOption(
+                value: 'passport',
+                groupValue: widget.data.selectedIdType,
+                label: 'Passport',
+                onChanged: (value) {
+                  widget.onDataChanged(widget.data.updateIdType(value));
+                },
+                errorKey: 'idType',
+              ),
+              _buildRadioOption(
+                value: 'ssnit',
+                groupValue: widget.data.selectedIdType,
+                label: 'SSNIT',
+                onChanged: (value) {
+                  widget.onDataChanged(widget.data.updateIdType(value));
+                },
+                errorKey: 'idType',
+              ),
+              _buildRadioOption(
+                value: 'birth_certificate',
+                groupValue: widget.data.selectedIdType,
+                label: 'Birth Certificate',
+                onChanged: (value) {
+                  widget.onDataChanged(widget.data.updateIdType(value));
+                },
+                errorKey: 'idType',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConsentSection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    if ((widget.data.hasGhanaCard != 'Yes') &&
+        !(widget.data.hasGhanaCard == 'No' && widget.data.selectedIdType != null)) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        _buildQuestionCard(
+          errorKey: 'consent',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.data.hasGhanaCard == 'Yes'
+                    ? 'Do you consent to us taking a picture of your Ghana Card and recording the card number?'
+                    : 'Do you consent to us taking a picture of your ${_getIdTypeDisplayName(widget.data.selectedIdType)} and recording the ID number?',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+              const SizedBox(height: _Spacing.md),
+              Column(
+                children: [
+                  _buildRadioOption(
+                    value: 'Yes',
+                    groupValue: widget.data.idPictureConsent,
+                    label: 'Yes',
+                    onChanged: (value) {
+                      widget.onDataChanged(widget.data.updatePictureConsent(value));
+                    },
+                    errorKey: 'consent',
+                  ),
+                  _buildRadioOption(
+                    value: 'No',
+                    groupValue: widget.data.idPictureConsent,
+                    label: 'No',
+                    onChanged: (value) {
+                      widget.onDataChanged(widget.data.updatePictureConsent(value));
+                    },
+                    errorKey: 'consent',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        // Show reason field only when consent is 'No'
+        if (widget.data.idPictureConsent == 'No')
+          Padding(
+            padding: const EdgeInsets.only(top: _Spacing.md),
+            child: _buildQuestionCard(
+              errorKey: 'noConsentReason',
+              child: _buildTextField(
+                label: 'Please specify reason',
+                controller: _noConsentReasonController,
+                hintText: 'Enter your reason for not providing consent',
+                keyboardType: TextInputType.multiline,
+                maxLines: 3,
+                onChanged: (value) {
+                  // Handled by listener
+                },
+                errorKey: 'noConsentReason',
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildIdNumberSection() {
+    // Ghana Card Number Field
+    if (widget.data.hasGhanaCard == 'Yes' && widget.data.idPictureConsent == 'Yes') {
+      return _buildQuestionCard(
+        errorKey: 'ghanaCardNumber',
+        child: _buildTextField(
+          label: 'Ghana Card Number (GHA-XXXXXXXXX-X)',
+          controller: _ghanaCardNumberController,
+          hintText: 'Enter Ghana Card number (e.g., GHA-123456789-0)',
+          keyboardType: TextInputType.text,
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (value) {
+            // Handled by listener
+          },
+          errorKey: 'ghanaCardNumber',
+        ),
+      );
+    }
+
+    // Alternative ID Number Field
+    if (widget.data.hasGhanaCard == 'No' &&
+        widget.data.selectedIdType != null &&
+        widget.data.idPictureConsent == 'Yes') {
+      return _buildQuestionCard(
+        errorKey: 'idNumber',
+        child: _buildTextField(
+          label: '${_getIdTypeDisplayName(widget.data.selectedIdType)} Number',
+          controller: _idNumberController,
+          hintText: 'Enter your ${_getIdTypeDisplayName(widget.data.selectedIdType)} number',
+          keyboardType: TextInputType.text,
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (value) {
+            // Handled by listener
+          },
+          errorKey: 'idNumber',
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildIdPictureSection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    if (widget.data.idPictureConsent != 'Yes') return const SizedBox.shrink();
+
+    return _buildQuestionCard(
+      errorKey: 'idImage',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.data.hasGhanaCard == 'Yes'
+                ? 'Ghana Card Picture'
+                : '${_getIdTypeDisplayName(widget.data.selectedIdType)} Picture',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: _Spacing.md),
+          Container(
+            width: double.infinity,
+            height: 200,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+              color: isDark ? Colors.grey[800] : Colors.grey[100],
+            ),
+            child: widget.data.idImagePath == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.photo_camera,
+                        size: 48,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No image captured',
+                        style: GoogleFonts.inter(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  )
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(widget.data.idImagePath!),
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: _Spacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _takeIdPicture,
+              icon: const Icon(Icons.camera_alt, size: 20),
+              label: Text(
+                widget.data.idImagePath == null
+                    ? 'Take Picture of ID'
+                    : 'Retake Picture',
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactNumberSection() {
+    return _buildQuestionCard(
+      errorKey: 'contactNumber',
+      child: _buildTextField(
+        label: 'Contact Number',
+        controller: _contactNumberController,
+        hintText: 'Enter 10-digit phone number (e.g., 0241234567)',
+        keyboardType: TextInputType.phone,
+        maxLength: 10,
+        onChanged: (value) {
+          // Handled by listener
+        },
+        errorKey: 'contactNumber',
+      ),
+    );
+  }
+
+  Widget _buildChildrenCountSection() {
+    return _buildQuestionCard(
+      errorKey: 'childrenCount',
+      child: _buildTextField(
+        label: 'Number of Children (Aged 5-17)',
+        controller: _childrenCountController,
+        hintText: 'Enter number of children',
+        keyboardType: TextInputType.number,
+        onChanged: (value) {
+          // Handled by listener
+        },
+        errorKey: 'childrenCount',
+      ),
+    );
+  }
+
+  Widget _buildChildrenDetailsSection() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final childrenCount = widget.data.childrenCount;
 
-    return Scaffold(
-      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(_Spacing.lg),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Ghana Card Question
-                          _buildQuestionCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Does the farmer have a Ghana Card?',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: isDark
-                                        ? Colors.white70
-                                        : Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: _Spacing.md),
-                                Wrap(
-                                  spacing: 20,
-                                  children: [
-                                    _buildRadioOption(
-                                      value: 'Yes',
-                                      groupValue: widget.data.hasGhanaCard,
-                                      label: 'Yes',
-                                      onChanged: (value) {
-                                        widget.onDataChanged(
-                                            widget.data.updateGhanaCard(value));
-                                      },
-                                    ),
-                                    _buildRadioOption(
-                                      value: 'No',
-                                      groupValue: widget.data.hasGhanaCard,
-                                      label: 'No',
-                                      onChanged: (value) {
-                                        widget.onDataChanged(
-                                            widget.data.updateGhanaCard(value));
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+    if (childrenCount <= 0) return const SizedBox.shrink();
 
-                          // Alternative ID Options (only show if no Ghana Card)
-                          if (widget.data.hasGhanaCard == 'No')
-                            _buildQuestionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Which other national id card is available?',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  Column(
-                                    children: [
-                                      _buildRadioOption(
-                                        value: 'voter_id',
-                                        groupValue: widget.data.selectedIdType,
-                                        label: 'Voter ID',
-                                        onChanged: (value) {
-                                          widget.onDataChanged(
-                                              widget.data.updateIdType(value));
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'drivers_license',
-                                        groupValue: widget.data.selectedIdType,
-                                        label: 'Driver\'s License',
-                                        onChanged: (value) {
-                                          widget.onDataChanged(
-                                              widget.data.updateIdType(value));
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'nhis_card',
-                                        groupValue: widget.data.selectedIdType,
-                                        label: 'NHIS Card',
-                                        onChanged: (value) {
-                                          widget.onDataChanged(
-                                              widget.data.updateIdType(value));
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'passport',
-                                        groupValue: widget.data.selectedIdType,
-                                        label: 'Passport',
-                                        onChanged: (value) {
-                                          widget.onDataChanged(
-                                              widget.data.updateIdType(value));
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'ssnit',
-                                        groupValue: widget.data.selectedIdType,
-                                        label: 'SSNIT',
-                                        onChanged: (value) {
-                                          widget.onDataChanged(
-                                              widget.data.updateIdType(value));
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'birth_certificate',
-                                        groupValue: widget.data.selectedIdType,
-                                        label: 'Birth Certificate',
-                                        onChanged: (value) {
-                                          widget.onDataChanged(
-                                              widget.data.updateIdType(value));
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
+    return _buildQuestionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.child_care, color: Colors.green.shade600),
+              const SizedBox(width: 12),
+              Text(
+                'Farmer\'s Children (Aged 5-17)',
+             style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: _Spacing.md),
+          Text(
+            'Total Children: $childrenCount',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: isDark ? Colors.white60 : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: _Spacing.sm),
+          ...List.generate(
+            childrenCount,
+            (index) {
+              final childNumber = index + 1;
+              
+              // Get or create controllers for this child
+              final firstNameController = _childFirstNameControllers.putIfAbsent(
+                index, 
+                () => TextEditingController(
+                  text: index < widget.data.children.length 
+                      ? widget.data.children[index].firstName 
+                      : ''
+                )
+              );
+              final surnameController = _childSurnameControllers.putIfAbsent(
+                index, 
+                () => TextEditingController(
+                  text: index < widget.data.children.length 
+                      ? widget.data.children[index].surname 
+                      : ''
+                )
+              );
 
-                          // CONSENT QUESTION - Show after Ghana Card selection OR alternative ID selection
-                          if ((widget.data.hasGhanaCard == 'Yes') ||
-                              (widget.data.hasGhanaCard == 'No' &&
-                                  widget.data.selectedIdType != null))
-                            _buildQuestionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.data.hasGhanaCard == 'Yes'
-                                        ? 'Do you consent to us taking a picture of your Ghana Card and recording the card number?'
-                                        : 'Do you consent to us taking a picture of your ${widget.data.selectedIdTypeDisplayName} and recording the ID number?',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  Wrap(
-                                    spacing: 20,
-                                    children: [
-                                      _buildRadioOption(
-                                        value: 'Yes',
-                                        groupValue:
-                                            widget.data.idPictureConsent,
-                                        label: 'Yes',
-                                        onChanged: (value) {
-                                          widget.onDataChanged(widget.data
-                                              .updatePictureConsent(value));
-                                        },
-                                      ),
-                                      _buildRadioOption(
-                                        value: 'No',
-                                        groupValue:
-                                            widget.data.idPictureConsent,
-                                        label: 'No',
-                                        onChanged: (value) {
-                                          widget.onDataChanged(widget.data
-                                              .updatePictureConsent(value));
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // Ghana Card Number Field (only show if they have Ghana Card AND consent)
-                          if (widget.data.hasGhanaCard == 'Yes' &&
-                              widget.data.idPictureConsent == 'Yes')
-                            _buildQuestionCard(
-                              child: _buildTextField(
-                                label: 'Ghana Card Number',
-                                controller:
-                                    widget.data.ghanaCardNumberController,
-                                hintText: 'Enter your Ghana Card number',
-                                keyboardType: TextInputType.text,
-                                textCapitalization:
-                                    TextCapitalization.characters,
-                                validator: (value) =>
-                                    widget.data.validateGhanaCardNumber(),
-                                onChanged: (value) {
-                                  widget.onDataChanged(
-                                      widget.data.updateGhanaCardNumber(value));
-                                },
-                              ),
-                            ),
-
-                          // Alternative ID Number Field (only show if no Ghana Card AND consent)
-                          if (widget.data.hasGhanaCard == 'No' &&
-                              widget.data.selectedIdType != null &&
-                              widget.data.idPictureConsent == 'Yes')
-                            _buildQuestionCard(
-                              child: _buildTextField(
-                                label:
-                                    '${widget.data.selectedIdTypeDisplayName} Number',
-                                controller: widget.data.idNumberController,
-                                hintText:
-                                    'Enter your ${widget.data.selectedIdTypeDisplayName} number',
-                                keyboardType: TextInputType.text,
-                                textCapitalization:
-                                    TextCapitalization.characters,
-                                validator: (value) =>
-                                    widget.data.validateIdNumber(),
-                                onChanged: (value) {
-                                  widget.onDataChanged(
-                                      widget.data.updateIdNumber(value));
-                                },
-                              ),
-                            ),
-
-                          // ID Picture Capture (only show if consented)
-                          if (widget.data.idPictureConsent == 'Yes')
-                            _buildQuestionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.data.hasGhanaCard == 'Yes'
-                                        ? 'Ghana Card Picture'
-                                        : '${widget.data.selectedIdTypeDisplayName} Picture',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  Container(
-                                    width: double.infinity,
-                                    height: 200,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.grey.shade300),
-                                      borderRadius: BorderRadius.circular(8),
-                                      color: Colors.grey[100],
-                                    ),
-                                    child: widget.data.idImagePath == null
-                                        ? Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.photo_camera,
-                                                size: 48,
-                                                color: Colors.grey.shade400,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'No image captured',
-                                                style: GoogleFonts.inter(
-                                                  color: Colors.grey.shade600,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                        : ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            child: Image.file(
-                                              File(widget.data.idImagePath!),
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                            ),
-                                          ),
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _takeIdPicture,
-                                      icon: const Icon(Icons.camera_alt,
-                                          size: 20),
-                                      label: Text(
-                                        widget.data.idImagePath == null
-                                            ? 'Take Picture of ID'
-                                            : 'Retake Picture',
-                                        style: GoogleFonts.inter(fontSize: 14),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green.shade600,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 12),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // Reason for No Consent (only show if declined consent)
-                          if (widget.data.idPictureConsent == 'No')
-                            _buildQuestionCard(
-                              child: _buildTextField(
-                                label: 'Please specify reason',
-                                controller: widget.data.reasonController,
-                                hintText: 'Enter reason for not consenting',
-                                maxLines: 2,
-                                validator: (value) =>
-                                    widget.data.validateNoConsentReason(),
-                                onChanged: (value) {
-                                  widget.onDataChanged(
-                                      widget.data.updateNoConsentReason(value));
-                                },
-                              ),
-                            ),
-
-                          // Contact Number
-                          _buildQuestionCard(
-                            child: _buildTextField(
-                              label: 'Contact Number',
-                              controller: widget.data.contactNumberController,
-                              hintText: 'Enter 10-digit phone number',
-                              keyboardType: TextInputType.phone,
-                              maxLength: 10,
-                              validator: (value) =>
-                                  widget.data.validateContactNumber(),
-                              onChanged: (value) {
-                                widget.onDataChanged(
-                                    widget.data.updateContactNumber(value));
-                              },
-                            ),
-                          ),
-
-                          // Number of Children
-                          _buildQuestionCard(
-                            child: _buildTextField(
-                              label: 'Number of Children (Aged 5-17)',
-                              controller: widget.data.childrenCountController,
-                              hintText: 'Enter number of children',
-                              keyboardType: TextInputType.number,
-                              validator: (value) =>
-                                  widget.data.validateChildrenCount(),
-                              onChanged: (value) {
-                                widget.onDataChanged(
-                                    widget.data.updateChildrenCount(value));
-                              },
-                            ),
-                          ),
-
-                          // Children Details
-                          if (childrenCount > 0)
-                            _buildQuestionCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.child_care,
-                                          color: Colors.green.shade600),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Farmer\'s Children (Aged 5-17)',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: _Spacing.md),
-                                  Text(
-                                    'Total Children: ${widget.data.childrenCountController.text.isEmpty ? "0" : widget.data.childrenCountController.text}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      color: isDark
-                                          ? Colors.white60
-                                          : Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: _Spacing.sm),
-                                  ...List.generate(
-                                    childrenCount,
-                                    (index) {
-                                      final childNumber = index + 1;
-                                      // Create controllers for each child field
-                                      final firstNameController =
-                                          TextEditingController();
-                                      final surnameController =
-                                          TextEditingController();
-
-                                      // Set initial values if they exist
-                                      if (index < widget.data.children.length) {
-                                        firstNameController.text = widget
-                                            .data.children[index].firstName;
-                                        surnameController.text =
-                                            widget.data.children[index].surname;
-                                      }
-
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const SizedBox(height: _Spacing.lg),
-                                          Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.grey[800]
-                                                  : Colors.grey[100],
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Child $childNumber Details',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 12),
-                                                // First Name Field
-                                                _buildTextField(
-                                                  label:
-                                                      'Enter first name of child No. $childNumber',
-                                                  controller:
-                                                      firstNameController,
-                                                  hintText: 'First name',
-                                                  onChanged: (value) {
-                                                    widget.onDataChanged(
-                                                      widget.data
-                                                          .updateChildName(
-                                                              index,
-                                                              'firstName',
-                                                              value),
-                                                    );
-                                                  },
-                                                ),
-                                                const SizedBox(height: 16),
-                                                // Surname Field
-                                                _buildTextField(
-                                                  label:
-                                                      'Enter surname of child No. $childNumber',
-                                                  controller: surnameController,
-                                                  hintText: 'Surname',
-                                                  onChanged: (value) {
-                                                    widget.onDataChanged(
-                                                      widget.data
-                                                          .updateChildName(
-                                                              index,
-                                                              'surname',
-                                                              value),
-                                                    );
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          const SizedBox(height: 80),
-                        ],
-                      ),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: _Spacing.lg),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[800] : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Child $childNumber',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        _buildTextField(
+                          label: 'First Name',
+                          controller: firstNameController,
+                          hintText: 'Enter first name',
+                          onChanged: (value) {
+                            _onChildNameChanged(index, 'firstName', value);
+                          },
+                          errorKey: 'child_${index}_firstName',
+                        ),
+                        const SizedBox(height: _Spacing.md),
+                        _buildTextField(
+                          label: 'Surname',
+                          controller: surnameController,
+                          hintText: 'Enter surname',
+                          onChanged: (value) {
+                            _onChildNameChanged(index, 'surname', value);
+                          },
+                          errorKey: 'child_${index}_surname',
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
-}
+
+  // ==================== Main Build Method ====================
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(_Spacing.lg),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ghana Card Question
+                    _buildGhanaCardSection(),
+
+                    // Alternative ID Options
+                    _buildAlternativeIdSection(),
+
+                    // Consent Question
+                    _buildConsentSection(),
+
+                    // ID Number Field (Ghana Card or Alternative)
+                    _buildIdNumberSection(),
+
+                    // ID Picture Capture
+                    _buildIdPictureSection(),
+
+                    // Contact Number
+                    _buildContactNumberSection(),
+
+                    // Number of Children
+                    _buildChildrenCountSection(),
+
+                    // Children Details
+                    _buildChildrenDetailsSection(),
+
+                    const SizedBox(height: 80),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== Helper Methods ====================
+
+  /// Helper method to convert ID type key to display name
+  String _getIdTypeDisplayName(String? idType) {
+    switch (idType) {
+      case 'voter_id':
+        return 'Voter ID';
+      case 'drivers_license':
+        return 'Driver\'s License';
+      case 'nhis_card':
+        return 'NHIS Card';
+      case 'passport':
+        return 'Passport';
+      case 'ssnit':
+        return 'SSNIT';
+      case 'birth_certificate':
+        return 'Birth Certificate';
+      default:
+        return 'ID';
+    }
+  }
+} 

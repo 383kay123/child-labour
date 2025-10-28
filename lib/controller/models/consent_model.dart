@@ -10,9 +10,12 @@ class ConsentData {
   final String? availablePerson;
   final String? otherSpecification;
   final String? otherCommunityName;
+  final String? refusalReason;  // New field for storing refusal reason
   final bool consentGiven;
+  final bool declinedConsent;
   final TextEditingController otherSpecController;
   final TextEditingController otherCommunityController;
+  final TextEditingController refusalReasonController;  // New controller for refusal reason
 
   // Survey state fields
   final DateTime? interviewStartTime;
@@ -30,8 +33,11 @@ class ConsentData {
     this.otherSpecification,
     this.otherCommunityName,
     this.consentGiven = false,
+    this.declinedConsent = false,
+    this.refusalReason,
     required this.otherSpecController,
     required this.otherCommunityController,
+    required this.refusalReasonController,
     this.interviewStartTime,
     this.timeStatus = 'Not recorded',
     this.currentPosition,
@@ -49,7 +55,9 @@ class ConsentData {
       'availablePerson': availablePerson,
       'otherSpecification': otherSpecification,
       'otherCommunityName': otherCommunityName,
+      'refusalReason': refusalReason,
       'consentGiven': consentGiven,
+      'declinedConsent': declinedConsent,
       'interviewStartTime': interviewStartTime?.toIso8601String(),
       'timeStatus': timeStatus,
       'currentPosition': currentPosition != null
@@ -74,11 +82,16 @@ class ConsentData {
       otherSpecification: map['otherSpecification']?.toString(),
       otherCommunityName: map['otherCommunityName']?.toString(),
       consentGiven: map['consentGiven'] == true,
+      declinedConsent: map['declinedConsent'] == true,
+      refusalReason: map['refusalReason']?.toString(),
       otherSpecController: TextEditingController(
         text: map['otherSpecification']?.toString() ?? '',
       ),
       otherCommunityController: TextEditingController(
         text: map['otherCommunityName']?.toString() ?? '',
+      ),
+      refusalReasonController: TextEditingController(
+        text: map['refusalReason']?.toString() ?? '',
       ),
       interviewStartTime: map['interviewStartTime'] != null
           ? DateTime.parse(map['interviewStartTime'] as String)
@@ -108,6 +121,7 @@ class ConsentData {
     return ConsentData(
       otherSpecController: TextEditingController(),
       otherCommunityController: TextEditingController(),
+      refusalReasonController: TextEditingController(),
     );
   }
 
@@ -121,8 +135,11 @@ class ConsentData {
     String? otherSpecification,
     String? otherCommunityName,
     bool? consentGiven,
+    bool? declinedConsent,
+    String? refusalReason,
     TextEditingController? otherSpecController,
     TextEditingController? otherCommunityController,
+    TextEditingController? refusalReasonController,
     DateTime? interviewStartTime,
     String? timeStatus,
     Position? currentPosition,
@@ -138,10 +155,14 @@ class ConsentData {
       availablePerson: availablePerson ?? this.availablePerson,
       otherSpecification: otherSpecification ?? this.otherSpecification,
       otherCommunityName: otherCommunityName ?? this.otherCommunityName,
-      consentGiven: consentGiven ?? this.consentGiven,
+consentGiven: consentGiven ?? this.consentGiven,
+      declinedConsent: declinedConsent ?? this.declinedConsent,
       otherSpecController: otherSpecController ?? this.otherSpecController,
       otherCommunityController:
           otherCommunityController ?? this.otherCommunityController,
+      refusalReason: refusalReason ?? this.refusalReason,
+      refusalReasonController:
+          refusalReasonController ?? this.refusalReasonController,
       interviewStartTime: interviewStartTime ?? this.interviewStartTime,
       timeStatus: timeStatus ?? this.timeStatus,
       currentPosition: currentPosition ?? this.currentPosition,
@@ -177,7 +198,18 @@ class ConsentData {
 
   /// Update consent
   ConsentData updateConsent(bool value) {
-    return copyWith(consentGiven: value);
+    return copyWith(
+      consentGiven: value,
+      declinedConsent: value ? false : declinedConsent, // Reset declinedConsent if giving consent
+    );
+  }
+
+  /// Update declined consent
+  ConsentData updateDeclinedConsent(bool value) {
+    return copyWith(
+      declinedConsent: value,
+      consentGiven: value ? false : consentGiven, // Reset consentGiven if declining
+    );
   }
 
   /// Update other specification
@@ -311,10 +343,11 @@ class ConsentData {
   void dispose() {
     otherSpecController.dispose();
     otherCommunityController.dispose();
+    refusalReasonController.dispose();
   }
 
   @override
   String toString() {
-    return 'ConsentData(communityType: $communityType, consentGiven: $consentGiven, farmerAvailable: $farmerAvailable)';
+    return 'ConsentData(communityType: $communityType, consentGiven: $consentGiven, declinedConsent: $declinedConsent, farmerAvailable: $farmerAvailable, refusalReason: $refusalReason)';
   }
 }

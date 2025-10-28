@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../pages/Monitoring/monitoring_assessment_form.dart';
 import '../pages/community-assessment/assessment-form.dart';
@@ -28,6 +29,12 @@ class _SurveyListPageState extends State<SurveyListPage> {
   Future<void> _clearSurveyData() async {
     try {
       await _dbHelper.clearAllSurveyData();
+      
+      // Clear shared preferences for survey data
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('selected_town');
+      await prefs.remove('selected_farmer');
+      
     } catch (e) {
       debugPrint('Error clearing survey data: $e');
     } finally {
@@ -48,7 +55,7 @@ class _SurveyListPageState extends State<SurveyListPage> {
         ),
       );
     }
-    
+
     // Child-friendly survey data with emojis and better descriptions
     final List<Map<String, dynamic>> surveys = [
       {
@@ -176,33 +183,7 @@ class _SurveyListPageState extends State<SurveyListPage> {
             ),
           ),
 
-          // Bottom encouragement
-          Container(
-            margin: const EdgeInsets.all(20),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF9800), Color(0xFFFFF3E0)],
-              ),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Row(
-              children: [
-                Text('⭐', style: GoogleFonts.inter(fontSize: 24)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Thank you for your help in this exercise',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFE65100),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+
         ],
       ),
     );

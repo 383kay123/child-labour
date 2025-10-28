@@ -56,13 +56,14 @@ class CoverPageData {
   factory CoverPageData.empty() => CoverPageData(
         selectedTownCode: null,
         selectedFarmerCode: null,
-        towns: const [],
-        farmers: const [],
+        towns: CoverDummyData.dummyTowns, // Use dummy towns data
+        farmers: CoverDummyData.getDummyFarmers('T001'), // Use dummy farmers data for first town
         townError: null,
         farmerError: null,
         isLoadingTowns: false,
         isLoadingFarmers: false,
         hasUnsavedChanges: false,
+        member: null,
       );
       
   /// Creates a CoverPageData instance with test data
@@ -79,6 +80,9 @@ class CoverPageData {
   bool _isLoadingTowns;
   bool _isLoadingFarmers;
   bool hasUnsavedChanges;
+  
+  /// Household member information
+  final Map<String, dynamic>? member;
 
   String? get selectedTownCode => _selectedTownCode;
   String? get selectedFarmerCode => _selectedFarmerCode;
@@ -98,6 +102,7 @@ class CoverPageData {
     String? townError,
     String? farmerError,
     bool? isLoadingTowns,
+    this.member,
     bool? isLoadingFarmers,
     bool? hasUnsavedChanges,
   })  : _selectedTownCode = selectedTownCode,
