@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:sqflite/sqflite.dart';
-import 'package:human_rights_monitor/controller/db/db.dart';
+import '../household_db_helper.dart';
 import 'package:human_rights_monitor/controller/models/childrenhouseholdmodel.dart';
 
 class ChildrenHouseholdDao {
-  final LocalDBHelper dbHelper;
+  final HouseholdDBHelper dbHelper;
 
   ChildrenHouseholdDao({required this.dbHelper});
 

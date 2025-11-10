@@ -10,7 +10,7 @@ import 'package:human_rights_monitor/controller/models/identification_of_owner_m
 import 'package:human_rights_monitor/controller/models/visit_information_model.dart';
 import 'package:human_rights_monitor/controller/models/workers_in_farm_model.dart';
 import 'package:human_rights_monitor/controller/db/table_names.dart';
-import 'package:human_rights_monitor/controller/db/db_tables/combined_farmer_identification_table.dart' as table;
+import 'package:human_rights_monitor/controller/db/household_tables.dart' as table;
 
 class CombinedFarmerIdentificationDao {
   final LocalDBHelper dbHelper;
@@ -20,30 +20,33 @@ class CombinedFarmerIdentificationDao {
   /// Inserts a new combined farmer identification record
   Future<int> insert(CombinedFarmerIdentificationModel model) async {
     final db = await dbHelper.database;
-    
+
     // Convert nested objects to JSON strings
-    final visitInfoJson = model.visitInformation != null 
-        ? jsonEncode(model.visitInformation!.toMap()) 
+    final visitInfoJson = model.visitInformation != null
+        ? jsonEncode(model.visitInformation!.toMap())
         : null;
-    final ownerInfoJson = model.ownerInformation != null 
-        ? jsonEncode(model.ownerInformation!.toMap()) 
+    final ownerInfoJson = model.ownerInformation != null
+        ? jsonEncode(model.ownerInformation!.toMap())
         : null;
-    final workersInFarmJson = model.workersInFarm != null 
-        ? jsonEncode(model.workersInFarm!.toMap()) 
+    final workersInFarmJson = model.workersInFarm != null
+        ? jsonEncode(model.workersInFarm!.toMap())
         : null;
-    final adultsInfoJson = model.adultsInformation != null 
-        ? jsonEncode(model.adultsInformation!.toMap()) 
+    final adultsInfoJson = model.adultsInformation != null
+        ? jsonEncode(model.adultsInformation!.toMap())
         : null;
-    
+
     final data = {
       table.CombinedFarmerIdentificationTable.coverPageId: model.coverPageId,
       'visit_information': visitInfoJson,
       'owner_information': ownerInfoJson,
       'workers_in_farm': workersInFarmJson,
       'adults_information': adultsInfoJson,
-      table.CombinedFarmerIdentificationTable.createdAt: DateTime.now().toIso8601String(),
-      table.CombinedFarmerIdentificationTable.updatedAt: DateTime.now().toIso8601String(),
-      table.CombinedFarmerIdentificationTable.isSynced: 0, // Not synced by default
+      table.CombinedFarmerIdentificationTable.createdAt:
+          DateTime.now().toIso8601String(),
+      table.CombinedFarmerIdentificationTable.updatedAt:
+          DateTime.now().toIso8601String(),
+      table.CombinedFarmerIdentificationTable.isSynced:
+          0, // Not synced by default
       table.CombinedFarmerIdentificationTable.syncStatus: 0, // Not synced yet
     };
 
@@ -59,32 +62,34 @@ class CombinedFarmerIdentificationDao {
   /// Updates an existing combined farmer identification record
   Future<int> update(CombinedFarmerIdentificationModel model) async {
     if (model.id == null) {
-      throw Exception('Cannot update a combined farmer identification record without an ID');
+      throw Exception(
+          'Cannot update a combined farmer identification record without an ID');
     }
 
     final db = await dbHelper.database;
-    
+
     // Convert nested objects to JSON strings
-    final visitInfoJson = model.visitInformation != null 
-        ? jsonEncode(model.visitInformation!.toMap()) 
+    final visitInfoJson = model.visitInformation != null
+        ? jsonEncode(model.visitInformation!.toMap())
         : null;
-    final ownerInfoJson = model.ownerInformation != null 
-        ? jsonEncode(model.ownerInformation!.toMap()) 
+    final ownerInfoJson = model.ownerInformation != null
+        ? jsonEncode(model.ownerInformation!.toMap())
         : null;
-    final workersInFarmJson = model.workersInFarm != null 
-        ? jsonEncode(model.workersInFarm!.toMap()) 
+    final workersInFarmJson = model.workersInFarm != null
+        ? jsonEncode(model.workersInFarm!.toMap())
         : null;
-    final adultsInfoJson = model.adultsInformation != null 
-        ? jsonEncode(model.adultsInformation!.toMap()) 
+    final adultsInfoJson = model.adultsInformation != null
+        ? jsonEncode(model.adultsInformation!.toMap())
         : null;
-    
+
     final data = {
       table.CombinedFarmerIdentificationTable.coverPageId: model.coverPageId,
       'visit_information': visitInfoJson,
       'owner_information': ownerInfoJson,
       'workers_in_farm': workersInFarmJson,
       'adults_information': adultsInfoJson,
-      table.CombinedFarmerIdentificationTable.updatedAt: DateTime.now().toIso8601String(),
+      table.CombinedFarmerIdentificationTable.updatedAt:
+          DateTime.now().toIso8601String(),
       table.CombinedFarmerIdentificationTable.isSynced: model.isSynced ? 1 : 0,
       table.CombinedFarmerIdentificationTable.syncStatus: model.syncStatus ?? 0,
     };
@@ -100,7 +105,7 @@ class CombinedFarmerIdentificationDao {
   /// Retrieves a combined farmer identification record by ID
   Future<CombinedFarmerIdentificationModel?> getById(int id) async {
     final db = await dbHelper.database;
-    
+
     final maps = await db.query(
       table.CombinedFarmerIdentificationTable.tableName,
       where: '${table.CombinedFarmerIdentificationTable.id} = ?',
@@ -114,9 +119,10 @@ class CombinedFarmerIdentificationDao {
   }
 
   /// Retrieves a combined farmer identification record by cover page ID
-  Future<CombinedFarmerIdentificationModel?> getByCoverPageId(int coverPageId) async {
+  Future<CombinedFarmerIdentificationModel?> getByCoverPageId(
+      int coverPageId) async {
     final db = await dbHelper.database;
-    
+
     final maps = await db.query(
       table.CombinedFarmerIdentificationTable.tableName,
       where: '${table.CombinedFarmerIdentificationTable.coverPageId} = ?',
@@ -132,7 +138,7 @@ class CombinedFarmerIdentificationDao {
   /// Retrieves all unsynced combined farmer identification records
   Future<List<CombinedFarmerIdentificationModel>> getUnsynced() async {
     final db = await dbHelper.database;
-    
+
     final maps = await db.query(
       table.CombinedFarmerIdentificationTable.tableName,
       where: '${table.CombinedFarmerIdentificationTable.isSynced} = ?',
@@ -145,13 +151,15 @@ class CombinedFarmerIdentificationDao {
   /// Marks a record as synced
   Future<int> markAsSynced(int id) async {
     final db = await dbHelper.database;
-    
+
     return await db.update(
       table.CombinedFarmerIdentificationTable.tableName,
       {
         table.CombinedFarmerIdentificationTable.isSynced: 1,
-        table.CombinedFarmerIdentificationTable.syncStatus: 1, // Successfully synced
-        table.CombinedFarmerIdentificationTable.updatedAt: DateTime.now().toIso8601String(),
+        table.CombinedFarmerIdentificationTable.syncStatus:
+            1, // Successfully synced
+        table.CombinedFarmerIdentificationTable.updatedAt:
+            DateTime.now().toIso8601String(),
       },
       where: '${table.CombinedFarmerIdentificationTable.id} = ?',
       whereArgs: [id],
@@ -161,7 +169,7 @@ class CombinedFarmerIdentificationDao {
   /// Deletes a combined farmer identification record
   Future<int> delete(int id) async {
     final db = await dbHelper.database;
-    
+
     return await db.delete(
       table.CombinedFarmerIdentificationTable.tableName,
       where: '${table.CombinedFarmerIdentificationTable.id} = ?',
@@ -176,10 +184,7 @@ class CombinedFarmerIdentificationDao {
     if (map['visit_information'] != null) {
       try {
         visitInfo = VisitInformationData.fromMap(
-          Map<String, dynamic>.from(
-            jsonDecode(map['visit_information'])
-          )
-        );
+            Map<String, dynamic>.from(jsonDecode(map['visit_information'])));
       } catch (e) {
         debugPrint('Error parsing visit_information: $e');
       }
@@ -189,10 +194,7 @@ class CombinedFarmerIdentificationDao {
     if (map['owner_information'] != null) {
       try {
         ownerInfo = IdentificationOfOwnerData.fromMap(
-          Map<String, dynamic>.from(
-            jsonDecode(map['owner_information'])
-          )
-        );
+            Map<String, dynamic>.from(jsonDecode(map['owner_information'])));
       } catch (e) {
         debugPrint('Error parsing owner_information: $e');
       }
@@ -202,10 +204,7 @@ class CombinedFarmerIdentificationDao {
     if (map['workers_in_farm'] != null) {
       try {
         workersInFarm = WorkersInFarmData.fromMap(
-          Map<String, dynamic>.from(
-            jsonDecode(map['workers_in_farm'])
-          )
-        );
+            Map<String, dynamic>.from(jsonDecode(map['workers_in_farm'])));
       } catch (e) {
         debugPrint('Error parsing workers_in_farm: $e');
       }
@@ -215,10 +214,7 @@ class CombinedFarmerIdentificationDao {
     if (map['adults_information'] != null) {
       try {
         adultsInfo = AdultsInformationData.fromMap(
-          Map<String, dynamic>.from(
-            jsonDecode(map['adults_information'])
-          )
-        );
+            Map<String, dynamic>.from(jsonDecode(map['adults_information'])));
       } catch (e) {
         debugPrint('Error parsing adults_information: $e');
       }
@@ -232,10 +228,12 @@ class CombinedFarmerIdentificationDao {
       workersInFarm: workersInFarm,
       adultsInformation: adultsInfo,
       createdAt: map[table.CombinedFarmerIdentificationTable.createdAt] != null
-          ? DateTime.parse(map[table.CombinedFarmerIdentificationTable.createdAt])
+          ? DateTime.parse(
+              map[table.CombinedFarmerIdentificationTable.createdAt])
           : null,
       updatedAt: map[table.CombinedFarmerIdentificationTable.updatedAt] != null
-          ? DateTime.parse(map[table.CombinedFarmerIdentificationTable.updatedAt])
+          ? DateTime.parse(
+              map[table.CombinedFarmerIdentificationTable.updatedAt])
           : null,
       isSynced: map[table.CombinedFarmerIdentificationTable.isSynced] == 1,
       syncStatus: map[table.CombinedFarmerIdentificationTable.syncStatus],

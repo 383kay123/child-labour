@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:human_rights_monitor/controller/models/cover_model.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:human_rights_monitor/controller/models/consent_model.dart';
 import 'package:human_rights_monitor/controller/models/farmeridentification_model.dart';
 import 'package:human_rights_monitor/controller/models/sensitization_model.dart';

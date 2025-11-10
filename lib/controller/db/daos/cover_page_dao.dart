@@ -1,24 +1,29 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
+import 'package:sqflite/sqlite_api.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
 import 'package:human_rights_monitor/controller/db/table_names.dart';
-import 'package:human_rights_monitor/controller/models/cover_page_model.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
 
 class CoverPageDao {
-  final LocalDBHelper dbHelper;
+  final HouseholdDBHelper dbHelper;
 
   CoverPageDao({required this.dbHelper});
 
   /// Inserts a new cover page record
-  Future<int> insert(CoverPageModel model) async {
+  Future<int> insert(CoverPageData model) async {
     final db = await dbHelper.database;
     
     final data = {
-      'selected_town': model.selectedTown,
-      'selected_town_name': model.selectedTownName,
-      'selected_farmer': model.selectedFarmer,
-      'selected_farmer_name': model.selectedFarmerName,
-      'status': model.status,
-      'sync_status': 0,
+      'selectedTownCode': model.selectedTownCode,
+      'selectedFarmerCode': model.selectedFarmerCode,
+      'towns': model.towns.map((town) => town.toMap()).toList(),
+      'farmers': model.farmers.map((farmer) => farmer.toMap()).toList(),
+      'townError': model.townError,
+      'farmerError': model.farmerError,
+      'isLoadingTowns': model.isLoadingTowns ? 1 : 0,
+      'isLoadingFarmers': model.isLoadingFarmers ? 1 : 0,
+      'hasUnsavedChanges': model.hasUnsavedChanges ? 1 : 0,
+      'member': model.member,
       'created_at': DateTime.now().toIso8601String(),
       'updated_at': DateTime.now().toIso8601String(),
       'is_synced': 0,
@@ -32,7 +37,7 @@ class CoverPageDao {
   }
 
   /// Updates an existing cover page record
-  Future<int> update(CoverPageModel model) async {
+  Future<int> update(CoverPageData model) async {
     if (model.id == null) {
       throw ArgumentError('Cannot update a model without an ID');
     }
@@ -40,14 +45,18 @@ class CoverPageDao {
     final db = await dbHelper.database;
     
     final data = {
-      'selected_town': model.selectedTown,
-      'selected_town_name': model.selectedTownName,
-      'selected_farmer': model.selectedFarmer,
-      'selected_farmer_name': model.selectedFarmerName,
-      'status': model.status,
-      'sync_status': model.syncStatus,
+      'selectedTownCode': model.selectedTownCode,
+      'selectedFarmerCode': model.selectedFarmerCode,
+      'towns': model.towns.map((town) => town.toMap()).toList(),
+      'farmers': model.farmers.map((farmer) => farmer.toMap()).toList(),
+      'townError': model.townError,
+      'farmerError': model.farmerError,
+      'isLoadingTowns': model.isLoadingTowns ? 1 : 0,
+      'isLoadingFarmers': model.isLoadingFarmers ? 1 : 0,
+      'hasUnsavedChanges': model.hasUnsavedChanges ? 1 : 0,
+      'member': model.member,
       'updated_at': DateTime.now().toIso8601String(),
-      'is_synced': model.syncStatus == 1 ? 1 : 0,
+      'is_synced': 0,
     };
 
     return await db.update(
@@ -59,7 +68,7 @@ class CoverPageDao {
   }
 
   /// Gets a cover page record by ID
-  Future<CoverPageModel?> getById(int id) async {
+  Future<CoverPageData?> getById(int id) async {
     final db = await dbHelper.database;
     final result = await db.query(
       TableNames.coverPageTBL,
@@ -69,58 +78,28 @@ class CoverPageDao {
 
     if (result.isNotEmpty) {
       // Map the database columns to the model properties
-      final map = Map<String, dynamic>.from(result.first);
-      return CoverPageModel(
-        id: map['id'],
-        selectedTown: map['selected_town'],
-        selectedTownName: map['selected_town_name'],
-        selectedFarmer: map['selected_farmer'],
-        selectedFarmerName: map['selected_farmer_name'],
-        status: map['status'] ?? 0,
-        syncStatus: map['sync_status'] ?? 0,
-        createdAt: map['created_at'],
-        updatedAt: map['updated_at'],
-      );
+      return CoverPageData.fromMap(result.first);
     }
     return null;
   }
 
   /// Gets all cover page records
-  Future<List<CoverPageModel>> getAll() async {
+  Future<List<CoverPageData>> getAll() async {
     final db = await dbHelper.database;
-    final List<Map<String, dynamic>> result = await db.query(TableNames.coverPageTBL);
-    return result.map((map) => CoverPageModel(
-      id: map['id'],
-      selectedTown: map['selected_town'],
-      selectedTownName: map['selected_town_name'],
-      selectedFarmer: map['selected_farmer'],
-      selectedFarmerName: map['selected_farmer_name'],
-      status: map['status'] ?? 0,
-      syncStatus: map['sync_status'] ?? 0,
-      createdAt: map['created_at'],
-      updatedAt: map['updated_at'],
-    )).toList();
+    final List<Map<String, dynamic>> result = 
+        await db.query(TableNames.coverPageTBL);
+    return result.map((e) => CoverPageData.fromMap(e)).toList();
   }
 
   /// Gets unsynced cover page records
-  Future<List<CoverPageModel>> getUnsynced() async {
+  Future<List<CoverPageData>> getUnsynced() async {
     final db = await dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       TableNames.coverPageTBL,
       where: 'is_synced = ?',
       whereArgs: [0],
     );
-    return maps.map((map) => CoverPageModel(
-      id: map['id'],
-      selectedTown: map['selected_town'],
-      selectedTownName: map['selected_town_name'],
-      selectedFarmer: map['selected_farmer'],
-      selectedFarmerName: map['selected_farmer_name'],
-      status: map['status'] ?? 0,
-      syncStatus: map['sync_status'] ?? 0,
-      createdAt: map['created_at'],
-      updatedAt: map['updated_at'],
-    )).toList();
+    return maps.map((map) => CoverPageData.fromMap(map)).toList();
   }
 
   /// Deletes a cover page record by ID

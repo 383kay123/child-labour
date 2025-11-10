@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -7,7 +9,6 @@ import 'table_names.dart';
 import '../../view/models/monitoring_model.dart';
 
 // Import all table classes
-import 'db_tables/cover_page_table.dart';
 import 'db_tables/consent_table.dart';
 import 'db_tables/farmer_identification_table.dart';
 import 'db_tables/combined_farmer_identification_table.dart';
@@ -53,13 +54,12 @@ class LocalDBHelper {
   Future<void> _createAllTables(Database db, int version) async {
     // Create community assessment table
     await _createCommunityAssessmentTable(db);
-    
+
     // Create monitoring table and indexes
     await MonitoringTable.createTable(db);
     await MonitoringTable.createIndexes(db);
-    
+
     // Create other tables
-    await CoverPageTable.createTable(db);
     await ConsentTable.createTable(db);
     await FarmerIdentificationTable.createTable(db);
     await CombinedFarmerIdentificationTable.createTable(db);
@@ -68,22 +68,23 @@ class LocalDBHelper {
     await SensitizationTable.createTable(db);
     await SensitizationQuestionsTable.createTable(db);
     await EndOfCollectionTable.createTable(db);
-    
+
     // Create any necessary triggers or indexes
     await _createDatabaseTriggers(db);
   }
 
-  Future<void> _upgradeDatabase(Database db, int oldVersion, int newVersion) async {
+  Future<void> _upgradeDatabase(
+      Database db, int oldVersion, int newVersion) async {
     // Let MonitoringTable handle its own upgrades
     await MonitoringTable.onUpgrade(db, oldVersion, newVersion);
-    
+
     // Add future version migrations here
     // Example for version 4:
     // if (oldVersion < 4) {
     //   // Migration code for version 4
     // }
   }
-  
+
   Future<void> _createDatabaseTriggers(Database db) async {
     // Create any necessary triggers for your tables
     // Example:
@@ -237,7 +238,7 @@ class LocalDBHelper {
 
 //   // ===================================================================
 //   // COVER PAGE TABLE METHODS
-  
+
 //   Future<int> insertCoverPageData(Map<String, dynamic> data) async {
 //     final db = await database;
 //     final now = DateTime.now().toIso8601String();

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../../controller/db/db.dart';
-import '../../../../../controller/models/cover_model.dart';
+import '../../../../../controller/db/household_db_helper.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart' show CoverPageData;
 
 /// A widget that represents the cover page for the household survey.
 /// This page allows users to select a society and farmer before proceeding with the survey.
@@ -48,7 +48,7 @@ class CoverPageState extends State<CoverPage> {
     setState(() => _isLoading = true);
 
     try {
-      // final dbHelper = LocalDBHelper.instance;
+      // final dbHelper = HouseholdDBHelper.instance;
       // final savedData = await dbHelper.getLatestCoverPageData();
 
       // if (savedData != null && mounted) {
@@ -92,35 +92,66 @@ class CoverPageState extends State<CoverPage> {
 
     try {
       setState(() => _isLoading = true);
-      final dbHelper = LocalDBHelper.instance;
+      final dbHelper = HouseholdDBHelper.instance;
 
       // Get town and farmer names
-      final town = widget.data.towns.firstWhere(
-        (town) => town.code == widget.data.selectedTownCode,
-        orElse: () => const DropdownItem(code: '', name: ''),
-      );
-      
-      final farmer = widget.data.farmers.firstWhere(
-        (farmer) => farmer.code == widget.data.selectedFarmerCode,
-        orElse: () => const DropdownItem(code: '', name: ''),
-      );
+      final town = widget.data.selectedTownCode != null
+          ? widget.data.towns.firstWhere(
+              (town) => town.code == widget.data.selectedTownCode,
+              orElse: () => const DropdownItem(code: '', name: ''),
+            )
+          : const DropdownItem(code: '', name: '');
 
-      // Prepare data for saving
-      final coverData = {
-        'selected_town': widget.data.selectedTownCode,
-        'selected_town_name': town.name,
-        'selected_farmer': widget.data.selectedFarmerCode,
-        'selected_farmer_name': farmer.name,
-        'status': 1, // Mark as completed
-        'sync_status': 0, // Not synced yet
-      };
+      final farmer = widget.data.selectedFarmerCode != null
+          ? widget.data.farmers.firstWhere(
+              (farmer) => farmer.code == widget.data.selectedFarmerCode,
+              orElse: () => const DropdownItem(code: '', name: ''),
+            )
+          : const DropdownItem(code: '', name: '');
 
-      // // Check if we should update existing record or insert new one
-      // final existingData = await dbHelper.getLatestCoverPageData();
-      // if (existingData != null) {
-      //   // Update existing record
-      //   await dbHelper.updateCoverPageData(existingData['id'] as int, coverData);
-      // } else {
+      // Save to database
+      try {
+        final coverPageData = CoverPageData(
+          selectedTownCode: widget.data.selectedTownCode,
+          selectedFarmerCode: widget.data.selectedFarmerCode,
+          towns: [town],
+          farmers: [farmer],
+        );
+        
+        final id = await dbHelper.insertCoverPage(coverPageData);
+
+        if (id > 0) {
+          debugPrint('✅ Cover page data saved with ID: $id');
+
+          // Update the parent widget's data
+          widget.onDataChanged(widget.data);
+          return true;
+        } else {
+          debugPrint('❌ Failed to save cover page data');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to save data. Please try again.'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return false;
+        }
+      } catch (e) {
+        debugPrint('❌ Error saving cover page data: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving data: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return false;
+      }
       //   // Insert new record
       //   await dbHelper.insertCoverPageData(coverData);
       // }
@@ -187,7 +218,8 @@ class CoverPageState extends State<CoverPage> {
                           value: widget.data.selectedTownCode,
                           items: DropdownItem.toMapList(widget.data.towns),
                           onChanged: (value) {
-                            widget.onDataChanged(widget.data.copyWith(selectedTownCode: value));
+                            widget.onDataChanged(
+                                widget.data.copyWith(selectedTownCode: value));
                           },
                           hint: 'Select your society',
                           isLoading: widget.data.isLoadingTowns,

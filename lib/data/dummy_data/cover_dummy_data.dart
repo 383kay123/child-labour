@@ -1,20 +1,21 @@
-import 'package:human_rights_monitor/controller/models/cover_model.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
+import 'package:human_rights_monitor/controller/models/dropdown_item_model.dart';
 
 /// Contains dummy data for the Cover page
 class CoverDummyData {
   /// Returns a list of dummy towns
-  static List<DropdownItem> get dummyTowns => const [
-        DropdownItem(code: 'T001', name: 'Accra'),
-        DropdownItem(code: 'T002', name: 'Kumasi'),
-        DropdownItem(code: 'T003', name: 'Tamale'),
-        DropdownItem(code: 'T004', name: 'Sekondi-Takoradi'),
-        DropdownItem(code: 'T005', name: 'Cape Coast'),
+  static List<DropdownItem> get dummyTowns => [
+        const DropdownItem(code: 'T001', name: 'Accra'),
+        const DropdownItem(code: 'T002', name: 'Kumasi'),
+        const DropdownItem(code: 'T003', name: 'Tamale'),
+        const DropdownItem(code: 'T004', name: 'Sekondi-Takoradi'),
+        const DropdownItem(code: 'T005', name: 'Cape Coast'),
       ];
 
   /// Returns a list of dummy farmers for a given town
   static List<DropdownItem> getDummyFarmers(String? townCode) {
     if (townCode == null) return [];
-    
+
     // Different farmers for different towns
     switch (townCode) {
       case 'T001': // Accra

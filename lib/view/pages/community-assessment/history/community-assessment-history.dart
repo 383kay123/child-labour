@@ -15,10 +15,12 @@ class CommunityAssessmentHistory extends StatefulWidget {
   const CommunityAssessmentHistory({super.key});
 
   @override
-  _CommunityAssessmentHistoryState createState() => _CommunityAssessmentHistoryState();
+  _CommunityAssessmentHistoryState createState() =>
+      _CommunityAssessmentHistoryState();
 }
 
-class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory> with SingleTickerProviderStateMixin {
+class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final CommunityDBHelper _dbHelper = CommunityDBHelper.instance;
   List<CommunityAssessmentModel> _pendingAssessments = [];
@@ -34,19 +36,20 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
 
   Future<void> _loadAssessments() async {
     if (!mounted) return;
-    
+
     setState(() => _isLoading = true);
     try {
       final allAssessments = await _dbHelper.getAllCommunityAssessments();
-      
-      final pending = allAssessments.where((a) => (a['status'] ?? 0) == 0).map((e) {
-        final communityName = e['communityName'] ?? 
-                             e['community_name'] ?? 
-                             e['village'] ?? 
-                             e['parish'] ?? 
-                             e['sub_county'] ?? 
-                             'Community Assessment';
-        
+
+      final pending =
+          allAssessments.where((a) => (a['status'] ?? 0) == 0).map((e) {
+        final communityName = e['communityName'] ??
+            e['community_name'] ??
+            e['village'] ??
+            e['parish'] ??
+            e['sub_county'] ??
+            'Community Assessment';
+
         return CommunityAssessmentModel.fromMap({
           'id': e['id'],
           'communityName': communityName,
@@ -67,15 +70,16 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
           'date_created': e['date_created'] ?? DateTime.now().toIso8601String(),
         });
       }).toList();
-      
-      final submitted = allAssessments.where((a) => (a['status'] ?? 0) == 1).map((e) {
-        final communityName = e['communityName'] ?? 
-                             e['community_name'] ?? 
-                             e['village'] ?? 
-                             e['parish'] ?? 
-                             e['sub_county'] ?? 
-                             'Community Assessment';
-        
+
+      final submitted =
+          allAssessments.where((a) => (a['status'] ?? 0) == 1).map((e) {
+        final communityName = e['communityName'] ??
+            e['community_name'] ??
+            e['village'] ??
+            e['parish'] ??
+            e['sub_county'] ??
+            'Community Assessment';
+
         return CommunityAssessmentModel.fromMap({
           'id': e['id'],
           'communityName': communityName,
@@ -96,7 +100,7 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
           'date_created': e['date_created'] ?? DateTime.now().toIso8601String(),
         });
       }).toList();
-      
+
       if (mounted) {
         setState(() {
           _pendingAssessments = pending;
@@ -104,7 +108,6 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
           _isLoading = false;
         });
       }
-      
     } catch (e) {
       debugPrint('Error loading assessments: $e');
       Get.snackbar(
@@ -140,99 +143,102 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
         elevation: 0,
         centerTitle: true,
         bottom: PreferredSize(
-  preferredSize: const Size.fromHeight(48),
-  child: Container(
-    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.15),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: TabBar(
-      controller: _tabController,
-      labelColor: AppTheme.primaryColor,
-      unselectedLabelColor: Colors.white70,
-      indicator: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: Colors.white,
-      ),
-      labelStyle: GoogleFonts.poppins(
-        fontWeight: FontWeight.w600,
-        fontSize: 14,
-      ),
-      unselectedLabelStyle: GoogleFonts.poppins(
-        fontWeight: FontWeight.w500,
-        fontSize: 14,
-      ),
-      dividerColor: Colors.transparent,
-      tabs: [
-        Tab(
+          preferredSize: const Size.fromHeight(48),
           child: Container(
-            width: double.infinity,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.edit_note, size: 18),
-                const SizedBox(width: 6),
-                const Text('Pending'),
-                if (_pendingAssessments.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: const BoxDecoration(
-                      color: Colors.orange,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      _pendingAssessments.length.toString(),
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: AppTheme.primaryColor,
+              unselectedLabelColor: Colors.white70,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: Colors.white,
+              ),
+              labelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              unselectedLabelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+              dividerColor: Colors.transparent,
+              tabs: [
+                Tab(
+                  child: Container(
+                    width: double.infinity,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.edit_note, size: 18),
+                        const SizedBox(width: 6),
+                        const Text('Pending'),
+                        if (_pendingAssessments.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: const BoxDecoration(
+                              color: Colors.orange,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              _pendingAssessments.length.toString(),
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                ],
+                ),
+                Tab(
+                  child: Container(
+                    width: double.infinity,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle, size: 18),
+                        const SizedBox(width: 6),
+                        const Text('Submitted'),
+                        if (_submittedAssessments.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              _submittedAssessments.length.toString(),
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         ),
-        Tab(
-          child: Container(
-            width: double.infinity,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.check_circle, size: 18),
-                const SizedBox(width: 6),
-                const Text('Submitted'),
-                if (_submittedAssessments.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      _submittedAssessments.length.toString(),
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),),
+      ),
       body: _isLoading
           ? _buildLoadingState()
           : TabBarView(
@@ -275,7 +281,8 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
     );
   }
 
-  Widget _buildAssessmentList(List<CommunityAssessmentModel> assessments, bool isSubmitted, BuildContext context) {
+  Widget _buildAssessmentList(List<CommunityAssessmentModel> assessments,
+      bool isSubmitted, BuildContext context) {
     if (assessments.isEmpty) {
       return _buildEmptyState(isSubmitted);
     }
@@ -308,7 +315,9 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isSubmitted ? Icons.assignment_turned_in : Icons.assignment_outlined,
+              isSubmitted
+                  ? Icons.assignment_turned_in
+                  : Icons.assignment_outlined,
               size: 50,
               color: AppTheme.primaryColor.withOpacity(0.3),
             ),
@@ -326,7 +335,7 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              isSubmitted 
+              isSubmitted
                   ? 'All completed assessments will appear here'
                   : 'Start a new community assessment to see it here',
               textAlign: TextAlign.center,
@@ -342,14 +351,16 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
   }
 
   void _navigateToDetail(CommunityAssessmentModel assessment) {
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (context) => AssessmentDetailScreen(
           assessment: assessment,
           isReadOnly: assessment.status == 1,
         ),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       _loadAssessments();
     });
   }
@@ -359,27 +370,28 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
-  children: [
-    Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(Icons.delete_outline, color: Colors.red),
-    ),
-    const SizedBox(width: 12),
-    Expanded(  // Add this
-      child: Text(
-        'Delete Assessment',
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w600,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline, color: Colors.red),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              // Add this
+              child: Text(
+                'Delete Assessment',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis, // Add this
+              ),
+            ),
+          ],
         ),
-        overflow: TextOverflow.ellipsis,  // Add this
-      ),
-    ),
-  ],
-),
         content: Text(
           'Are you sure you want to delete the assessment for ${assessment.communityName ?? 'this community'}? This action cannot be undone.',
           style: GoogleFonts.poppins(),
@@ -401,7 +413,8 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
 
     if (confirmed == true) {
       try {
-        final success = await _dbHelper.deleteCommunityAssessment(assessment.id!);
+        final success =
+            await _dbHelper.deleteCommunityAssessment(assessment.id!);
         if (success == true && mounted) {
           setState(() {
             if (assessment.status == 0) {
@@ -410,14 +423,15 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
               _submittedAssessments.removeWhere((a) => a.id == assessment.id);
             }
           });
-          
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Assessment deleted successfully'),
                 backgroundColor: Colors.green,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
             );
           }
@@ -429,7 +443,8 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
               content: Text('Error deleting assessment: $e'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
         }
@@ -466,16 +481,18 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
 
     // Check internet connectivity
     final hasInternet = await _isInternetAvailable();
-    
+
     if (!hasInternet) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('No internet connection. Please check your connection and try again.'),
+            content: const Text(
+                'No internet connection. Please check your connection and try again.'),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 4),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
@@ -491,57 +508,61 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
             backgroundColor: Colors.blue,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
 
       // First try to submit to the API
       try {
-        final api = ApiService();
-        final apiSuccess = await api.submitCommunityAssessment(assessment);
-        
-        if (apiSuccess) {
-          // If API submission is successful, update local status to submitted (2)
-          await _dbHelper.updateAssessmentStatus(assessment.id!, 2);
-          
-          if (mounted) {
-            setState(() {
-              _pendingAssessments.removeWhere((a) => a.id == assessment.id);
-              _submittedAssessments.add(assessment.copyWith(status: 2));
-            });
-            
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Assessment submitted and synced successfully'),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 3),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            );
-          }
-        } else {
-          throw Exception('Failed to submit to server');
-        }
+        // // final api = ApiService();
+        // final apiSuccess = await api.submitCommunityAssessment(assessment);
+
+        // if (apiSuccess) {
+        //   // If API submission is successful, update local status to submitted (2)
+        //   await _dbHelper.updateAssessmentStatus(assessment.id!, 2);
+
+        //   if (mounted) {
+        //     setState(() {
+        //       _pendingAssessments.removeWhere((a) => a.id == assessment.id);
+        //       _submittedAssessments.add(assessment.copyWith(status: 2));
+        //     });
+
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       SnackBar(
+        //         content: const Text('Assessment submitted and synced successfully'),
+        //         backgroundColor: Colors.green,
+        //         behavior: SnackBarBehavior.floating,
+        //         duration: const Duration(seconds: 3),
+        //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        //       ),
+        //     );
+        //   }
+        // } else {
+        //   throw Exception('Failed to submit to server');
+        // }
       } catch (e) {
         debugPrint('Error submitting to API: $e');
         // If API fails, save as pending (status 1)
-        final success = await _dbHelper.updateAssessmentStatus(assessment.id!, 1);
-        
+        final success =
+            await _dbHelper.updateAssessmentStatus(assessment.id!, 1);
+
         if (success && mounted) {
           setState(() {
             _pendingAssessments.removeWhere((a) => a.id == assessment.id);
             _submittedAssessments.add(assessment.copyWith(status: 1));
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Assessment saved locally. Will sync when online.'),
+              content: const Text(
+                  'Assessment saved locally. Will sync when online.'),
               backgroundColor: Colors.orange,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 4),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
         } else {
@@ -557,28 +578,30 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 4),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
     }
   }
 
-  Widget _buildAssessmentCard(CommunityAssessmentModel assessment, BuildContext context) {
+  Widget _buildAssessmentCard(
+      CommunityAssessmentModel assessment, BuildContext context) {
     final isSubmitted = assessment.status == 1;
     final statusColor = isSubmitted ? Colors.green : Colors.orange;
-    
+
     final score = _calculateScore(assessment);
-    
+
     DateTime createdAt;
     try {
-      createdAt = assessment.dateCreated != null 
+      createdAt = assessment.dateCreated != null
           ? DateTime.parse(assessment.dateCreated!)
           : DateTime.now();
     } catch (e) {
       createdAt = DateTime.now();
     }
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -607,7 +630,8 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -646,7 +670,7 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
               ],
             ),
           ),
-          
+
           // Main content
           InkWell(
             onTap: () => _navigateToDetail(assessment),
@@ -692,13 +716,14 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 8),
-                            
+
                             // Score with progress bar
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       'Assessment Score',
@@ -730,10 +755,12 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                                       LayoutBuilder(
                                         builder: (context, constraints) {
                                           return Container(
-                                            width: constraints.maxWidth * (score / 100),
+                                            width: constraints.maxWidth *
+                                                (score / 100),
                                             decoration: BoxDecoration(
                                               color: _getScoreColor(score),
-                                              borderRadius: BorderRadius.circular(3),
+                                              borderRadius:
+                                                  BorderRadius.circular(3),
                                             ),
                                           );
                                         },
@@ -748,9 +775,9 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Assessment details in grid
                   if (_hasAssessmentDetails(assessment))
                     Container(
@@ -763,11 +790,13 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                         children: [
                           if (assessment.q2?.isNotEmpty == true)
                             Expanded(
-                              child: _buildDetailItem('👥', 'Population', assessment.q2!),
+                              child: _buildDetailItem(
+                                  '👥', 'Population', assessment.q2!),
                             ),
                           if (assessment.q3?.isNotEmpty == true)
                             Expanded(
-                              child: _buildDetailItem('👶', 'Children', assessment.q3!),
+                              child: _buildDetailItem(
+                                  '👶', 'Children', assessment.q3!),
                             ),
                         ],
                       ),
@@ -776,7 +805,7 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
               ),
             ),
           ),
-          
+
           // Action buttons for pending assessments
           if (!isSubmitted)
             Container(
@@ -799,7 +828,8 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                         foregroundColor: Colors.green[700],
                         side: BorderSide(color: Colors.green[700]!),
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () => _submitAssessment(assessment),
                     ),
@@ -813,7 +843,8 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                         foregroundColor: Colors.red[700],
                         side: BorderSide(color: Colors.red[700]!),
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () => _deleteAssessment(assessment),
                     ),
@@ -825,11 +856,11 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
       ),
     );
   }
-  
+
   // Fixed score calculation with proper null checking
   int _calculateScore(CommunityAssessmentModel assessment) {
     int score = 0;
-    
+
     // Use null-safe checks with == true comparison
     if ((assessment.q1 == 'Yes') == true) score++;
     if ((assessment.q2 == 'Yes') == true) score++;
@@ -841,15 +872,16 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
     if ((assessment.q8 == 'Yes') == true) score++;
     if ((assessment.q9 == 'Yes') == true) score++;
     if ((assessment.q10 == 'Yes') == true) score++;
-    
+
     return (score / 10 * 100).round();
   }
-  
+
   // Helper method to check if assessment has details to display
   bool _hasAssessmentDetails(CommunityAssessmentModel assessment) {
-    return assessment.q2?.isNotEmpty == true || assessment.q3?.isNotEmpty == true;
+    return assessment.q2?.isNotEmpty == true ||
+        assessment.q3?.isNotEmpty == true;
   }
-  
+
   // Helper method to get the most specific available location name
   String _getDisplayName(CommunityAssessmentModel assessment) {
     return assessment.communityName?.trim().isNotEmpty == true
@@ -864,7 +896,7 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                         ? '${assessment.district} District'
                         : 'Unnamed Community';
   }
-  
+
   Widget _buildDetailItem(String emoji, String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -895,7 +927,7 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
       ],
     );
   }
-  
+
   Color _getScoreColor(int score) {
     if (score >= 80) return Colors.green;
     if (score >= 60) return Colors.orange;
