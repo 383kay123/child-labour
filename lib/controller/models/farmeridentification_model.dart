@@ -62,15 +62,21 @@ class FarmerChild {
 
 /// Main model for Farmer Identification Page data
 class FarmerIdentificationData {
-  final String? hasGhanaCard; // 'Yes' or 'No'
-  final String? selectedIdType;
-  final String? idPictureConsent; // 'Yes' or 'No'
+  final int? id;
+  final int? coverPageId;
+  final int hasGhanaCard; // 0 or 1
   final String? ghanaCardNumber;
+  final String? selectedIdType;
   final String? idNumber;
+  final int idPictureConsent; // 0 or 1
   final String? noConsentReason;
   final String? idImagePath;
   final String? contactNumber;
   final int childrenCount;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int isSynced;
+  final int syncStatus;
   final List<FarmerChild> children;
 
   // Controllers for form fields
@@ -81,28 +87,35 @@ class FarmerIdentificationData {
   final TextEditingController noConsentReasonController;
 
   FarmerIdentificationData({
-    this.hasGhanaCard,
-    this.selectedIdType,
-    this.idPictureConsent,
+    this.id,
+    this.coverPageId,
+    this.hasGhanaCard = 0,
     this.ghanaCardNumber,
+    this.selectedIdType,
     this.idNumber,
+    this.idPictureConsent = 0,
     this.noConsentReason,
     this.idImagePath,
     this.contactNumber,
     this.childrenCount = 0,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    this.isSynced = 0,
+    this.syncStatus = 0,
     List<FarmerChild>? children,
     TextEditingController? ghanaCardNumberController,
     TextEditingController? idNumberController,
     TextEditingController? contactNumberController,
     TextEditingController? childrenCountController,
     TextEditingController? noConsentReasonController,
-  })  : children = children ?? [],
+  })  : createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now(),
+        children = children ?? [],
         ghanaCardNumberController = ghanaCardNumberController ?? TextEditingController(),
         idNumberController = idNumberController ?? TextEditingController(),
         contactNumberController = contactNumberController ?? TextEditingController(),
         childrenCountController = childrenCountController ?? TextEditingController(),
         noConsentReasonController = noConsentReasonController ?? TextEditingController() {
-    // Initialize controller texts from field values
     _initializeControllers();
   }
 
@@ -128,33 +141,42 @@ class FarmerIdentificationData {
   /// Convert to Map for storage/API
   Map<String, dynamic> toMap() {
     return {
-      'hasGhanaCard': hasGhanaCard,
-      'selectedIdType': selectedIdType,
-      'idPictureConsent': idPictureConsent,
-      'ghanaCardNumber': ghanaCardNumberController.text.isNotEmpty ? ghanaCardNumberController.text : ghanaCardNumber,
-      'idNumber': idNumberController.text.isNotEmpty ? idNumberController.text : idNumber,
-      'noConsentReason': noConsentReasonController.text.isNotEmpty ? noConsentReasonController.text : noConsentReason,
-      'idImagePath': idImagePath,
-      'contactNumber': contactNumberController.text.isNotEmpty ? contactNumberController.text : contactNumber,
-      'childrenCount': childrenCount,
-      'children': children.map((child) => child.toMap()).toList(),
+      'id': id,
+      'cover_page_id': coverPageId,
+      'has_ghana_card': hasGhanaCard,
+      'ghana_card_number': ghanaCardNumberController.text.isNotEmpty ? ghanaCardNumberController.text : ghanaCardNumber,
+      'selected_id_type': selectedIdType,
+      'id_number': idNumberController.text.isNotEmpty ? idNumberController.text : idNumber,
+      'id_picture_consent': idPictureConsent,
+      'no_consent_reason': noConsentReasonController.text.isNotEmpty ? noConsentReasonController.text : noConsentReason,
+      'id_image_path': idImagePath,
+      'contact_number': contactNumberController.text.isNotEmpty ? contactNumberController.text : contactNumber,
+      'children_count': childrenCount,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'is_synced': isSynced,
+      'sync_status': syncStatus,
     };
   }
 
   /// Create from Map from storage/API
   factory FarmerIdentificationData.fromMap(Map<String, dynamic> map) {
     return FarmerIdentificationData(
-      hasGhanaCard: map['hasGhanaCard']?.toString(),
-      selectedIdType: map['selectedIdType']?.toString(),
-      idPictureConsent: map['idPictureConsent']?.toString(),
-      ghanaCardNumber: map['ghanaCardNumber']?.toString(),
-      idNumber: map['idNumber']?.toString(),
-      noConsentReason: map['noConsentReason']?.toString(),
-      idImagePath: map['idImagePath']?.toString(),
-      contactNumber: map['contactNumber']?.toString(),
-      childrenCount: map['childrenCount'] as int? ?? 0,
-      children: (map['children'] as List<dynamic>? ?? [])
-          .map((childMap) => FarmerChild.fromMap(childMap as Map<String, dynamic>)).toList(),
+      id: map['id'] as int?,
+      coverPageId: map['cover_page_id'] as int?,
+      hasGhanaCard: map['has_ghana_card'] as int? ?? 0,
+      ghanaCardNumber: map['ghana_card_number']?.toString(),
+      selectedIdType: map['selected_id_type']?.toString(),
+      idNumber: map['id_number']?.toString(),
+      idPictureConsent: map['id_picture_consent'] as int? ?? 0,
+      noConsentReason: map['no_consent_reason']?.toString(),
+      idImagePath: map['id_image_path']?.toString(),
+      contactNumber: map['contact_number']?.toString(),
+      childrenCount: map['children_count'] as int? ?? 0,
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : null,
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
+      isSynced: map['is_synced'] as int? ?? 0,
+      syncStatus: map['sync_status'] as int? ?? 0,
     );
   }
 
@@ -164,16 +186,15 @@ class FarmerIdentificationData {
   }
 
   /// Update methods that return new instances - FIXED: Preserve existing controllers
-  FarmerIdentificationData updateGhanaCard(String? value) {
-    return copyWith(
-      hasGhanaCard: value,
-      selectedIdType: value == 'Yes' ? null : selectedIdType,
-      idPictureConsent: null,
-      idImagePath: null,
-      // Preserve existing controllers
-      preserveControllers: true,
-    );
-  }
+  FarmerIdentificationData updateGhanaCard(int value) {
+  return copyWith(
+    hasGhanaCard: value,
+    selectedIdType: value == 1 ? null : selectedIdType,
+    idPictureConsent: 0,
+    idImagePath: null,
+    preserveControllers: true,
+  );
+}
 
   FarmerIdentificationData updateIdType(String? value) {
     return copyWith(
@@ -185,9 +206,10 @@ class FarmerIdentificationData {
   }
 
   FarmerIdentificationData updatePictureConsent(String? value) {
+    final consentValue = value == 'Yes' ? 1 : 0;
     return copyWith(
-      idPictureConsent: value,
-      idImagePath: value == 'No' ? null : idImagePath,
+      idPictureConsent: consentValue,
+      idImagePath: consentValue == 0 ? null : idImagePath,
       preserveControllers: true,
     );
   }
@@ -447,9 +469,10 @@ class FarmerIdentificationData {
 
   /// Enhanced copyWith that can preserve existing controllers
   FarmerIdentificationData copyWith({
-    String? hasGhanaCard,
+    int? id,
+    int? hasGhanaCard,
     String? selectedIdType,
-    String? idPictureConsent,
+    int? idPictureConsent,
     String? ghanaCardNumber,
     String? idNumber,
     String? noConsentReason,

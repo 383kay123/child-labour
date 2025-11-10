@@ -1,110 +1,77 @@
+import 'package:flutter/material.dart';
 import 'adult_info_model.dart';
+import 'visit_information_model.dart';
+import 'identification_of_owner_model.dart';
+import 'workers_in_farm_model.dart';
 
-class FarmerIdentificationModel {
+class CombinedFarmerIdentificationModel {
   final int? id; // For database primary key
+  final int? coverPageId; // Reference to the cover page
 
   // Visit Information
-  final String? respondentNameCorrect;
-  final String? respondentNationality;
-  final String? countryOfOrigin;
-  final String? isFarmOwner;
-  final String? farmOwnershipType;
-  final String correctedRespondentName;
-  final String respondentOtherNames;
-  final String otherCountry;
-
+  final VisitInformationData? visitInformation;
+  
+  // Owner Identification
+  final IdentificationOfOwnerData? ownerInformation;
+  
   // Workers in Farm
-  final String? hasRecruitedWorker;
-  final String? everRecruitedWorker;
-  final String? workerAgreementType;
-  final String? tasksClarified;
-  final String? additionalTasks;
-  final String? refusalAction;
-  final String? salaryPaymentFrequency;
-  final bool? permanentLabor;
-  final bool? casualLabor;
-  final String? otherAgreement;
-  final Map<String, String?>? agreementResponses;
-
+  final WorkersInFarmData? workersInFarm;
+  
   // Adults Information
-  final int? numberOfAdults;
-  final List<HouseholdMember>? householdMembers;
+  final AdultsInformationData? adultsInformation;
 
   // Metadata
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final bool isSynced; // Track if synced with server
+  final int? syncStatus; // Sync status code
 
-  const FarmerIdentificationModel({
+  const CombinedFarmerIdentificationModel({
     this.id,
-
+    this.coverPageId,
+    
     // Visit Information
-    this.respondentNameCorrect,
-    this.respondentNationality,
-    this.countryOfOrigin,
-    this.isFarmOwner,
-    this.farmOwnershipType,
-    this.correctedRespondentName = '',
-    this.respondentOtherNames = '',
-    this.otherCountry = '',
-
+    this.visitInformation,
+    
+    // Owner Identification
+    this.ownerInformation,
+    
     // Workers in Farm
-    this.hasRecruitedWorker,
-    this.everRecruitedWorker,
-    this.workerAgreementType,
-    this.tasksClarified,
-    this.additionalTasks,
-    this.refusalAction,
-    this.salaryPaymentFrequency,
-    this.permanentLabor,
-    this.casualLabor,
-    this.otherAgreement,
-    this.agreementResponses,
-
+    this.workersInFarm,
+    
     // Adults Information
-    this.numberOfAdults,
-    this.householdMembers,
-
+    this.adultsInformation,
+    
     // Metadata
     this.createdAt,
     this.updatedAt,
     this.isSynced = false,
+    this.syncStatus = 0,
   });
+  
+  // Create an empty instance
+  factory CombinedFarmerIdentificationModel.empty() {
+    return CombinedFarmerIdentificationModel(
+      visitInformation: VisitInformationData(),
+      ownerInformation: IdentificationOfOwnerData(),
+      workersInFarm: WorkersInFarmData(),
+      adultsInformation: AdultsInformationData(),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
 
   // Convert to Map for database storage
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
-
-      // Visit Information
-      'respondentNameCorrect': respondentNameCorrect,
-      'respondentNationality': respondentNationality,
-      'countryOfOrigin': countryOfOrigin,
-      'isFarmOwner': isFarmOwner,
-      'farmOwnershipType': farmOwnershipType,
-      'correctedRespondentName': correctedRespondentName,
-      'respondentOtherNames': respondentOtherNames,
-      'otherCountry': otherCountry,
-
-      // Workers in Farm
-      'hasRecruitedWorker': hasRecruitedWorker,
-      'everRecruitedWorker': everRecruitedWorker,
-      'workerAgreementType': workerAgreementType,
-      'tasksClarified': tasksClarified,
-      'additionalTasks': additionalTasks,
-      'refusalAction': refusalAction,
-      'salaryPaymentFrequency': salaryPaymentFrequency,
-      'permanentLabor':
-          permanentLabor == null ? null : (permanentLabor! ? 1 : 0),
-      'casualLabor': casualLabor == null ? null : (casualLabor! ? 1 : 0),
-      'otherAgreement': otherAgreement,
-      'agreementResponses':
-          agreementResponses != null ? _encodeMap(agreementResponses!) : null,
-
-      // Adults Information
-      'numberOfAdults': numberOfAdults,
-      'householdMembers': householdMembers?.map((m) => m.toMap()).toList(),
-
+      
+      // Nested models
+      'visitInformation': visitInformation?.toMap(),
+      'ownerInformation': ownerInformation?.toMap(),
+      'workersInFarm': workersInFarm?.toMap(),
+      'adultsInformation': adultsInformation?.toMap(),
+      
       // Metadata
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
@@ -113,180 +80,77 @@ class FarmerIdentificationModel {
   }
 
   // Create from Map (for database retrieval)
-  factory FarmerIdentificationModel.fromMap(Map<String, dynamic> map) {
-    return FarmerIdentificationModel(
+  factory CombinedFarmerIdentificationModel.fromMap(Map<String, dynamic> map) {
+    return CombinedFarmerIdentificationModel(
       id: map['id'],
-
-      // Visit Information
-      respondentNameCorrect: map['respondentNameCorrect'],
-      respondentNationality: map['respondentNationality'],
-      countryOfOrigin: map['countryOfOrigin'],
-      isFarmOwner: map['isFarmOwner'],
-      farmOwnershipType: map['farmOwnershipType'],
-      correctedRespondentName: map['correctedRespondentName'] ?? '',
-      respondentOtherNames: map['respondentOtherNames'] ?? '',
-      otherCountry: map['otherCountry'] ?? '',
-
-      // Workers in Farm
-      hasRecruitedWorker: map['hasRecruitedWorker'],
-      everRecruitedWorker: map['everRecruitedWorker'],
-      workerAgreementType: map['workerAgreementType'],
-      tasksClarified: map['tasksClarified'],
-      additionalTasks: map['additionalTasks'],
-      refusalAction: map['refusalAction'],
-      salaryPaymentFrequency: map['salaryPaymentFrequency'],
-      permanentLabor: map['permanentLabor'] == 1,
-      casualLabor: map['casualLabor'] == 1,
-      otherAgreement: map['otherAgreement'],
-      agreementResponses: map['agreementResponses'] != null
-          ? _decodeMap(map['agreementResponses'])
+      
+      // Nested models
+      visitInformation: map['visitInformation'] != null 
+          ? VisitInformationData.fromMap(Map<String, dynamic>.from(map['visitInformation']))
           : null,
-
-      // Adults Information
-      numberOfAdults: map['numberOfAdults'],
-      householdMembers: map['householdMembers'] != null
-          ? List<Map<String, dynamic>>.from(map['householdMembers'])
-              .map((m) => HouseholdMember.fromMap(m))
-              .toList()
+      ownerInformation: map['ownerInformation'] != null
+          ? IdentificationOfOwnerData.fromMap(Map<String, dynamic>.from(map['ownerInformation']))
           : null,
-
+      workersInFarm: map['workersInFarm'] != null
+          ? WorkersInFarmData.fromMap(Map<String, dynamic>.from(map['workersInFarm']))
+          : null,
+      adultsInformation: map['adultsInformation'] != null
+          ? AdultsInformationData.fromMap(Map<String, dynamic>.from(map['adultsInformation']))
+          : null,
+      
       // Metadata
-      createdAt:
-          map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
-      updatedAt:
-          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
+      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
       isSynced: map['isSynced'] == 1,
     );
   }
 
-  // Create a copy with some fields updated
-  FarmerIdentificationModel copyWith({
+  // Create a copy with updated fields
+  CombinedFarmerIdentificationModel copyWith({
     int? id,
-
-    // Visit Information
-    String? respondentNameCorrect,
-    String? respondentNationality,
-    String? countryOfOrigin,
-    String? isFarmOwner,
-    String? farmOwnershipType,
-    String? correctedRespondentName,
-    String? respondentOtherNames,
-    String? otherCountry,
-
-    // Workers in Farm
-    String? hasRecruitedWorker,
-    String? everRecruitedWorker,
-    String? workerAgreementType,
-    String? tasksClarified,
-    String? additionalTasks,
-    String? refusalAction,
-    String? salaryPaymentFrequency,
-    bool? permanentLabor,
-    bool? casualLabor,
-    String? otherAgreement,
-    Map<String, String?>? agreementResponses,
-
-    // Adults Information
-    int? numberOfAdults,
-    List<HouseholdMember>? householdMembers,
-
+    int? coverPageId,
+    
+    // Nested models
+    VisitInformationData? visitInformation,
+    IdentificationOfOwnerData? ownerInformation,
+    WorkersInFarmData? workersInFarm,
+    AdultsInformationData? adultsInformation,
+    
     // Metadata
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isSynced,
+    int? syncStatus,
   }) {
-    return FarmerIdentificationModel(
+    return CombinedFarmerIdentificationModel(
       id: id ?? this.id,
-
-      // Visit Information
-      respondentNameCorrect:
-          respondentNameCorrect ?? this.respondentNameCorrect,
-      respondentNationality:
-          respondentNationality ?? this.respondentNationality,
-      countryOfOrigin: countryOfOrigin ?? this.countryOfOrigin,
-      isFarmOwner: isFarmOwner ?? this.isFarmOwner,
-      farmOwnershipType: farmOwnershipType ?? this.farmOwnershipType,
-      correctedRespondentName:
-          correctedRespondentName ?? this.correctedRespondentName,
-      respondentOtherNames: respondentOtherNames ?? this.respondentOtherNames,
-      otherCountry: otherCountry ?? this.otherCountry,
-
-      // Workers in Farm
-      hasRecruitedWorker: hasRecruitedWorker ?? this.hasRecruitedWorker,
-      everRecruitedWorker: everRecruitedWorker ?? this.everRecruitedWorker,
-      workerAgreementType: workerAgreementType ?? this.workerAgreementType,
-      tasksClarified: tasksClarified ?? this.tasksClarified,
-      additionalTasks: additionalTasks ?? this.additionalTasks,
-      refusalAction: refusalAction ?? this.refusalAction,
-      salaryPaymentFrequency:
-          salaryPaymentFrequency ?? this.salaryPaymentFrequency,
-      permanentLabor: permanentLabor ?? this.permanentLabor,
-      casualLabor: casualLabor ?? this.casualLabor,
-      otherAgreement: otherAgreement ?? this.otherAgreement,
-      agreementResponses: agreementResponses ?? this.agreementResponses,
-
-      // Adults Information
-      numberOfAdults: numberOfAdults ?? this.numberOfAdults,
-      householdMembers: householdMembers ?? this.householdMembers,
-
+      coverPageId: coverPageId ?? this.coverPageId,
+      
+      // Nested models
+      visitInformation: visitInformation ?? this.visitInformation,
+      ownerInformation: ownerInformation ?? this.ownerInformation,
+      workersInFarm: workersInFarm ?? this.workersInFarm,
+      adultsInformation: adultsInformation ?? this.adultsInformation,
+      
       // Metadata
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
+      syncStatus: syncStatus ?? this.syncStatus,
     );
   }
 
-  // Helper methods for map serialization
-  static Map<String, dynamic> _encodeMap(Map<String, String?> map) {
-    return Map<String, dynamic>.from(map);
-  }
-
-  static Map<String, String?> _decodeMap(dynamic data) {
-    if (data == null) return {};
-    return Map<String, String?>.from(data);
-  }
-
-  // Create an empty instance
-  static FarmerIdentificationModel empty() => const FarmerIdentificationModel();
-
-  // Check if the model is empty
-  bool get isEmpty => this == empty();
-
-  // Check if the model is not empty
-  bool get isNotEmpty => this != empty();
-
   @override
   String toString() {
-    return 'FarmerIdentificationModel{\n'
-        '  id: $id,\n'
-        '  // Visit Information\n'
-        '  respondentNameCorrect: $respondentNameCorrect,\n'
-        '  respondentNationality: $respondentNationality,\n'
-        '  countryOfOrigin: $countryOfOrigin,\n'
-        '  isFarmOwner: $isFarmOwner,\n'
-        '  farmOwnershipType: $farmOwnershipType,\n'
-        '  correctedRespondentName: $correctedRespondentName,\n'
-        '  respondentOtherNames: $respondentOtherNames,\n'
-        '  otherCountry: $otherCountry,\n'
-        '  // Workers in Farm\n'
-        '  hasRecruitedWorker: $hasRecruitedWorker,\n'
-        '  everRecruitedWorker: $everRecruitedWorker,\n'
-        '  workerAgreementType: $workerAgreementType,\n'
-        '  tasksClarified: $tasksClarified,\n'
-        '  additionalTasks: $additionalTasks,\n'
-        '  refusalAction: $refusalAction,\n'
-        '  salaryPaymentFrequency: $salaryPaymentFrequency,\n'
-        '  permanentLabor: $permanentLabor,\n'
-        '  casualLabor: $casualLabor,\n'
-        '  otherAgreement: $otherAgreement,\n'
-        '  agreementResponses: $agreementResponses,\n'
-        '  // Adults Information\n'
-        '  numberOfAdults: $numberOfAdults,\n'
-        '  householdMembers: $householdMembers,\n'
-        '  // Metadata\n'
-        '  createdAt: $createdAt,\n'
-        '  updatedAt: $updatedAt,\n'
-        '  isSynced: $isSynced\n'
-        '}';
-  }
+    return 'CombinedFarmerIdentificationModel{'
+        'id: $id, '
+        'visitInformation: $visitInformation, '
+        'ownerInformation: $ownerInformation, '
+        'workersInFarm: $workersInFarm, '
+        'adultsInformation: $adultsInformation, '
+        'createdAt: $createdAt, '
+        'updatedAt: $updatedAt, '
+        'isSynced: $isSynced, '
+        'syncStatus: $syncStatus}';
+}
 }

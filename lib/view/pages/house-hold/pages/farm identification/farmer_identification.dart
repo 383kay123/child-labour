@@ -166,11 +166,14 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
   // ==================== Validation Methods ====================
   
   String? _validateGhanaCardNumber(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Ghana Card number is required';
-    }
-    if (!RegExp(r'^GHA-\d{9}-\d$').hasMatch(value)) {
-      return 'Invalid Ghana Card number format (GHA-XXXXXXXXX-X)';
+    // Only validate Ghana Card number if consent is given
+    if (widget.data.idPictureConsent == 1) {
+      if (value == null || value.isEmpty) {
+        return 'Ghana Card number is required when consent is given';
+      }
+      if (!RegExp(r'^GHA-\d{9}-\d$').hasMatch(value)) {
+        return 'Invalid Ghana Card number format (GHA-XXXXXXXXX-X)';
+      }
     }
     return null;
   }
@@ -187,14 +190,47 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       return 'Contact number is required';
     }
     // Ghana phone numbers: must be exactly 10 digits starting with 0
-    final phoneRegex = RegExp(r'^0[0-9]{9}$');
+    final phoneRegex = RegExp(r'^0[2345]\d{8}$');
     if (!phoneRegex.hasMatch(value)) {
-      return 'Please enter a valid 10-digit Ghanaian phone number';
+      return 'Please enter a valid 10-digit Ghanaian phone number (e.g., 0241234567)';
     }
     return null;
   }
 
+  String? _validateName(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) {
+      return '${fieldName[0].toUpperCase()}${fieldName.substring(1)} is required';
+    }
+    
+    // Check for minimum length (at least 2 characters)
+    if (value.trim().length < 2) {
+      return '${fieldName[0].toUpperCase()}${fieldName.substring(1)} must be at least 2 characters long';
+    }
+    
+   
+    return null;
+  }
+
   /// Validates the entire form and returns true if all validations pass.
+  /// Saves the form data after validation
+  /// Returns true if save was successful, false otherwise
+  Future<bool> saveForm() async {
+    try {
+      // Validate the form first
+      final isValid = validateForm();
+      if (!isValid) {
+        return false;
+      }
+      
+      // If validation passes, update the data through the callback
+      widget.onDataChanged(widget.data);
+      return true;
+    } catch (e) {
+      developer.log('[$_tag] Error saving form: $e', name: _tag);
+      return false;
+    }
+  }
+
   bool validateForm() {
     developer.log('[$_tag] Starting form validation', name: _tag);
     _validationErrors.clear();
@@ -205,18 +241,15 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       developer.log('[$_tag] No consent given, skipping ID validation', name: _tag);
     } else {
       // Validate Ghana Card selection only if consent is given
-      if (widget.data.hasGhanaCard == null) {
-        _validationErrors['ghanaCard'] = 'Please specify if you have a Ghana Card';
-        developer.log('[$_tag] Validation failed: Ghana Card not specified', name: _tag);
-      } else if (widget.data.hasGhanaCard == 'Yes') {
-        // Validate Ghana Card number if user has a Ghana Card and consented
+      if (widget.data.hasGhanaCard == 1 && widget.data.idPictureConsent == 1) {
+        // Validate Ghana Card number if Ghana Card is selected and consent is given
         final ghanaCardError = _validateGhanaCardNumber(_ghanaCardNumberController.text);
         if (ghanaCardError != null) {
           _validationErrors['ghanaCardNumber'] = ghanaCardError;
-          developer.log('[$_tag] Validation failed: Invalid Ghana Card number', name: _tag);
+          developer.log('[$_tag] Validation failed for Ghana Card number', name: _tag);
         }
-      } else {
-        // Validate alternative ID if no Ghana Card but consent is given
+      } else if (widget.data.hasGhanaCard == 0) {
+        // Validate alternative ID if no Ghana Card
         if (widget.data.selectedIdType == null) {
           _validationErrors['idType'] = 'Please select an alternative ID type';
           developer.log('[$_tag] Validation failed: No alternative ID type selected', name: _tag);
@@ -228,11 +261,14 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
           }
           
           // Only require ID image if consent is given
-          if (widget.data.idPictureConsent == 'Yes' && widget.data.idImagePath == null) {
+          if (widget.data.idPictureConsent == 1 && widget.data.idImagePath == null) {
             _validationErrors['idImage'] = 'Please capture a picture of the ID';
             developer.log('[$_tag] Validation failed: ID image not captured', name: _tag);
           }
         }
+      } else {
+        _validationErrors['ghanaCard'] = 'Please specify if you have a Ghana Card';
+        developer.log('[$_tag] Validation failed: Ghana Card not specified', name: _tag);
       }
     }
 
@@ -244,16 +280,46 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
     }
 
     // Validate children count
-    final childrenCount = int.tryParse(_childrenCountController.text) ?? 0;
-    if (childrenCount < 0) {
-      _validationErrors['childrenCount'] = 'Number of children cannot be negative';
-      developer.log('[$_tag] Validation failed: Invalid children count', name: _tag);
-    }
+    final childrenCountText = _childrenCountController.text.trim();
+    if (childrenCountText.isEmpty) {
+      _validationErrors['childrenCount'] = 'Please enter the number of children';
+      developer.log('[$_tag] Validation failed: Children count is required', name: _tag);
+    } else {
+      final childrenCount = int.tryParse(childrenCountText);
+      if (childrenCount == null) {
+        _validationErrors['childrenCount'] = 'Please enter a valid number';
+        developer.log('[$_tag] Validation failed: Invalid children count format', name: _tag);
+      } else if (childrenCount < 0) {
+        _validationErrors['childrenCount'] = 'Number of children cannot be negative';
+        developer.log('[$_tag] Validation failed: Negative children count', name: _tag);
+      }
 
     // Validate no consent reason
     if (widget.data.idPictureConsent == 'No' && _noConsentReasonController.text.trim().isEmpty) {
       _validationErrors['noConsentReason'] = 'Please provide a reason for not consenting';
       developer.log('[$_tag] Validation failed: No consent reason missing', name: _tag);
+    }
+
+    // Validate children's names if there are children
+    if (childrenCountText.isNotEmpty) {
+      final childrenCount = int.tryParse(childrenCountText) ?? 0;
+      for (int i = 0; i < childrenCount; i++) {
+        final firstName = _childFirstNameControllers[i]?.text.trim() ?? '';
+        final surname = _childSurnameControllers[i]?.text.trim() ?? '';
+        
+        final firstNameError = _validateName(firstName, 'first name');
+        if (firstNameError != null) {
+          _validationErrors['child_${i}_firstName'] = firstNameError;
+          developer.log('[$_tag] Validation failed for child $i first name', name: _tag);
+        }
+        
+        final surnameError = _validateName(surname, 'surname');
+        if (surnameError != null) {
+          _validationErrors['child_${i}_surname'] = surnameError;
+          developer.log('[$_tag] Validation failed for child $i surname', name: _tag);
+        }
+      }
+    }
     }
 
     final isValid = _validationErrors.isEmpty;
@@ -361,6 +427,14 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
     widget.onDataChanged(
       widget.data.updateChildName(index, field, value),
     );
+    
+    // Clear validation error when user starts typing
+    final errorKey = 'child_${index}_${field.toLowerCase()}';
+    if (_validationErrors.containsKey(errorKey)) {
+      setState(() {
+        _validationErrors.remove(errorKey);
+      });
+    }
   }
 
   // ==================== Action Handlers ====================
@@ -526,12 +600,15 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       value: value,
       groupValue: groupValue,
       onChanged: (newValue) {
+        if (!mounted) return;  // Check if widget is still mounted
         onChanged(newValue);
         // Clear validation error when user makes selection
         if (errorKey != null && _validationErrors.containsKey(errorKey)) {
-          setState(() {
-            _validationErrors.remove(errorKey);
-          });
+          if (mounted) {  // Check again before setState
+            setState(() {
+              _validationErrors.remove(errorKey);
+            });
+          }
         }
       },
       activeColor: Colors.green.shade600,
@@ -668,6 +745,8 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
   Widget _buildGhanaCardSection() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    // Initialize as null to ensure no option is pre-selected
+    final hasGhanaCard = widget.data.hasGhanaCard == null ? null : (widget.data.hasGhanaCard == 1 ? 'Yes' : 'No');
 
     return _buildQuestionCard(
       errorKey: 'ghanaCard',
@@ -686,19 +765,19 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
             children: [
               _buildRadioOption(
                 value: 'Yes',
-                groupValue: widget.data.hasGhanaCard,
+                groupValue: hasGhanaCard,
                 label: 'Yes',
                 onChanged: (value) {
-                  widget.onDataChanged(widget.data.updateGhanaCard(value));
+                  widget.onDataChanged(widget.data.updateGhanaCard(1));
                 },
                 errorKey: 'ghanaCard',
               ),
               _buildRadioOption(
                 value: 'No',
-                groupValue: widget.data.hasGhanaCard,
+                groupValue: hasGhanaCard,
                 label: 'No',
                 onChanged: (value) {
-                  widget.onDataChanged(widget.data.updateGhanaCard(value));
+                  widget.onDataChanged(widget.data.updateGhanaCard(0));
                 },
                 errorKey: 'ghanaCard',
               ),
@@ -713,7 +792,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    if (widget.data.hasGhanaCard != 'No') return const SizedBox.shrink();
+    if (widget.data.hasGhanaCard == 1) return const SizedBox.shrink();
 
     return _buildQuestionCard(
       errorKey: 'idType',
@@ -735,7 +814,12 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                 groupValue: widget.data.selectedIdType,
                 label: 'Voter ID',
                 onChanged: (value) {
-                  widget.onDataChanged(widget.data.updateIdType(value));
+                  if (!mounted) return;
+                  try {
+                    widget.onDataChanged(widget.data.updateIdType(value));
+                  } catch (e) {
+                    developer.log('Error updating ID type: $e', name: _tag);
+                  }
                 },
                 errorKey: 'idType',
               ),
@@ -744,7 +828,12 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                 groupValue: widget.data.selectedIdType,
                 label: 'Driver\'s License',
                 onChanged: (value) {
-                  widget.onDataChanged(widget.data.updateIdType(value));
+                  if (!mounted) return;
+                  try {
+                    widget.onDataChanged(widget.data.updateIdType(value));
+                  } catch (e) {
+                    developer.log('Error updating ID type: $e', name: _tag);
+                  }
                 },
                 errorKey: 'idType',
               ),
@@ -753,7 +842,12 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                 groupValue: widget.data.selectedIdType,
                 label: 'NHIS Card',
                 onChanged: (value) {
-                  widget.onDataChanged(widget.data.updateIdType(value));
+                  if (!mounted) return;
+                  try {
+                    widget.onDataChanged(widget.data.updateIdType(value));
+                  } catch (e) {
+                    developer.log('Error updating ID type: $e', name: _tag);
+                  }
                 },
                 errorKey: 'idType',
               ),
@@ -762,7 +856,12 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                 groupValue: widget.data.selectedIdType,
                 label: 'Passport',
                 onChanged: (value) {
-                  widget.onDataChanged(widget.data.updateIdType(value));
+                  if (!mounted) return;
+                  try {
+                    widget.onDataChanged(widget.data.updateIdType(value));
+                  } catch (e) {
+                    developer.log('Error updating ID type: $e', name: _tag);
+                  }
                 },
                 errorKey: 'idType',
               ),
@@ -794,9 +893,15 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
   Widget _buildConsentSection() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    // Only show this section if we have a valid selection
+    if (widget.data.hasGhanaCard == null) {
+      return const SizedBox.shrink();
+    }
+    
+    final hasGhanaCard = widget.data.hasGhanaCard == 1;
 
-    if ((widget.data.hasGhanaCard != 'Yes') &&
-        !(widget.data.hasGhanaCard == 'No' && widget.data.selectedIdType != null)) {
+    // Only show if we have a valid ID type when Ghana Card is not selected
+    if (!hasGhanaCard && widget.data.selectedIdType == null) {
       return const SizedBox.shrink();
     }
 
@@ -808,10 +913,10 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.data.hasGhanaCard == 'Yes'
+                hasGhanaCard
                     ? 'Do you consent to us taking a picture of your Ghana Card and recording the card number?'
                     : 'Do you consent to us taking a picture of your ${_getIdTypeDisplayName(widget.data.selectedIdType)} and recording the ID number?',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
                       fontWeight: FontWeight.w500,
                     ),
@@ -821,7 +926,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                 children: [
                   _buildRadioOption(
                     value: 'Yes',
-                    groupValue: widget.data.idPictureConsent,
+                    groupValue: widget.data.idPictureConsent == 1 ? 'Yes' : 'No',
                     label: 'Yes',
                     onChanged: (value) {
                       widget.onDataChanged(widget.data.updatePictureConsent(value));
@@ -830,7 +935,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                   ),
                   _buildRadioOption(
                     value: 'No',
-                    groupValue: widget.data.idPictureConsent,
+                    groupValue: widget.data.idPictureConsent == 1 ? 'Yes' : 'No',
                     label: 'No',
                     onChanged: (value) {
                       widget.onDataChanged(widget.data.updatePictureConsent(value));
@@ -844,7 +949,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
         ),
         
         // Show reason field only when consent is 'No'
-        if (widget.data.idPictureConsent == 'No')
+        if (widget.data.idPictureConsent == 0)
           Padding(
             padding: const EdgeInsets.only(top: _Spacing.md),
             child: _buildQuestionCard(
@@ -867,8 +972,8 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
   }
 
   Widget _buildIdNumberSection() {
-    // Ghana Card Number Field
-    if (widget.data.hasGhanaCard == 'Yes' && widget.data.idPictureConsent == 'Yes') {
+    // Ghana Card Number Field - Only show if consent is given
+    if (widget.data.hasGhanaCard == 1 && widget.data.idPictureConsent == 1) {
       return _buildQuestionCard(
         errorKey: 'ghanaCardNumber',
         child: _buildTextField(
@@ -886,9 +991,8 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
     }
 
     // Alternative ID Number Field
-    if (widget.data.hasGhanaCard == 'No' &&
-        widget.data.selectedIdType != null &&
-        widget.data.idPictureConsent == 'Yes') {
+    if (widget.data.hasGhanaCard == 0 &&
+        widget.data.selectedIdType != null) {
       return _buildQuestionCard(
         errorKey: 'idNumber',
         child: _buildTextField(
@@ -912,7 +1016,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    if (widget.data.idPictureConsent != 'Yes') return const SizedBox.shrink();
+    if (widget.data.idPictureConsent != 1) return const SizedBox.shrink();
 
     return _buildQuestionCard(
       errorKey: 'idImage',
@@ -920,7 +1024,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.data.hasGhanaCard == 'Yes'
+            widget.data.hasGhanaCard == 1
                 ? 'Ghana Card Picture'
                 : '${_getIdTypeDisplayName(widget.data.selectedIdType)} Picture',
             style: GoogleFonts.inter(
@@ -1109,6 +1213,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                             _onChildNameChanged(index, 'firstName', value);
                           },
                           errorKey: 'child_${index}_firstName',
+                          textCapitalization: TextCapitalization.words,
                         ),
                         const SizedBox(height: _Spacing.md),
                         _buildTextField(
@@ -1119,6 +1224,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                             _onChildNameChanged(index, 'surname', value);
                           },
                           errorKey: 'child_${index}_surname',
+                          textCapitalization: TextCapitalization.words,
                         ),
                       ],
                     ),

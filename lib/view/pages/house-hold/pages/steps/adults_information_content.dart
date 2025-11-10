@@ -16,12 +16,14 @@ class AdultsInformationContent extends StatefulWidget {
   final AdultsInformationData data;
   final ValueChanged<AdultsInformationData> onDataChanged;
   final List<String> validationErrors;
+  final GlobalKey<FormState>? formKey;
 
   const AdultsInformationContent({
     Key? key,
     required this.data,
     required this.onDataChanged,
     this.validationErrors = const [],
+    this.formKey,
   }) : super(key: key);
 
   @override
@@ -257,26 +259,38 @@ class _AdultsInformationContentState extends State<AdultsInformationContent> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(_Spacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Number of adults input
-          _buildQuestionCard(
-            child: _buildTextField(
-              label: 'Total number of adults in the household '
-                  '(Producer/manager/owner not included). '
-                  'Include the manager\'s family only if they live in the producer\'s household. *',
+    return Form(
+      key: widget.formKey,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(_Spacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Number of adults input
+            TextFormField(
               controller: _adultsCountController,
-              hintText: 'Enter number of adults',
+              decoration: InputDecoration(
+                labelText: 'Number of adults in household',
+                hintText: 'Enter number of adults',
+                border: OutlineInputBorder(),
+              ),
               keyboardType: TextInputType.number,
               onChanged: _onCountChanged,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter the number of adults';
+                }
+                final count = int.tryParse(value);
+                if (count == null || count < 0) {
+                  return 'Please enter a valid number';
+                }
+                return null;
+              },
             ),
-          ),
+            const SizedBox(height: _Spacing.lg),
 
-          // Household members section
-          if (_nameControllers.isNotEmpty) ...[
+            // Household members section
+            if (_nameControllers.isNotEmpty) ...[
             _buildQuestionCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,7 +432,8 @@ class _AdultsInformationContentState extends State<AdultsInformationContent> {
           ],
 
           const SizedBox(height: 80),
-        ],
+          ],
+        ),
       ),
     );
   }

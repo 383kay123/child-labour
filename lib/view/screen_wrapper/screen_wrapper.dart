@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:human_rights_monitor/view/pages/community/community_list_screen.dart';
+// import 'package:human_rights_monitor/view/pages/community/community_list_screen.dart';
 import 'package:human_rights_monitor/view/pages/farmers/farmer_list_screen.dart';
 
 import '../home/home.dart';
@@ -19,7 +19,7 @@ class _ScreenWrapperState extends State<ScreenWrapper> {
   final List<Widget> _screens = const [
     Homepage(),
     FarmerListScreen(),
-    CommunityListScreen(),
+    // CommunityListScreen(),
     ProfileScreen(),
   ];
 

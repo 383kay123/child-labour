@@ -23,10 +23,10 @@ class CoverPage extends StatefulWidget {
   });
 
   @override
-  State<CoverPage> createState() => _CoverPageState();
+  State<CoverPage> createState() => CoverPageState();
 }
 
-class _CoverPageState extends State<CoverPage> {
+class CoverPageState extends State<CoverPage> {
   bool _isLoading = false;
 
   @override
@@ -40,27 +40,34 @@ class _CoverPageState extends State<CoverPage> {
     });
   }
 
+  /// Loads the most recent cover page data from the database
+  /// and updates the form fields if data exists
   Future<void> _loadSavedData() async {
     if (_isLoading) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final dbHelper = LocalDBHelper.instance;
-      final savedData = await dbHelper.getLatestCoverPageData();
+      // final dbHelper = LocalDBHelper.instance;
+      // final savedData = await dbHelper.getLatestCoverPageData();
 
-      if (savedData != null && mounted) {
-        widget.onDataChanged(
-          widget.data.copyWith(
-            selectedTownCode: savedData['selectedTown'],
-            selectedFarmerCode: savedData['selectedFarmer'],
-          ),
-        );
-      }
-    } catch (e) {
+      // if (savedData != null && mounted) {
+      //   widget.onDataChanged(
+      //     widget.data.copyWith(
+      //       selectedTownCode: savedData['selected_town']?.toString(),
+      //       selectedFarmerCode: savedData['selected_farmer']?.toString(),
+      //     ),
+      //   );
+      // }
+    } catch (e, stackTrace) {
       if (mounted) {
+        debugPrint('Error loading saved data: $e\n$stackTrace');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading saved data: $e')),
+          const SnackBar(
+            content: Text('Error loading previous data. Starting fresh.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
+          ),
         );
       }
     } finally {
@@ -75,7 +82,7 @@ class _CoverPageState extends State<CoverPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please fill in all required fields'),
+            content: Text('Please select both society and farmer'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -87,40 +94,46 @@ class _CoverPageState extends State<CoverPage> {
       setState(() => _isLoading = true);
       final dbHelper = LocalDBHelper.instance;
 
-      // Check if this is an update to an existing record
-      final existingData = await dbHelper.getLatestCoverPageData();
+      // Get town and farmer names
+      final town = widget.data.towns.firstWhere(
+        (town) => town.code == widget.data.selectedTownCode,
+        orElse: () => const DropdownItem(code: '', name: ''),
+      );
+      
+      final farmer = widget.data.farmers.firstWhere(
+        (farmer) => farmer.code == widget.data.selectedFarmerCode,
+        orElse: () => const DropdownItem(code: '', name: ''),
+      );
 
+      // Prepare data for saving
       final coverData = {
-        if (existingData != null) 'id': existingData['id'],
-        'selectedTown': widget.data.selectedTownCode ?? '',
-        'selectedTownName': widget.data.towns
-            .firstWhere(
-              (town) => town.code == widget.data.selectedTownCode,
-              orElse: () => const DropdownItem(code: '', name: ''),
-            )
-            .name,
-        'selectedFarmer': widget.data.selectedFarmerCode ?? '',
-        'selectedFarmerName': widget.data.farmers
-            .firstWhere(
-              (farmer) => farmer.code == widget.data.selectedFarmerCode,
-              orElse: () => const DropdownItem(code: '', name: ''),
-            )
-            .name,
+        'selected_town': widget.data.selectedTownCode,
+        'selected_town_name': town.name,
+        'selected_farmer': widget.data.selectedFarmerCode,
+        'selected_farmer_name': farmer.name,
         'status': 1, // Mark as completed
-        'createdAt':
-            existingData?['createdAt'] ?? DateTime.now().toIso8601String(),
-        'updatedAt': DateTime.now().toIso8601String(),
-        'syncStatus': 0, // Not synced
+        'sync_status': 0, // Not synced yet
       };
 
-      await dbHelper.insertCoverPageData(coverData);
+      // // Check if we should update existing record or insert new one
+      // final existingData = await dbHelper.getLatestCoverPageData();
+      // if (existingData != null) {
+      //   // Update existing record
+      //   await dbHelper.updateCoverPageData(existingData['id'] as int, coverData);
+      // } else {
+      //   // Insert new record
+      //   await dbHelper.insertCoverPageData(coverData);
+      // }
+
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Error saving cover page data: $e\n$stackTrace');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving data: $e'),
+          const SnackBar(
+            content: Text('Error saving data. Please try again.'),
             behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -174,7 +187,7 @@ class _CoverPageState extends State<CoverPage> {
                           value: widget.data.selectedTownCode,
                           items: DropdownItem.toMapList(widget.data.towns),
                           onChanged: (value) {
-                            widget.onDataChanged(widget.data.selectTown(value));
+                            widget.onDataChanged(widget.data.copyWith(selectedTownCode: value));
                           },
                           hint: 'Select your society',
                           isLoading: widget.data.isLoadingTowns,

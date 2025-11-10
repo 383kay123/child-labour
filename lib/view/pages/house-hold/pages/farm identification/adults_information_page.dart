@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../theme/app_theme.dart';
-import 'children_household_page.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
 class _Spacing {
@@ -224,77 +223,37 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
   }
 
   bool get _isFormComplete {
-    if (_numberOfAdults == null || _numberOfAdults == 0) return false;
-
-    // Check all names are filled and valid
+    // If no adults, form is complete
+    if (_numberOfAdults == null || _numberOfAdults == 0) return true;
+    
+    // Check if all names are valid (if provided)
     for (int i = 0; i < _nameControllers.length; i++) {
-      if (i >= _isNameValidList.length || !_isNameValidList[i]) return false;
-    }
-
-    // Check all producer details are complete for each member
-    for (int i = 0; i < _producerDetailsList.length; i++) {
-      if (!_isProducerDetailsComplete(_producerDetailsList[i])) {
+      if (_nameControllers[i].text.trim().isNotEmpty && 
+          !_isNameValid(_nameControllers[i].text)) {
         return false;
       }
     }
-
     return true;
   }
 
   bool _isProducerDetailsComplete(ProducerDetails details) {
-    // Check all required fields are filled
-    return details.gender != null &&
-        details.nationality != null &&
-        details.yearOfBirth != null &&
-        details.relationshipToRespondent != null &&
-        details.hasBirthCertificate != null &&
-        details.occupation != null &&
-        // If non-Ghanaian, country must be specified
-        (details.nationality != 'non_ghanaian' ||
-            details.selectedCountry != null) &&
-        // Ghana card question must be answered
-        _isGhanaCardComplete(details) &&
-        // Consent question must be answered if applicable
-        _isConsentComplete(details);
+    // All fields are optional, but if provided, they should be valid
+    return true;
   }
 
   bool _isGhanaCardComplete(ProducerDetails details) {
-    // Either has Ghana card with ID, or has other ID type specified
-    if (details.ghanaCardId != null && details.ghanaCardId!.isNotEmpty) {
-      return true; // Has Ghana card with ID
-    }
-    if (details.otherIdType != null && details.otherIdType != 'none') {
-      return details.otherIdNumber != null && details.otherIdNumber!.isNotEmpty;
-    }
-    if (details.otherIdType == 'none') {
-      return true; // Explicitly selected "None"
-    }
-    return false; // Ghana card question not properly answered
+    // All fields are optional
+    return true;
   }
 
   bool _isConsentComplete(ProducerDetails details) {
-    // Consent question only required if they have an ID type (not 'none')
-    final hasValidId =
-        (details.ghanaCardId != null && details.ghanaCardId!.isNotEmpty) ||
-            (details.otherIdType != null && details.otherIdType != 'none');
-
-    if (!hasValidId) {
-      return true; // No ID required, so consent not needed
-    }
-
-    // If they have a valid ID, consent must be specified
-    if (details.consentToTakePhoto == true) {
-      return true; // Consent given
-    }
-    if (details.consentToTakePhoto == false) {
-      return details.noConsentReason != null &&
-          details.noConsentReason!.isNotEmpty;
-    }
-    return false; // Consent question not answered
+    // All fields are optional
+    return true;
   }
 
   void _saveAndContinue() {
-    if (_formKey.currentState!.validate() && _isFormComplete) {
+    // Always allow saving, but validate what's there
+    if (_formKey.currentState!.validate()) {
       // Prepare data for submission
       final householdData = {
         'numberOfAdults': _numberOfAdults,
@@ -309,14 +268,15 @@ class _AdultsInformationPageState extends State<AdultsInformationPage> {
       print('Household Data: $householdData');
 
       // Navigate to ChildrenHouseholdPage with the collected data
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChildrenHouseholdPage(
-            producerDetails: householdData, // Pass the actual household data
-          ),
-        ),
-      );
+      // This navigation should be handled by the parent widget's page controller
+      // The parent widget should manage the page navigation
+      if (mounted) {
+        // Instead of pushing a new route, we should call the parent's onNext
+        // This assumes the parent widget is managing the page controller
+        // and will handle the navigation to the next page
+        // If this is not the case, you'll need to pass the onNext callback from the parent
+        Navigator.of(context).pop(householdData);
+      }
     }
   }
 
@@ -964,10 +924,7 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
       ),
       value: value,
       groupValue: groupValue,
-      onChanged: (value) {
-        onChanged(value);
-        _updateParentDetails();
-      },
+      onChanged: onChanged,
       activeColor: AppTheme.primaryColor,
       contentPadding: EdgeInsets.zero,
       dense: true,
@@ -1096,16 +1053,15 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                 // Only update if the value has actually changed
                 if (newValue != value) {
                   onChanged(newValue);
+                  // Update parent details when selection changes
+                  _updateParentDetails();
                 }
               },
               dropdownColor: isDark ? AppTheme.darkCard : Colors.white,
               selectedItemBuilder: (BuildContext context) {
                 return items.map<Widget>((Map<String, String> item) {
                   return Text(
-                    items.firstWhere(
-                      (element) => element['value'] == value,
-                      orElse: () => {'label': 'Select an option'},
-                    )['label']!,
+                    item['label']!,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: isDark ? AppTheme.darkTextPrimary : AppTheme.textPrimary,
                     ),
@@ -1113,17 +1069,12 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                   );
                 }).toList();
               },
-              items: items
-                  .map<DropdownMenuItem<String>>((Map<String, String> item) {
+              items: items.map<DropdownMenuItem<String>>((Map<String, String> item) {
                 return DropdownMenuItem<String>(
                   value: item['value'],
                   child: Text(
                     item['label']!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isDark
-                          ? AppTheme.darkTextPrimary
-                          : AppTheme.textPrimary,
-                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 );
               }).toList(),
@@ -1256,6 +1207,7 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                         onChanged: (value) {
                           setState(() {
                             _consentToTakePhoto = value == 'Yes';
+                            _updateParentDetails();
                           });
                         },
                       ),
@@ -1268,6 +1220,7 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                         onChanged: (value) {
                           setState(() {
                             _consentToTakePhoto = value == 'Yes';
+                            _updateParentDetails();
                           });
                         },
                       ),
@@ -1370,9 +1323,13 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                   value: _relationshipToRespondent,
                   items: relationshipOptions,
                   onChanged: (value) {
-                    setState(() {
-                      _relationshipToRespondent = value;
-                    });
+                    if (value != _relationshipToRespondent) {
+                      setState(() {
+                        _relationshipToRespondent = value;
+                        _otherRelationshipController.clear(); // Clear other field when changing relationship
+                      });
+                      _updateParentDetails(); // Ensure parent is updated with new value
+                    }
                   },
                 ),
                 if (_relationshipToRespondent == 'other') ...[

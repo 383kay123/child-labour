@@ -1,11 +1,22 @@
 import 'dart:async';
-
-import 'package:human_rights_monitor/controller/db/table_names.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../../view/models/monitoring_model.dart';
 import '../models/community-assessment-model.dart';
+import 'table_names.dart';
+import '../../view/models/monitoring_model.dart';
+
+// Import all table classes
+import 'db_tables/cover_page_table.dart';
+import 'db_tables/consent_table.dart';
+import 'db_tables/farmer_identification_table.dart';
+import 'db_tables/combined_farmer_identification_table.dart';
+import 'db_tables/children_household_table.dart';
+import 'db_tables/remediation_table.dart';
+import 'db_tables/sensitization_table.dart';
+import 'db_tables/sensitization_questions_table.dart';
+import 'db_tables/end_of_collection_table.dart';
+import 'db_tables/monitoring_table.dart';
 
 class LocalDBHelper {
   static final LocalDBHelper instance = LocalDBHelper._init();
@@ -13,225 +24,124 @@ class LocalDBHelper {
 
   LocalDBHelper._init();
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB('community_assessment.db');
-    return _database!;
-  }
-
-  Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
-
-    return await openDatabase(path, version: 1, onCreate: _createDB);
-  }
-
-  Future _createDB(Database db, int version) async {
+  // Create community assessment table
+  Future<void> _createCommunityAssessmentTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS ${TableNames.communityAssessmentTBL}(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         communityName TEXT,
         communityScore INTEGER,
         q1 TEXT, q2 TEXT, q3 TEXT, q4 TEXT, q5 TEXT,
-        q6 TEXT, q7a INTEGER, q7b TEXT, q7c TEXT, q8 TEXT, q9 TEXT, q10 TEXT, status INTEGER
+        q6 TEXT, q7a INTEGER, q7b TEXT, q7c TEXT, q8 TEXT, q9 TEXT, q10 TEXT, 
+        status INTEGER
       )
     ''');
+  }
 
-    await db.execute('''
-      CREATE TABLE ${TableNames.consentTBL}(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        interviewStartTime TEXT,
-        timeStatus TEXT,
-        latitude REAL,
-        longitude REAL,
-        locationStatus TEXT,
-        isGettingLocation INTEGER,
-        communityType TEXT,
-        residesInCommunityConsent TEXT,
-        farmerAvailable TEXT,
-        farmerStatus TEXT,
-        availablePerson TEXT,
-        otherSpecification TEXT,
-        otherCommunityName TEXT,
-        consentGiven INTEGER,
-        refusalReason TEXT,
-        consentTimestamp TEXT,
-        syncStatus INTEGER DEFAULT 0,
-        createdAt TEXT,
-        updatedAt TEXT
-      )
-    ''');
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
 
-    await db.execute('''
-      CREATE TABLE ${TableNames.monitoringTBL}(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        childId TEXT,
-        childName TEXT,
-        age TEXT,
-        sex TEXT,
-        community TEXT,
-        farmerId TEXT,
-        firstRemediationDate TEXT,
-        remediationFormProvided TEXT,
-        followUpVisitsCount TEXT,
-        isEnrolledInSchool INTEGER,
-        attendanceImproved INTEGER,
-        receivedSchoolMaterials INTEGER,
-        canReadWriteBasicText INTEGER,
-        advancedToNextGrade INTEGER,
-        classAtRemediation TEXT,
-        academicYearEnded INTEGER,
-        promoted INTEGER,
-        promotedGrade TEXT,
-        improvementInSkills INTEGER,
-        recommendations TEXT,
-        engagedInHazardousWork INTEGER,
-        reducedWorkHours INTEGER,
-        involvedInLightWork INTEGER,
-        outOfHazardousWork INTEGER,
-        hasBirthCertificate INTEGER,
-        birthCertificateProcess INTEGER,
-        noBirthCertificateReason TEXT,
-        receivedAwarenessSessions INTEGER,
-        improvedUnderstanding INTEGER,
-        caregiversSupportSchool INTEGER,
-        receivedFinancialSupport INTEGER,
-        referralsMade INTEGER,
-        ongoingFollowUpPlanned INTEGER,
-        consideredRemediated INTEGER,
-        additionalComments TEXT,
-        followUpVisitsCountSinceIdentification TEXT,
-        visitsSpacedCorrectly INTEGER,
-        confirmedNotInChildLabour INTEGER,
-        followUpCycleComplete INTEGER,
-        createdAt TEXT,
-        updatedAt TEXT
-      )
-    ''');
+    return await openDatabase(
+      path,
+      version: 3, // Incremented to update schema and add missing columns
+      onCreate: _createAllTables,
+      onUpgrade: _upgradeDatabase,
+    );
+  }
 
-    // COVER PAGE TABLE
-    await db.execute('''
-      CREATE TABLE ${TableNames.coverPageTBL}(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        selectedTown TEXT,
-        selectedTownName TEXT,
-        selectedFarmer TEXT,
-        selectedFarmerName TEXT,
-        createdAt TEXT,
-        updatedAt TEXT,
-        status INTEGER DEFAULT 0,
-        syncStatus INTEGER DEFAULT 0
-      )
-    ''');
+  Future<void> _createAllTables(Database db, int version) async {
+    // Create community assessment table
+    await _createCommunityAssessmentTable(db);
+    
+    // Create monitoring table and indexes
+    await MonitoringTable.createTable(db);
+    await MonitoringTable.createIndexes(db);
+    
+    // Create other tables
+    await CoverPageTable.createTable(db);
+    await ConsentTable.createTable(db);
+    await FarmerIdentificationTable.createTable(db);
+    await CombinedFarmerIdentificationTable.createTable(db);
+    await ChildrenHouseholdTable.createTable(db);
+    await RemediationTable.createTable(db);
+    await SensitizationTable.createTable(db);
+    await SensitizationQuestionsTable.createTable(db);
+    await EndOfCollectionTable.createTable(db);
+    
+    // Create any necessary triggers or indexes
+    await _createDatabaseTriggers(db);
+  }
 
-    // FARMER IDENTIFICATION TABLE
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS ${TableNames.farmerIdentificationTBL} (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        
-        -- Visit Information
-        respondentNameCorrect TEXT,
-        respondentNationality TEXT,
-        countryOfOrigin TEXT,
-        isFarmOwner TEXT,
-        farmOwnershipType TEXT,
-        correctedRespondentName TEXT,
-        respondentOtherNames TEXT,
-        otherCountry TEXT,
-        
-        -- Workers in Farm
-        hasRecruitedWorker TEXT,
-        everRecruitedWorker TEXT,
-        workerAgreementType TEXT,
-        tasksClarified TEXT,
-        additionalTasks TEXT,
-        refusalAction TEXT,
-        salaryPaymentFrequency TEXT,
-        permanentLabor INTEGER,
-        casualLabor INTEGER,
-        otherAgreement TEXT,
-        agreementResponses TEXT,
-        
-        -- Adults Information
-        numberOfAdults INTEGER,
-        householdMembers TEXT,
-        
-        -- Metadata
-        createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL,
-        isSynced INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
+  Future<void> _upgradeDatabase(Database db, int oldVersion, int newVersion) async {
+    // Let MonitoringTable handle its own upgrades
+    await MonitoringTable.onUpgrade(db, oldVersion, newVersion);
+    
+    // Add future version migrations here
+    // Example for version 4:
+    // if (oldVersion < 4) {
+    //   // Migration code for version 4
+    // }
+  }
+  
+  Future<void> _createDatabaseTriggers(Database db) async {
+    // Create any necessary triggers for your tables
+    // Example:
+    // await CoverPageTable.createTriggers(db);
+    // await ConsentTable.createTriggers(db);
+    // ... and so on for other tables with triggers
+  }
 
-    // CONSENT TABLE
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS ${TableNames.consentTBL} (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        
-        -- Consent Information
-        consentType TEXT,
-        consentStatus TEXT,
-        consentMethod TEXT,
-        consentWitnessName TEXT,
-        consentWitnessContact TEXT,
-        consentNotes TEXT,
-        isVerified INTEGER DEFAULT 0,
-        
-        -- Location and Timing
-        consentDateTime TEXT,
-        consentLatitude REAL,
-        consentLongitude REAL,
-        consentStatusMessage TEXT,
-        isProcessingConsent INTEGER DEFAULT 0,
-        
-        -- Metadata
-        createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL,
-        isSynced INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
-  } // Added missing closing brace for _createDB method
+  // Get database instance
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('child_labour.db');
+    return _database!;
+  }
 
+  // Community Assessment CRUD operations
   Future<int> insertCommunityAssessment(CommunityAssessmentModel model) async {
-    final db = await instance.database;
+    final db = await database;
     return await db.insert(TableNames.communityAssessmentTBL, model.toMap());
   }
 
   Future<int> updateCommunityAssessment(CommunityAssessmentModel model) async {
-    final db = await instance.database;
-    return await db.update(TableNames.communityAssessmentTBL, model.toMap(),
-        where: 'id = ?', whereArgs: [model.id]);
+    final db = await database;
+    return await db.update(
+      TableNames.communityAssessmentTBL,
+      model.toMap(),
+      where: 'id = ?',
+      whereArgs: [model.id],
+    );
   }
 
   Future<List<CommunityAssessmentModel>> getCommunityAssessment() async {
-    final db = await instance.database;
+    final db = await database;
     final result = await db.query(TableNames.communityAssessmentTBL);
     return result
-        .map((json) =>
-            CommunityAssessmentModel.fromMap(Map<String, String>.from(json)))
+        .map((json) => CommunityAssessmentModel.fromMap(json))
         .toList();
   }
 
-  // get response by status
   Future<List<CommunityAssessmentModel>> getCommunityAssessmentByStatus(
       {int status = 0}) async {
     final db = await database;
-    final result = await db.query(TableNames.communityAssessmentTBL,
-        where: 'status = ?', whereArgs: [status]);
+    final result = await db.query(
+      TableNames.communityAssessmentTBL,
+      where: 'status = ?',
+      whereArgs: [status],
+    );
     return result
-        .map((json) =>
-            CommunityAssessmentModel.fromMap(Map<String, String>.from(json)))
+        .map((json) => CommunityAssessmentModel.fromMap(json))
         .toList();
   }
 
   Future<int> deleteAllCommunityAssessment() async {
-    final db = await instance.database;
+    final db = await database;
     return await db.delete(TableNames.communityAssessmentTBL);
   }
 
-  // ========================================================================================
-  // MONITORING TABLE QUERIES
-
+  // Monitoring CRUD operations
   Future<int> insertIntoMonitoringTable(MonitoringModel form) async {
     final db = await database;
     return await db.insert(TableNames.monitoringTBL, form.toMap());
@@ -259,17 +169,32 @@ class LocalDBHelper {
     return null;
   }
 
-  // get by status
   Future<List<MonitoringModel>> getMonitoringTableByStatus(int status) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      TableNames.monitoringTBL,
-      where: 'status = ?',
-      whereArgs: [status],
-    );
-    return List.generate(maps.length, (i) {
-      return MonitoringModel.fromMap(maps[i]);
-    });
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        TableNames.monitoringTBL,
+        where: 'status = ?',
+        whereArgs: [status],
+        orderBy: 'date_created DESC',
+      );
+      return List.generate(maps.length, (i) {
+        return MonitoringModel.fromMap(maps[i]);
+      });
+    } catch (e) {
+      print('Error getting monitoring records by status $status: $e');
+      return [];
+    }
+  }
+
+  /// Gets all pending monitoring assessments (status = 0)
+  Future<List<MonitoringModel>> getPendingMonitoringAssessments() async {
+    return await getMonitoringTableByStatus(0);
+  }
+
+  /// Gets all submitted monitoring assessments (status = 1)
+  Future<List<MonitoringModel>> getSubmittedMonitoringAssessments() async {
+    return await getMonitoringTableByStatus(1);
   }
 
   Future<int> updateMonitoringTable(MonitoringModel form) async {
@@ -296,276 +221,130 @@ class LocalDBHelper {
     await db.delete(TableNames.monitoringTBL);
   }
 
-  // ========================================================================================
-  // FARMER IDENTIFICATION TABLE QUERIES
-
-  Future<int> insertFarmerIdentification(Map<String, dynamic> data) async {
-    final db = await database;
-    data['createdAt'] = DateTime.now().toIso8601String();
-    data['updatedAt'] = DateTime.now().toIso8601String();
-    data['isSynced'] = 0;
-    return await db.insert(TableNames.farmerIdentificationTBL, data);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllFarmerIdentifications() async {
-    final db = await database;
-    return await db.query(TableNames.farmerIdentificationTBL);
-  }
-
-  Future<Map<String, dynamic>?> getFarmerIdentification(int id) async {
-    final db = await database;
-    final List<Map<String, dynamic>> results = await db.query(
-      TableNames.farmerIdentificationTBL,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<List<Map<String, dynamic>>> getUnsyncedFarmerIdentifications() async {
-    final db = await database;
-    return await db.query(
-      TableNames.farmerIdentificationTBL,
-      where: 'isSynced = ?',
-      whereArgs: [0],
-    );
-  }
-
-  Future<int> updateFarmerIdentification(
-      int id, Map<String, dynamic> data) async {
-    final db = await database;
-    data['updatedAt'] = DateTime.now().toIso8601String();
-    return await db.update(
-      TableNames.farmerIdentificationTBL,
-      data,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> deleteFarmerIdentification(int id) async {
-    final db = await database;
-    return await db.delete(
-      TableNames.farmerIdentificationTBL,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> markFarmerIdentificationAsSynced(int id) async {
-    final db = await database;
-    return await db.update(
-      TableNames.farmerIdentificationTBL,
-      {
-        'isSynced': 1,
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> clearAllFarmerIdentifications() async {
-    final db = await database;
-    return await db.delete(TableNames.farmerIdentificationTBL);
-  }
-
-  // ========================================================================================
-  // COVER PAGE TABLE QUERIES
-
-  Future<int> insertCoverPageData(Map<String, dynamic> data) async {
-    final db = await database;
-    data['createdAt'] = DateTime.now().toIso8601String();
-    data['updatedAt'] = DateTime.now().toIso8601String();
-    data['syncStatus'] = 0; // Mark as not synced
-    return await db.insert(TableNames.coverPageTBL, data);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllCoverPageData() async {
-    final db = await database;
-    return await db.query(TableNames.coverPageTBL);
-  }
-
-  Future<Map<String, dynamic>?> getCoverPageData(int id) async {
-    final db = await database;
-    final List<Map<String, dynamic>> results = await db.query(
-      TableNames.coverPageTBL,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<List<Map<String, dynamic>>> getUnsyncedCoverPageData() async {
-    final db = await database;
-    return await db.query(
-      TableNames.coverPageTBL,
-      where: 'syncStatus = ?',
-      whereArgs: [0],
-    );
-  }
-
-  Future<int> updateCoverPageData(int id, Map<String, dynamic> data) async {
-    final db = await database;
-    data['updatedAt'] = DateTime.now().toIso8601String();
-    return await db.update(
-      TableNames.coverPageTBL,
-      data,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  /// Updates the status of a cover page record
-  /// [id] - The ID of the record to update
-  /// [status] - The new status (0 for pending, 1 for submitted)
-  /// [updatedAt] - The timestamp of the update (defaults to current time if null)
-  Future<int> updateCoverPageStatus({
-    required int id,
-    required int status,
-    String? updatedAt,
-  }) async {
-    final db = await database;
-    return await db.update(
-      TableNames.coverPageTBL,
-      {
-        'status': status,
-        'updatedAt': updatedAt ?? DateTime.now().toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> deleteCoverPageData(int id) async {
-    final db = await database;
-    return await db.delete(
-      TableNames.coverPageTBL,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> markCoverPageAsSynced(int id) async {
-    final db = await database;
-    return await db.update(
-      TableNames.coverPageTBL,
-      {
-        'syncStatus': 1,
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> clearAllCoverPageData() async {
-    final db = await database;
-    return await db.delete(TableNames.coverPageTBL);
-  }
-
-  // Get the latest cover page data
-  Future<Map<String, dynamic>?> getLatestCoverPageData() async {
-    final db = await database;
-    final List<Map<String, dynamic>> results = await db.query(
-      TableNames.coverPageTBL,
-      orderBy: 'id DESC',
-      limit: 1,
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
-
   /// Clears all survey data from the database
   /// This should be called when navigating back to the StartSurvey screen
   Future<void> clearAllSurveyData() async {
     final db = await database;
-    await db.delete(TableNames.coverPageTBL);
-    await db.delete(TableNames.farmerIdentificationTBL);
-    await db.delete(TableNames.consentTBL);
-    // Add any other survey-related tables that need to be cleared
+    await db.delete(TableNames.communityAssessmentTBL);
+    await db.delete(TableNames.monitoringTBL);
   }
 
-  // ========================================================================================
-  // CONSENT TABLE QUERIES
-
-  Future<int> insertConsentData(Map<String, dynamic> data) async {
+  // Close the database connection
+  Future<void> close() async {
     final db = await database;
-    data['createdAt'] = DateTime.now().toIso8601String();
-    data['updatedAt'] = DateTime.now().toIso8601String();
-    data['isSynced'] = 0;
-    return await db.insert(TableNames.consentTBL, data);
+    await db.close();
   }
 
-  Future<List<Map<String, dynamic>>> getAllConsentData() async {
-    final db = await database;
-    return await db.query(TableNames.consentTBL);
-  }
+//   // ===================================================================
+//   // COVER PAGE TABLE METHODS
+  
+//   Future<int> insertCoverPageData(Map<String, dynamic> data) async {
+//     final db = await database;
+//     final now = DateTime.now().toIso8601String();
+//     final insertData = {
+//       'selected_town': data['selected_town'],
+//       'selected_town_name': data['selected_town_name'],
+//       'selected_farmer': data['selected_farmer'],
+//       'selected_farmer_name': data['selected_farmer_name'],
+//       'status': data['status'] ?? 0,
+//       'sync_status': 0,
+//       'created_at': now,
+//       'updated_at': now,
+//       'is_synced': 0,
+//     };
+//     return await db.insert(TableNames.coverPageTBL, insertData);
+//   }
 
-  Future<Map<String, dynamic>?> getConsentData(int id) async {
-    final db = await database;
-    final List<Map<String, dynamic>> results = await db.query(
-      TableNames.consentTBL,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
+//   Future<Map<String, dynamic>?> getLatestCoverPageData() async {
+//     final db = await database;
+//     final List<Map<String, dynamic>> results = await db.query(
+//       TableNames.coverPageTBL,
+//       orderBy: 'id DESC',
+//       limit: 1,
+//     );
+//     return results.isNotEmpty ? results.first : null;
+//   }
 
-  Future<List<Map<String, dynamic>>> getUnsyncedConsentData() async {
-    final db = await database;
-    return await db.query(
-      TableNames.consentTBL,
-      where: 'isSynced = ?',
-      whereArgs: [0],
-    );
-  }
+//   Future<List<Map<String, dynamic>>> getAllCoverPageData() async {
+//     final db = await database;
+//     return await db.query(TableNames.coverPageTBL);
+//   }
 
-  Future<int> updateConsentData(int id, Map<String, dynamic> data) async {
-    final db = await database;
-    data['updatedAt'] = DateTime.now().toIso8601String();
-    return await db.update(
-      TableNames.consentTBL,
-      data,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
+//   Future<int> updateCoverPageData(int id, Map<String, dynamic> data) async {
+//     final db = await database;
+//     data['updated_at'] = DateTime.now().toIso8601String();
+//     return await db.update(
+//       TableNames.coverPageTBL,
+//       data,
+//       where: 'id = ?',
+//       whereArgs: [id],
+//     );
+//   }
 
-  Future<int> deleteConsentData(int id) async {
-    final db = await database;
-    return await db.delete(
-      TableNames.consentTBL,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
+//   Future<int> updateCoverPageStatus({
+//     required int id,
+//     required int status,
+//   }) async {
+//     final db = await database;
+//     return await db.update(
+//       TableNames.coverPageTBL,
+//       {
+//         'status': status,
+//         'updated_at': DateTime.now().toIso8601String(),
+//       },
+//       where: 'id = ?',
+//       whereArgs: [id],
+//     );
+//   }
 
-  Future<int> markConsentAsSynced(int id) async {
-    final db = await database;
-    return await db.update(
-      TableNames.consentTBL,
-      {
-        'isSynced': 1,
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
+//   Future<int> deleteCoverPageData(int id) async {
+//     final db = await database;
+//     return await db.delete(
+//       TableNames.coverPageTBL,
+//       where: 'id = ?',
+//       whereArgs: [id],
+//     );
+//   }
 
-  Future<int> clearAllConsentData() async {
-    final db = await database;
-    return await db.delete(TableNames.consentTBL);
-  }
+//   Future<int> clearAllCoverPageData() async {
+//     final db = await database;
+//     return await db.delete(TableNames.coverPageTBL);
+//   }
 
-  // Get the latest consent data
-  Future<Map<String, dynamic>?> getLatestConsentData() async {
-    final db = await database;
-    final List<Map<String, dynamic>> results = await db.query(
-      TableNames.consentTBL,
-      orderBy: 'id DESC',
-      limit: 1,
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
+//   // ===================================================================
+//   // CONSENT TABLE METHODS
+
+//   Future<int> insertConsentData(Map<String, dynamic> data) async {
+//     final db = await database;
+//     final now = DateTime.now().toIso8601String();
+//     final insertData = {
+//       ...data,
+//       'created_at': now,
+//       'updated_at': now,
+//       'is_synced': 0,
+//     };
+//     return await db.insert(TableNames.consentTBL, insertData);
+//   }
+
+//   Future<int> updateConsentData(int id, Map<String, dynamic> data) async {
+//     final db = await database;
+//     data['updated_at'] = DateTime.now().toIso8601String();
+//     return await db.update(
+//       TableNames.consentTBL,
+//       data,
+//       where: 'id = ?',
+//       whereArgs: [id],
+//     );
+//   }
+
+//   Future<Map<String, dynamic>?> getLatestConsentData() async {
+//     final db = await database;
+//     final List<Map<String, dynamic>> results = await db.query(
+//       TableNames.consentTBL,
+//       orderBy: 'id DESC',
+//       limit: 1,
+//     );
+//     return results.isNotEmpty ? results.first : null;
+//   }
+// }
 }

@@ -1,30 +1,86 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/db/daos/remediation_dao.dart';
+import 'package:human_rights_monitor/controller/models/remediation_model.dart';
 
 class RemediationPage extends StatefulWidget {
-  const RemediationPage({Key? key}) : super(key: key);
+  final VoidCallback onNext;
+  final VoidCallback onPrevious;
+
+  const RemediationPage({
+    Key? key,
+    required this.onNext,
+    required this.onPrevious,
+  }) : super(key: key);
 
   @override
-  _RemediationPageState createState() => _RemediationPageState();
+  RemediationPageState createState() => RemediationPageState();
 }
 
-class _RemediationPageState extends State<RemediationPage> {
+class RemediationPageState extends State<RemediationPage> {
+  // Make these fields public for validation
   bool? hasSchoolFees;
   bool childProtectionEducation = false;
   bool schoolKitsSupport = false;
   bool igaSupport = false;
   bool otherSupport = false;
   String? communityAction;
-
   final TextEditingController _otherSupportController = TextEditingController();
-  final TextEditingController _otherCommunityActionController =
-      TextEditingController();
+  final TextEditingController _otherCommunityActionController = TextEditingController();
+  
+  // Getters for validation
+  String get otherSupportText => _otherSupportController.text;
+  String get communityActionOtherText => _otherCommunityActionController.text;
+  // State variables are now declared above
 
   @override
   void dispose() {
     _otherSupportController.dispose();
     _otherCommunityActionController.dispose();
     super.dispose();
+  }
+
+  /// Saves the current form data to the database
+  /// [farmIdentificationId] - The ID of the farm identification record to associate with this remediation data.
+  /// If not provided, defaults to 0 (temporary value until we get the actual ID).
+  Future<bool> saveData([int farmIdentificationId = 0]) async {
+    try {
+      // Create a RemediationModel with the current state
+      final model = RemediationModel(
+        hasSchoolFees: hasSchoolFees,
+        childProtectionEducation: childProtectionEducation,
+        schoolKitsSupport: schoolKitsSupport,
+        igaSupport: igaSupport,
+        otherSupport: otherSupport,
+        otherSupportDetails: otherSupport ? _otherSupportController.text : null,
+        communityAction: communityAction,
+        otherCommunityActionDetails: communityAction == 'Other' 
+            ? _otherCommunityActionController.text 
+            : null,
+      );
+
+      // Get the database helper instance
+      final dbHelper = LocalDBHelper.instance;
+      final remediationDao = RemediationDao(dbHelper: dbHelper);
+      
+      // Check if a record already exists for this farm identification
+      final existingRecord = await remediationDao.getByFarmIdentificationId(farmIdentificationId);
+      
+      // Save the data
+      if (existingRecord == null) {
+        // Insert new record
+        await remediationDao.insert(model, farmIdentificationId);
+      } else {
+        // Update existing record
+        await remediationDao.update(model, farmIdentificationId);
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error saving remediation data: $e');
+      return false;
+    }
   }
 
   Widget _buildQuestionCard({required Widget child}) {
@@ -53,7 +109,7 @@ class _RemediationPageState extends State<RemediationPage> {
       title: Text(
         label,
         style: GoogleFonts.poppins(
-          fontSize: 15,
+          fontSize: 14,
           color: Colors.black87,
         ),
       ),
@@ -146,21 +202,6 @@ class _RemediationPageState extends State<RemediationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: Colors.grey.shade50,
-      // appBar: AppBar(
-      //   title: Text(
-      //     'Remediation',
-      //     style: GoogleFonts.poppins(
-      //       fontSize: 20,
-      //       fontWeight: FontWeight.w600,
-      //       color: Colors.white,
-      //     ),
-      //   ),
-      //   centerTitle: true,
-      //   elevation: 0,
-      //   backgroundColor: Theme.of(context).primaryColor,
-      //   automaticallyImplyLeading: false,
-      // ),
       body: Column(
         children: [
           Expanded(
@@ -177,7 +218,7 @@ class _RemediationPageState extends State<RemediationPage> {
                         Text(
                           'Do you owe fees for the school of the children living in your household?',
                           style: GoogleFonts.poppins(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: Colors.black87,
                           ),
@@ -219,9 +260,9 @@ class _RemediationPageState extends State<RemediationPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'What support is needed to prevent child labor?',
+                            'What should be done for the parent to stop involving their children in child labour?',
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
                             ),
@@ -378,94 +419,7 @@ class _RemediationPageState extends State<RemediationPage> {
           ),
         ],
       ),
-      // bottomNavigationBar: Container(
-      //   padding: const EdgeInsets.all(16),
-      //   decoration: BoxDecoration(
-      //     color: Colors.white,
-      //     boxShadow: [
-      //       BoxShadow(
-      //         color: Colors.black.withOpacity(0.1),
-      //         blurRadius: 10,
-      //         offset: const Offset(0, -2),
-      //       ),
-      //     ],
-      //   ),
-      //   child: SafeArea(
-      //     child: Row(
-      //       children: [
-      //         // Previous Button
-      //         Expanded(
-      //           child: OutlinedButton(
-      //             onPressed: () {
-      //               Navigator.pop(context);
-      //             },
-      //             style: OutlinedButton.styleFrom(
-      //               padding: const EdgeInsets.symmetric(vertical: 16),
-      //               side: BorderSide(color: Colors.green.shade600, width: 2),
-      //               shape: RoundedRectangleBorder(
-      //                 borderRadius: BorderRadius.circular(12),
-      //               ),
-      //             ),
-      //             child: Row(
-      //               mainAxisAlignment: MainAxisAlignment.center,
-      //               children: [
-      //                 Icon(Icons.arrow_back_ios,
-      //                     size: 18, color: Colors.green.shade600),
-      //                 const SizedBox(width: 8),
-      //                 Text(
-      //                   'Previous',
-      //                   style: GoogleFonts.inter(
-      //                     color: Colors.green.shade600,
-      //                     fontWeight: FontWeight.w600,
-      //                     fontSize: 16,
-      //                   ),
-      //                 ),
-      //               ],
-      //             ),
-      //           ),
-      //         ),
-      //         const SizedBox(width: 16),
-      //         // Next Button (Navigation removed)
-      //         Expanded(
-      //           child: ElevatedButton(
-      //             onPressed: null,
-      //             style: ElevatedButton.styleFrom(
-      //               backgroundColor: (hasSchoolFees != null &&
-      //                       communityAction != null &&
-      //                       (communityAction != 'Other (please specify)' ||
-      //                           _otherCommunityActionController
-      //                               .text.isNotEmpty))
-      //                   ? Colors.green.shade600
-      //                   : Colors.grey[400],
-      //               padding: const EdgeInsets.symmetric(vertical: 16),
-      //               shape: RoundedRectangleBorder(
-      //                 borderRadius: BorderRadius.circular(12),
-      //               ),
-      //               elevation: 2,
-      //               shadowColor: Colors.green.shade600.withOpacity(0.3),
-      //             ),
-      //             child: Row(
-      //               mainAxisAlignment: MainAxisAlignment.center,
-      //               children: [
-      //                 Text(
-      //                   'Next',
-      //                   style: GoogleFonts.inter(
-      //                     color: Colors.white,
-      //                     fontWeight: FontWeight.w600,
-      //                     fontSize: 16,
-      //                   ),
-      //                 ),
-      //                 const SizedBox(width: 8),
-      //                 const Icon(Icons.arrow_forward_ios,
-      //                     size: 18, color: Colors.white),
-      //               ],
-      //             ),
-      //           ),
-      //         ),
-      //       ],
-      //     ),
-      //   ),
-      // ),
+      // Navigation is handled by the parent component
     );
   }
 }

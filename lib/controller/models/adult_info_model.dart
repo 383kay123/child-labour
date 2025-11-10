@@ -17,21 +17,30 @@ class AdultsInformationData {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  /// Converts the model to a JSON-compatible map
+  Map<String, dynamic> toJson() {
     return {
       'numberOfAdults': numberOfAdults,
       'members': members.map((member) => member.toMap()).toList(),
     };
   }
+  
+  /// For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
 
-  factory AdultsInformationData.fromMap(Map<String, dynamic> map) {
+  /// Creates an AdultsInformationData from a JSON map
+  factory AdultsInformationData.fromJson(Map<String, dynamic> json) {
     return AdultsInformationData(
-      numberOfAdults: map['numberOfAdults'],
+      numberOfAdults: json['numberOfAdults'],
       members: List<HouseholdMember>.from(
-        (map['members'] ?? []).map((x) => HouseholdMember.fromMap(x)),
+        (json['members'] ?? []).map((x) => HouseholdMember.fromMap(x)),
       ),
     );
   }
+  
+  /// For backward compatibility
+  factory AdultsInformationData.fromMap(Map<String, dynamic> map) => 
+      AdultsInformationData.fromJson(map);
 
   static AdultsInformationData empty() {
     return const AdultsInformationData();
@@ -75,20 +84,28 @@ class HouseholdMember {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  /// Converts the model to a JSON-compatible map
+  Map<String, dynamic> toJson() {
     return {
       'name': name,
       'producerDetails': producerDetails.toMap(),
     };
   }
+  
+  /// For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
 
-  factory HouseholdMember.fromMap(Map<String, dynamic> map) {
+  /// Creates a HouseholdMember from a JSON map
+  factory HouseholdMember.fromJson(Map<String, dynamic> json) {
     return HouseholdMember(
-      name: map['name'] ?? '',
-      producerDetails:
-          ProducerDetailsModel.fromMap(map['producerDetails'] ?? {}),
+      name: json['name'] ?? '',
+      producerDetails: ProducerDetailsModel.fromMap(json['producerDetails'] ?? {}),
     );
   }
+  
+  /// For backward compatibility
+  factory HouseholdMember.fromMap(Map<String, dynamic> map) => 
+      HouseholdMember.fromJson(map);
 
   bool get isNameValid {
     return name.trim().isNotEmpty && name.trim().split(' ').length >= 2;
@@ -172,7 +189,8 @@ class ProducerDetailsModel {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  /// Converts the model to a JSON-compatible map
+  Map<String, dynamic> toJson() {
     return {
       'gender': gender,
       'nationality': nationality,
@@ -192,25 +210,33 @@ class ProducerDetailsModel {
     };
   }
 
-  factory ProducerDetailsModel.fromMap(Map<String, dynamic> map) {
+  /// Creates a ProducerDetailsModel from a JSON map
+  factory ProducerDetailsModel.fromJson(Map<String, dynamic> json) {
     return ProducerDetailsModel(
-      gender: map['gender'],
-      nationality: map['nationality'],
-      yearOfBirth: map['yearOfBirth'],
-      selectedCountry: map['selectedCountry'],
-      ghanaCardId: map['ghanaCardId'],
-      otherIdType: map['otherIdType'],
-      otherIdNumber: map['otherIdNumber'],
-      consentToTakePhoto: map['consentToTakePhoto'],
-      noConsentReason: map['noConsentReason'],
-      idPhotoPath: map['idPhotoPath'],
-      relationshipToRespondent: map['relationshipToRespondent'],
-      otherRelationship: map['otherRelationship'],
-      hasBirthCertificate: map['hasBirthCertificate'],
-      occupation: map['occupation'],
-      otherOccupation: map['otherOccupation'],
+      gender: json['gender'],
+      nationality: json['nationality'],
+      yearOfBirth: json['yearOfBirth'],
+      selectedCountry: json['selectedCountry'],
+      ghanaCardId: json['ghanaCardId'],
+      otherIdType: json['otherIdType'],
+      otherIdNumber: json['otherIdNumber'],
+      consentToTakePhoto: json['consentToTakePhoto'] == true || json['consentToTakePhoto'] == 1,
+      noConsentReason: json['noConsentReason'],
+      idPhotoPath: json['idPhotoPath'],
+      relationshipToRespondent: json['relationshipToRespondent'],
+      otherRelationship: json['otherRelationship'],
+      hasBirthCertificate: json['hasBirthCertificate'],
+      occupation: json['occupation'],
+      otherOccupation: json['otherOccupation'],
     );
   }
+  
+  /// For backward compatibility
+  factory ProducerDetailsModel.fromMap(Map<String, dynamic> map) => 
+      ProducerDetailsModel.fromJson(map);
+      
+  /// For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
 
   bool get isComplete {
     // Check all required fields are filled

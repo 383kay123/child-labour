@@ -71,51 +71,67 @@ class WorkersInFarmData {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  /// Converts the model to a JSON-compatible map
+  Map<String, dynamic> toJson() {
     return {
       'hasRecruitedWorker': hasRecruitedWorker,
       'everRecruitedWorker': everRecruitedWorker,
+      'permanentLabor': permanentLabor,
+      'casualLabor': casualLabor,
       'workerAgreementType': workerAgreementType,
+      'otherAgreement': otherAgreement,
       'tasksClarified': tasksClarified,
       'additionalTasks': additionalTasks,
       'refusalAction': refusalAction,
       'salaryPaymentFrequency': salaryPaymentFrequency,
-      'permanentLabor': permanentLabor,
-      'casualLabor': casualLabor,
-      'otherAgreement': otherAgreement,
       'agreementResponses': agreementResponses,
     };
   }
 
-  factory WorkersInFarmData.fromMap(Map<String, dynamic> map) {
+  /// For backward compatibility
+  factory WorkersInFarmData.fromMap(Map<String, dynamic> map) =>
+      WorkersInFarmData.fromJson(map);
+
+  /// For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
+
+  /// Creates a WorkersInFarmData from a JSON map
+  factory WorkersInFarmData.fromJson(Map<String, dynamic> json) {
+    final responses = json['agreementResponses'] != null
+        ? Map<String, String?>.from(json['agreementResponses'] as Map)
+        : const <String, String?>{};
+
+    // Ensure all response keys exist with null values if not present
+    final defaultResponses = <String, String?>{
+      'salary_workers': null,
+      'recruit_1': null,
+      'recruit_2': null,
+      'recruit_3': null,
+      'conditions_1': null,
+      'conditions_2': null,
+      'conditions_3': null,
+      'conditions_4': null,
+      'conditions_5': null,
+      'leaving_1': null,
+      'leaving_2': null,
+    }..addAll(responses.cast<String, String?>());
+    
     return WorkersInFarmData(
-      hasRecruitedWorker: map['hasRecruitedWorker'],
-      everRecruitedWorker: map['everRecruitedWorker'],
-      workerAgreementType: map['workerAgreementType'],
-      tasksClarified: map['tasksClarified'],
-      additionalTasks: map['additionalTasks'],
-      refusalAction: map['refusalAction'],
-      salaryPaymentFrequency: map['salaryPaymentFrequency'],
-      permanentLabor: map['permanentLabor'] ?? false,
-      casualLabor: map['casualLabor'] ?? false,
-      otherAgreement: map['otherAgreement'] ?? '',
-      agreementResponses: Map<String, String?>.from(map['agreementResponses'] ??
-          {
-            'salary_workers': null,
-            'recruit_1': null,
-            'recruit_2': null,
-            'recruit_3': null,
-            'conditions_1': null,
-            'conditions_2': null,
-            'conditions_3': null,
-            'conditions_4': null,
-            'conditions_5': null,
-            'leaving_1': null,
-            'leaving_2': null,
-          }),
+      hasRecruitedWorker: json['hasRecruitedWorker'],
+      everRecruitedWorker: json['everRecruitedWorker'],
+      permanentLabor: json['permanentLabor'] == true || json['permanentLabor'] == 1,
+      casualLabor: json['casualLabor'] == true || json['casualLabor'] == 1,
+      workerAgreementType: json['workerAgreementType'],
+      otherAgreement: json['otherAgreement'] ?? '',
+      tasksClarified: json['tasksClarified'],
+      additionalTasks: json['additionalTasks'],
+      refusalAction: json['refusalAction'],
+      salaryPaymentFrequency: json['salaryPaymentFrequency'],
+      agreementResponses: defaultResponses,
     );
   }
 
+  /// Creates an empty instance of WorkersInFarmData
   static WorkersInFarmData empty() {
     return const WorkersInFarmData();
   }

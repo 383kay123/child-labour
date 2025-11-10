@@ -1,30 +1,35 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:meta/meta.dart' show required;
 
 /// Model for Consent Page data
 class ConsentData {
-  final String? communityType;
+  final int? id;
+  String? communityType;
   final String? residesInCommunityConsent;
   final String? farmerAvailable;
   final String? farmerStatus;
   final String? availablePerson;
   final String? otherSpecification;
   final String? otherCommunityName;
-  final String? refusalReason;  // New field for storing refusal reason
-  final bool consentGiven;
-  final bool declinedConsent;
+  final String? refusalReason;
+  final bool? consentGiven;
+  final bool? declinedConsent;
+  final DateTime? consentTimestamp;
   final TextEditingController otherSpecController;
   final TextEditingController otherCommunityController;
-  final TextEditingController refusalReasonController;  // New controller for refusal reason
+  final TextEditingController refusalReasonController;
 
   // Survey state fields
   final DateTime? interviewStartTime;
-  final String timeStatus;
+  final String? timeStatus;
   final Position? currentPosition;
-  final String locationStatus;
-  final bool isGettingLocation;
+  final String? locationStatus;
+  final bool? isGettingLocation;
 
-  const ConsentData({
+  ConsentData({
+    this.id,
     this.communityType,
     this.residesInCommunityConsent,
     this.farmerAvailable,
@@ -32,101 +37,23 @@ class ConsentData {
     this.availablePerson,
     this.otherSpecification,
     this.otherCommunityName,
-    this.consentGiven = false,
-    this.declinedConsent = false,
+    this.consentGiven,
+    this.declinedConsent,
     this.refusalReason,
+    this.consentTimestamp,
     required this.otherSpecController,
     required this.otherCommunityController,
     required this.refusalReasonController,
     this.interviewStartTime,
-    this.timeStatus = 'Not recorded',
+    this.timeStatus,
     this.currentPosition,
-    this.locationStatus = 'Not recorded',
-    this.isGettingLocation = false,
+    this.locationStatus,
+    this.isGettingLocation,
   });
 
-  /// Convert to Map for storage
-  Map<String, dynamic> toMap() {
-    return {
-      'communityType': communityType,
-      'residesInCommunityConsent': residesInCommunityConsent,
-      'farmerAvailable': farmerAvailable,
-      'farmerStatus': farmerStatus,
-      'availablePerson': availablePerson,
-      'otherSpecification': otherSpecification,
-      'otherCommunityName': otherCommunityName,
-      'refusalReason': refusalReason,
-      'consentGiven': consentGiven,
-      'declinedConsent': declinedConsent,
-      'interviewStartTime': interviewStartTime?.toIso8601String(),
-      'timeStatus': timeStatus,
-      'currentPosition': currentPosition != null
-          ? {
-              'latitude': currentPosition!.latitude,
-              'longitude': currentPosition!.longitude,
-            }
-          : null,
-      'locationStatus': locationStatus,
-      'isGettingLocation': isGettingLocation,
-    };
-  }
-
-  /// Create from Map from storage
-  factory ConsentData.fromMap(Map<String, dynamic> map) {
-    return ConsentData(
-      communityType: map['communityType']?.toString(),
-      residesInCommunityConsent: map['residesInCommunityConsent']?.toString(),
-      farmerAvailable: map['farmerAvailable']?.toString(),
-      farmerStatus: map['farmerStatus']?.toString(),
-      availablePerson: map['availablePerson']?.toString(),
-      otherSpecification: map['otherSpecification']?.toString(),
-      otherCommunityName: map['otherCommunityName']?.toString(),
-      consentGiven: map['consentGiven'] == true,
-      declinedConsent: map['declinedConsent'] == true,
-      refusalReason: map['refusalReason']?.toString(),
-      otherSpecController: TextEditingController(
-        text: map['otherSpecification']?.toString() ?? '',
-      ),
-      otherCommunityController: TextEditingController(
-        text: map['otherCommunityName']?.toString() ?? '',
-      ),
-      refusalReasonController: TextEditingController(
-        text: map['refusalReason']?.toString() ?? '',
-      ),
-      interviewStartTime: map['interviewStartTime'] != null
-          ? DateTime.parse(map['interviewStartTime'] as String)
-          : null,
-      timeStatus: map['timeStatus']?.toString() ?? 'Not recorded',
-      currentPosition: map['currentPosition'] != null
-          ? Position(
-              longitude: (map['currentPosition'] as Map)['longitude'] ?? 0.0,
-              latitude: (map['currentPosition'] as Map)['latitude'] ?? 0.0,
-              timestamp: DateTime.now(),
-              accuracy: 0.0,
-              altitude: 0.0,
-              heading: 0.0,
-              speed: 0.0,
-              speedAccuracy: 0.0,
-              altitudeAccuracy: 0.0,
-              headingAccuracy: 0.0,
-            )
-          : null,
-      locationStatus: map['locationStatus']?.toString() ?? 'Not recorded',
-      isGettingLocation: map['isGettingLocation'] == true,
-    );
-  }
-
-  /// Create empty instance
-  factory ConsentData.empty() {
-    return ConsentData(
-      otherSpecController: TextEditingController(),
-      otherCommunityController: TextEditingController(),
-      refusalReasonController: TextEditingController(),
-    );
-  }
-
-  /// Copy with method for immutability
+  // Create a copyWith method to update fields
   ConsentData copyWith({
+    int? id,
     String? communityType,
     String? residesInCommunityConsent,
     String? farmerAvailable,
@@ -137,6 +64,7 @@ class ConsentData {
     bool? consentGiven,
     bool? declinedConsent,
     String? refusalReason,
+    DateTime? consentTimestamp,
     TextEditingController? otherSpecController,
     TextEditingController? otherCommunityController,
     TextEditingController? refusalReasonController,
@@ -147,27 +75,125 @@ class ConsentData {
     bool? isGettingLocation,
   }) {
     return ConsentData(
+      id: id ?? this.id,
       communityType: communityType ?? this.communityType,
-      residesInCommunityConsent:
-          residesInCommunityConsent ?? this.residesInCommunityConsent,
+      residesInCommunityConsent: residesInCommunityConsent ?? this.residesInCommunityConsent,
       farmerAvailable: farmerAvailable ?? this.farmerAvailable,
       farmerStatus: farmerStatus ?? this.farmerStatus,
       availablePerson: availablePerson ?? this.availablePerson,
       otherSpecification: otherSpecification ?? this.otherSpecification,
       otherCommunityName: otherCommunityName ?? this.otherCommunityName,
-consentGiven: consentGiven ?? this.consentGiven,
+      consentGiven: consentGiven ?? this.consentGiven,
       declinedConsent: declinedConsent ?? this.declinedConsent,
-      otherSpecController: otherSpecController ?? this.otherSpecController,
-      otherCommunityController:
-          otherCommunityController ?? this.otherCommunityController,
       refusalReason: refusalReason ?? this.refusalReason,
-      refusalReasonController:
-          refusalReasonController ?? this.refusalReasonController,
+      consentTimestamp: consentTimestamp ?? this.consentTimestamp,
+      otherSpecController: otherSpecController ?? this.otherSpecController,
+      otherCommunityController: otherCommunityController ?? this.otherCommunityController,
+      refusalReasonController: refusalReasonController ?? this.refusalReasonController,
       interviewStartTime: interviewStartTime ?? this.interviewStartTime,
       timeStatus: timeStatus ?? this.timeStatus,
       currentPosition: currentPosition ?? this.currentPosition,
       locationStatus: locationStatus ?? this.locationStatus,
       isGettingLocation: isGettingLocation ?? this.isGettingLocation,
+    );
+  }
+
+  /// Convert to Map for storage
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'communityType': communityType,
+      'residesInCommunityConsent': residesInCommunityConsent,
+      'farmerAvailable': farmerAvailable,
+      'farmerStatus': farmerStatus,
+      'availablePerson': availablePerson,
+      'otherSpecification': otherSpecification,
+      'otherCommunityName': otherCommunityName,
+      'refusalReason': refusalReason,
+      'consentGiven': consentGiven == true ? 1 : 0, // Convert bool to int for SQLite
+      'declinedConsent': declinedConsent == true ? 1 : 0, // Convert bool to int for SQLite
+      'consentTimestamp': consentTimestamp?.toIso8601String(),
+      'interviewStartTime': interviewStartTime?.toIso8601String(),
+      'timeStatus': timeStatus,
+      'currentPosition': currentPosition != null
+          ? jsonEncode({
+              'latitude': currentPosition!.latitude,
+              'longitude': currentPosition!.longitude,
+              'timestamp': currentPosition!.timestamp?.toIso8601String(),
+            })
+          : null,
+      'locationStatus': locationStatus,
+      'isGettingLocation': isGettingLocation == true ? 1 : 0, // Convert bool to int for SQLite
+    };
+  }
+
+  /// Create from Map from storage
+  factory ConsentData.fromMap(Map<String, dynamic> map) {
+    // Parse position if it exists
+    Position? position;
+    if (map['currentPosition'] != null) {
+      try {
+        final positionData = jsonDecode(map['currentPosition']);
+        position = Position(
+          latitude: positionData['latitude'] ?? 0.0,
+          longitude: positionData['longitude'] ?? 0.0,
+          timestamp: positionData['timestamp'] != null 
+              ? DateTime.parse(positionData['timestamp']) 
+              : DateTime.now(),
+          accuracy: 0.0,
+          altitude: 0.0,
+          heading: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0,
+          headingAccuracy: 0.0,
+        );
+      } catch (e) {
+        debugPrint('Error parsing position data: $e');
+      }
+    }
+
+    return ConsentData(
+      id: map['id'] as int?,
+      communityType: map['communityType']?.toString(),
+      residesInCommunityConsent: map['residesInCommunityConsent']?.toString(),
+      farmerAvailable: map['farmerAvailable']?.toString(),
+      farmerStatus: map['farmerStatus']?.toString(),
+      availablePerson: map['availablePerson']?.toString(),
+      otherSpecification: map['otherSpecification']?.toString(),
+      otherCommunityName: map['otherCommunityName']?.toString(),
+      consentGiven: map['consentGiven'] == 1, // Convert int back to bool
+      declinedConsent: map['declinedConsent'] == 1, // Convert int back to bool
+      refusalReason: map['refusalReason']?.toString(),
+      consentTimestamp: map['consentTimestamp'] != null 
+          ? DateTime.tryParse(map['consentTimestamp'] as String)
+          : null,
+      otherSpecController: TextEditingController(
+        text: map['otherSpecification']?.toString() ?? '',
+      ),
+      otherCommunityController: TextEditingController(
+        text: map['otherCommunityName']?.toString() ?? '',
+      ),
+      refusalReasonController: TextEditingController(
+        text: map['refusalReason']?.toString() ?? '',
+      ),
+      interviewStartTime: map['interviewStartTime'] != null
+          ? DateTime.tryParse(map['interviewStartTime'] as String)
+          : null,
+      timeStatus: map['timeStatus']?.toString() ?? 'Not recorded',
+      currentPosition: position,
+      locationStatus: map['locationStatus']?.toString() ?? 'Not recorded',
+      isGettingLocation: map['isGettingLocation'] == 1, // Convert int back to bool
+    );
+  }
+
+  /// Create empty instance
+  factory ConsentData.empty() {
+    return ConsentData(
+      id: null,
+      otherSpecController: TextEditingController(),
+      otherCommunityController: TextEditingController(),
+      refusalReasonController: TextEditingController(),
     );
   }
 
@@ -268,7 +294,7 @@ consentGiven: consentGiven ?? this.consentGiven,
 
   /// Check if survey should end
   bool get shouldEndSurvey {
-    return !consentGiven ||
+    return consentGiven != true ||  // Handles null by treating it as false
         farmerStatus == 'Deceased' ||
         farmerStatus == 'Doesn\'t work with TOUTON anymore' ||
         availablePerson == 'Nobody';
@@ -311,7 +337,7 @@ consentGiven: consentGiven ?? this.consentGiven,
     }
 
     if (shouldShowConsentSection) {
-      if (!consentGiven && (otherSpecification?.isEmpty ?? true)) {
+      if (consentGiven == false && (otherSpecification?.isEmpty ?? true)) {
         errors['consent'] = 'Please provide reason for refusal';
       }
     }
@@ -332,10 +358,10 @@ consentGiven: consentGiven ?? this.consentGiven,
       'Farmer Available': farmerAvailable ?? 'Not selected',
       'Farmer Status': farmerStatus ?? 'Not selected',
       'Available Person': availablePerson ?? 'Not selected',
-      'Consent Given': consentGiven ? 'Yes' : 'No',
+      'Consent Given': consentGiven == true ? 'Yes' : 'No',
       'Other Community': otherCommunityName ?? 'Not specified',
-      'Interview Time': timeStatus,
-      'Location': locationStatus,
+      'Interview Time': timeStatus ?? 'Not available',
+      'Location': locationStatus ?? 'Not available',
     };
   }
 

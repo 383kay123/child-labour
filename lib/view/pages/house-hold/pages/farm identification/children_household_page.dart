@@ -16,34 +16,78 @@ class _Spacing {
 
 class ChildrenHouseholdPage extends StatefulWidget {
   final Map<String, dynamic> producerDetails;
-  final Function(int)? onComplete;
+  final VoidCallback onNext;
+  final VoidCallback onPrevious;
   final TextEditingController? children5To17Controller;
   final ChildrenHouseholdModel? initialData;
+  final GlobalKey<FormState>? formKey;
 
   const ChildrenHouseholdPage({
     Key? key,
     required this.producerDetails,
-    this.onComplete,
+    required this.onNext,
+    required this.onPrevious,
     this.children5To17Controller,
     this.initialData,
+    this.formKey,
   }) : super(key: key);
 
+  // Add this method to get the state from the context
+  static ChildrenHouseholdPageState? of(BuildContext context) {
+    return context.findAncestorStateOfType<ChildrenHouseholdPageState>();
+  }
+
   @override
-  _ChildrenHouseholdPageState createState() => _ChildrenHouseholdPageState();
+  ChildrenHouseholdPageState createState() => ChildrenHouseholdPageState();
 }
 
-class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
-  final _formKey = GlobalKey<FormState>();
+class ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> with AutomaticKeepAliveClientMixin {
+  bool _isSaving = false;
+  late final GlobalKey<FormState> _formKey;
   late ChildrenHouseholdModel _householdData;
   late final TextEditingController _numberOfChildrenController;
   late final TextEditingController _children5To17Controller;
   bool _isOwnController = false;
+  
+  @override
   bool get wantKeepAlive => true;
+
+  // Public method to get the household data
+  ChildrenHouseholdModel getHouseholdData() => _householdData;
+  
+  // Public getter for the form key
+  GlobalKey<FormState> get formKey => _formKey;
+  
+  // Public method to validate the form
+  bool validateForm() {
+    if (_formKey.currentState == null) return false;
+    return _formKey.currentState!.validate();
+  }
 
   @override
   void initState() {
     super.initState();
+    // Always create a new form key to prevent duplicates
+    _formKey = GlobalKey<FormState>();
+    _initFromWidget();
+  }
 
+  @override
+  void didUpdateWidget(ChildrenHouseholdPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-initialize if the initialData changes
+    if (widget.initialData != oldWidget.initialData) {
+      _initFromWidget();
+    }
+    
+    // Update the controller if it was changed from outside
+    if (widget.children5To17Controller != oldWidget.children5To17Controller) {
+      _children5To17Controller = widget.children5To17Controller ?? TextEditingController();
+      _isOwnController = widget.children5To17Controller == null;
+    }
+  }
+
+  void _initFromWidget() {
     // Initialize with provided data or create empty
     _householdData = widget.initialData ?? ChildrenHouseholdModel.empty();
 
@@ -72,33 +116,24 @@ class _ChildrenHouseholdPageState extends State<ChildrenHouseholdPage> {
     super.dispose();
   }
 
-// In the parent widget that shows ChildrenHouseholdPage
-void _onChildDetailsComplete(int children5To17) {
-  setState(() {
-    // Update your state with the returned data
-    _householdData = _householdData.copyWith(children5To17: children5To17);
-  });
-}
-
-// Add this method to ensure the state is updated when the widget is updated
-@override
-void didUpdateWidget(ChildrenHouseholdPage oldWidget) {
-  super.didUpdateWidget(oldWidget);
-  if (widget.initialData != oldWidget.initialData) {
-    setState(() {
-      _householdData = widget.initialData ?? ChildrenHouseholdModel.empty();
-      // Update controllers with new data
-      _numberOfChildrenController.text = _householdData.numberOfChildren > 0
-          ? _householdData.numberOfChildren.toString()
-          : '';
-      if (_isOwnController) {
-        _children5To17Controller.text = _householdData.children5To17 > 0
-            ? _householdData.children5To17.toString()
-            : '';
+  // Callback when child details are completed
+  void _onChildDetailsComplete(int children5To17) {
+    if (mounted) {
+      setState(() {
+        // Update your state with the returned data
+        _householdData = _householdData.copyWith(children5To17: children5To17);
+      });
+      
+      // Update the controller if needed
+      if (_isOwnController && _householdData.children5To17 > 0) {
+        _children5To17Controller.text = _householdData.children5To17.toString();
       }
-    });
+      
+      // After collecting child details, proceed to next page
+      widget.onNext();
+    }
   }
-}
+
   void _updateHouseholdData(ChildrenHouseholdModel newData) {
     setState(() {
       _householdData = newData;
@@ -107,60 +142,84 @@ void didUpdateWidget(ChildrenHouseholdPage oldWidget) {
 
   Future<void> _navigateToChildDetails(
       BuildContext context, int totalChildren) async {
-    int currentChild = _householdData.childrenDetails.length + 1;
+    if (!mounted) return; // Check if widget is still mounted
 
-    while (currentChild <= totalChildren) {
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChildDetailsPage(
-            childNumber: currentChild,
-            totalChildren: totalChildren,
-            childrenDetails: _householdData.childrenDetails,
-          ),
-        ),
-      );
-
-      if (result == null || result['childData'] == null) {
-        // User cancelled the operation or there was an error
-        return;
+    try {
+      // Start with the first child that doesn't have details yet
+      int currentChild = _householdData.childrenDetails.length + 1;
+      
+      // If all children have details, start from the first one
+      if (currentChild > totalChildren && totalChildren > 0) {
+        currentChild = 1;
       }
 
-      // Update or add the child data to our list
-      setState(() {
-        final existingIndex = _householdData.childrenDetails.indexWhere(
-            (child) =>
-                child['childNumber'] == result['childData']['childNumber']);
+      while (currentChild <= totalChildren) {
+        if (!mounted) return; // Check before async operation
 
-        final updatedChildren =
-            List<Map<String, dynamic>>.from(_householdData.childrenDetails);
+        // Find if we already have details for this child
+        final existingChildIndex = _householdData.childrenDetails.indexWhere(
+          (child) => child['childNumber'] == currentChild
+        );
+        
+        final existingChildData = existingChildIndex >= 0 
+            ? _householdData.childrenDetails[existingChildIndex]
+            : null;
 
-        if (existingIndex >= 0) {
-          // Update existing child data
-          updatedChildren[existingIndex] = result['childData'];
-        } else {
-          // Add new child data
-          updatedChildren.add(result['childData']);
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChildDetailsPage(
+              childNumber: currentChild,
+              totalChildren: totalChildren,
+              childrenDetails: _householdData.childrenDetails,
+              onComplete: (data) => _onChildDetailsComplete(data),
+            ),
+          ),
+        );
+
+        if (!mounted) return; // Check after async operation
+
+        // If user cancels or there's an error, return to the list
+        if (result == null || result['childData'] == null) {
+          return;
         }
 
-        _householdData =
-            _householdData.copyWith(childrenDetails: updatedChildren);
-      });
+        // Update or add the child data to our list
+        if (mounted) {
+          setState(() {
+            final updatedChildren = List<Map<String, dynamic>>.from(_householdData.childrenDetails);
+            final newChildData = Map<String, dynamic>.from(result['childData']);
+            
+            // Ensure the child number is set correctly
+            newChildData['childNumber'] = currentChild;
 
-      // Check if we should navigate to next child
-      if (result['navigateToNextChild'] == true &&
-          result['nextChildNumber'] != null) {
-        currentChild = result['nextChildNumber'];
-      } else {
-        // Return to children household page
-        break;
+            if (existingChildIndex >= 0) {
+              // Update existing child data
+              updatedChildren[existingChildIndex] = newChildData;
+            } else {
+              // Add new child data
+              updatedChildren.add(newChildData);
+            }
+
+            _updateHouseholdData(
+              _householdData.copyWith(childrenDetails: updatedChildren),
+            );
+          });
+        }
+
+        currentChild++;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
       }
     }
-
-    // All children processed, return to parent
     if (mounted) {
-      // Call onComplete callback if provided
-      widget.onComplete?.call(_householdData.children5To17);
+      setState(() {});
+      // Call onNext to proceed to the next page
+      widget.onNext();
     }
   }
 
@@ -220,6 +279,7 @@ void didUpdateWidget(ChildrenHouseholdPage oldWidget) {
     required String label,
     required TextEditingController controller,
     String hintText = '',
+    String? Function(String?)? validator,
     TextInputType keyboardType = TextInputType.text,
     ValueChanged<String>? onChanged,
   }) {
@@ -337,19 +397,111 @@ void didUpdateWidget(ChildrenHouseholdPage oldWidget) {
       }
     }
 
-    // All validations passed, return the data
+    // All validations passed, proceed to next page
     if (mounted) {
-      // Call onComplete callback if provided
-      widget.onComplete?.call(_householdData.children5To17);
+      widget.onNext();
+    }
+  }
+
+  // Save the current form data without navigation
+  Future<void> saveFormData() async {
+    // Update the household data with current form values
+    _householdData = _householdData.copyWith(
+      hasChildrenInHousehold: _householdData.hasChildrenInHousehold,
+      numberOfChildren: int.tryParse(_numberOfChildrenController.text) ?? 0,
+      children5To17: int.tryParse(_children5To17Controller.text) ?? 0,
+      // Preserve existing children details
+      childrenDetails: _householdData.childrenDetails,
+    );
+
+    // Update the parent's controller if it exists
+    if (widget.children5To17Controller != null) {
+      widget.children5To17Controller!.text = _children5To17Controller.text;
+    }
+  }
+
+  // Public method to submit the form (save only, no navigation)
+  Future<bool> submitForm() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      setState(() => _isSaving = true);
+      try {
+        saveFormData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Progress saved successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        return true;
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill in all required fields correctly'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      // appBar: AppBar(
+      //   title: const Text('Children in Household'),
+      //   centerTitle: true,
+      //   elevation: 0,
+      //   backgroundColor: Theme.of(context).primaryColor,
+      //   leading: IconButton(
+      //     icon: const Icon(Icons.arrow_back, color: Colors.white),
+      //     onPressed: () => Navigator.of(context).pop(),
+      //   ),
+      //   actions: [
+      //     // Save button
+      //     _isSaving
+      //         ? const Padding(
+      //             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      //             child: Center(
+      //               child: SizedBox(
+      //                 width: 20,
+      //                 height: 20,
+      //                 child: CircularProgressIndicator(
+      //                   strokeWidth: 2,
+      //                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      //                 ),
+      //               ),
+      //             ),
+      //           )
+      //         : IconButton(
+      //             icon: const Icon(Icons.save, color: Colors.white),
+      //             tooltip: 'Save',
+      //             onPressed: submitForm,
+      //           ),
+      //   ],
+      // ),
       body: Form(
         key: _formKey,
         child: Column(
@@ -452,21 +604,51 @@ void didUpdateWidget(ChildrenHouseholdPage oldWidget) {
                     if (_householdData.hasChildrenInHousehold == 'Yes' &&
                         _householdData.numberOfChildren > 0)
                       _buildQuestionCard(
-                        child: _buildTextField(
-                          label:
-                              'Out of ${_householdData.numberOfChildren} children, how many are between 5-17 years old?',
-                          controller: _children5To17Controller,
-                          hintText: 'Enter number of children (5-17 years)',
-                          keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            final count = int.tryParse(value) ?? 0;
-                            setState(() {
-                              _householdData =
-                                  _householdData.copyWith(children5To17: count);
-                              // Update the main controller in real-time
-                              widget.children5To17Controller?.text = value;
-                            });
-                          },
+                        child: Form(
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: _buildTextField(
+                            label:
+                                'Out of ${_householdData.numberOfChildren} children, how many are between 5-17 years old?',
+                            controller: _children5To17Controller,
+                            hintText: 'Enter number of children (5-17 years)',
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter the number of children';
+                              }
+                              final count = int.tryParse(value);
+                              if (count == null) {
+                                return 'Please enter a valid number';
+                              }
+                              if (count < 0) {
+                                return 'Number cannot be negative';
+                              }
+                              if (count > _householdData.numberOfChildren) {
+                                return 'Cannot exceed total number of children (${_householdData.numberOfChildren})';
+                              }
+                              if (count > 19) {
+                                return 'Maximum allowed is 19';
+                              }
+                              return null;
+                            },
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                final count = int.tryParse(value) ?? 0;
+                                if (count >= 0 && count <= _householdData.numberOfChildren && count <= 19) {
+                                  setState(() {
+                                    _householdData = _householdData.copyWith(children5To17: count);
+                                    // Update the main controller in real-time
+                                    widget.children5To17Controller?.text = value;
+                                  });
+                                }
+                              } else {
+                                setState(() {
+                                  _householdData = _householdData.copyWith(children5To17: 0);
+                                  widget.children5To17Controller?.clear();
+                                });
+                              }
+                            },
+                          ),
                         ),
                       ),
 

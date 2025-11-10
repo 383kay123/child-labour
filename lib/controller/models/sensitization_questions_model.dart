@@ -87,8 +87,10 @@ class SensitizationQuestionsData {
     );
   }
 
-  /// Converts this [SensitizationQuestionsData] to a JSON map.
-  Map<String, dynamic> toJson() {
+  /// Converts this [SensitizationQuestionsData] to a Map for database storage.
+  /// This is similar to toJson() but might have different field names or formatting
+  /// if needed for database compatibility.
+  Map<String, dynamic> toMap() {
     return {
       'hasSensitizedHousehold': hasSensitizedHousehold,
       'hasSensitizedOnProtection': hasSensitizedOnProtection,
@@ -102,6 +104,11 @@ class SensitizationQuestionsData {
       'parentsReaction': parentsReaction,
       'submittedAt': submittedAt.toIso8601String(),
     };
+  }
+
+  /// Converts this [SensitizationQuestionsData] to a JSON map.
+  Map<String, dynamic> toJson() {
+    return toMap();
   }
 
   /// Creates a [SensitizationQuestionsData] from a JSON map.

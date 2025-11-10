@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/house_hold.dart';
+import 'package:human_rights_monitor/view/pages/Monitoring/monitoring_assessment_form.dart';
+import 'package:human_rights_monitor/view/pages/Monitoring/monitoring_assessment_history.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../pages/Monitoring/monitoring_assessment_form.dart';
 import '../pages/community-assessment/assessment-form.dart';
 import '../pages/community-assessment/history/community-assessment-history.dart';
 import '../pages/house-hold/history/house_hold_history.dart';
-import '../pages/house-hold/house_hold.dart';
+import '../pages/house-hold/house_hold.dart' as household;
 
 class SurveyListPage extends StatefulWidget {
   const SurveyListPage({super.key});
@@ -77,7 +79,7 @@ class _SurveyListPageState extends State<SurveyListPage> {
         'color': Theme.of(context).primaryColor,
         'lightColor': Theme.of(context).primaryColor.withOpacity(0.2),
         'page': const HouseHold(),
-        'historyPage': const HouseHoldHistory(),
+        // 'historyPage': const HouseHoldHistory(),
         'icon': Icons.home_rounded,
       },
       {
@@ -88,7 +90,7 @@ class _SurveyListPageState extends State<SurveyListPage> {
         'color': Theme.of(context).primaryColor,
         'lightColor': Theme.of(context).primaryColor.withOpacity(0.2),
         'page': MonitoringAssessmentForm(),
-        'historyPage': const CommunityAssessmentHistory(),
+        'historyPage': MonitoringAssessmentHistory(),
         'icon': Icons.people_rounded,
       }
     ];
@@ -387,20 +389,44 @@ class _SurveyListPageState extends State<SurveyListPage> {
 
                 _buildOptionItem(
                   context,
-                  '📚 View Past Surveys',
-                  'See your previous contributions and impact',
-                  Icons.history_rounded,
-                  const Color(0xFF2196F3),
-                  const Color(0xFFE3F2FD),
+                  '📚 View Past ${survey['title']}',
+                  'View and manage ${survey['title'].toLowerCase()} assessments',
+                  Icons.assessment_outlined,
+                  const Color(0xFF4CAF50),
+                  const Color(0xFFE8F5E9),
                   () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => survey['historyPage']),
-                    );
+                    if (survey['historyPage'] != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => survey['historyPage'],
+                        ),
+                      );
+                    }
                   },
                 ),
+
+                const SizedBox(height: 12),
+
+                // _buildOptionItem(
+                //   context,
+                //   '📚 View Past Community Assessments',
+                //   'See your previous contributions and impact',
+                //   Icons.history_rounded,
+                //   const Color(0xFF2196F3),
+                //   const Color(0xFFE3F2FD),
+                //   () {
+                //     Navigator.pop(context);
+                //     // TODO: Add navigation to Community Assessment History
+                //     // Navigator.push(
+                //     //   context,
+                //     //   MaterialPageRoute(
+                //     //     builder: (context) => const CommunityAssessmentHistory(),
+                //     //   ),
+                //     // );
+                //   },
+                // ),
 
                 const SizedBox(height: 20),
               ],

@@ -1,20 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
 import 'package:image_picker/image_picker.dart';
-
-import '../../theme/app_theme.dart';
-// import 'package:surveyflow/view/pages/house-hold/pages/farm%20identification/sensitization_page.dart';
-
-/// A collection of reusable spacing constants for consistent UI layout.
-class _Spacing {
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 16.0;
-  static const double lg = 24.0;
-  static const double xl = 32.0;
-}
 
 class _ArithmeticItem extends StatelessWidget {
   final String expression;
@@ -121,7 +108,7 @@ class ModernRadioButton<T> extends StatelessWidget {
                         Text(
                           subtitle!,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 11,
                             color: isSelected
                                 ? primaryColor.withOpacity(0.8)
                                 : Colors.grey[600],
@@ -164,7 +151,12 @@ class ModernCheckbox extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => onChanged(!value),
+          onTap: () {
+            // Use a post-frame callback to ensure the widget tree is stable
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              onChanged(!value);
+            });
+          },
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -206,7 +198,7 @@ class ModernCheckbox extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: value ? primaryColor : Colors.grey[800],
                         ),
@@ -216,7 +208,7 @@ class ModernCheckbox extends StatelessWidget {
                         Text(
                           subtitle!,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 11,
                             color: value
                                 ? primaryColor.withOpacity(0.8)
                                 : Colors.grey[600],
@@ -239,14 +231,16 @@ class ChildDetailsPage extends StatefulWidget {
   final int childNumber;
   final int totalChildren;
   final List<dynamic> childrenDetails;
-  final Function(dynamic)? onComplete;
+  final Function(dynamic) onComplete;
+  final Map<String, dynamic>? initialData;
 
   const ChildDetailsPage({
     Key? key,
     required this.childNumber,
     required this.totalChildren,
     required this.childrenDetails,
-    this.onComplete,
+    required this.onComplete,
+    this.initialData,
   }) : super(key: key);
 
   @override
@@ -254,64 +248,109 @@ class ChildDetailsPage extends StatefulWidget {
 }
 
 class _ChildDetailsPageState extends State<ChildDetailsPage> {
-  // Form key
-  final _formKey = GlobalKey<FormState>();
+  final Set<String> _cocoaFarmTasksLast12Months = {};
+  bool? _parentConsentPhoto;
+  final TextEditingController _noConsentReasonController =
+      TextEditingController();
+  File? _childPhoto;
 
-  // ========== BASIC CHILD INFORMATION ==========
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _surnameController = TextEditingController();
-  final TextEditingController _childNumberController = TextEditingController();
-  final TextEditingController _birthYearController = TextEditingController();
+  final Set<String> _helpReceived = {};
+  final TextEditingController _otherHelpController = TextEditingController();
+  final TextEditingController _howWoundedController = TextEditingController();
+  final TextEditingController _whenWoundedController = TextEditingController();
+  bool? _oftenFeelPains;
+  DateTime? _woundedDate;
+  bool? _appliedAgrochemicals;
+  bool? _onFarmDuringApplication;
+  bool? _sufferedInjury;
+  bool? _wasSupervisedByAdultDangerous;
+  bool? _receivedSalaryForTasks;
+  String? _longestSchoolDayTimeDangerous;
+  String? _longestNonSchoolDayTimeDangerous;
+  final TextEditingController _totalHoursWorkedControllerDangerous =
+      TextEditingController();
+  final TextEditingController _totalHoursWorkedControllerNonSchoolDangerous =
+      TextEditingController();
+  String? _whereTaskDone;
+  final TextEditingController _otherLocationController =
+      TextEditingController();
+  String? _taskDangerousLocation;
+  final TextEditingController _otherLocationDangerousController =
+      TextEditingController();
+  bool? _attendedSchoolLast7Days;
+  bool? _missedSchoolDays;
+  bool? _workedInHouse;
+  final TextEditingController _schoolDayHoursDangerousController =
+      TextEditingController();
+  final TextEditingController _nonSchoolDayHoursController =
+      TextEditingController();
+  final TextEditingController _schoolDayHoursController =
+      TextEditingController();
+  String? _longestSchoolDayTime;
+  String? _selectedSchoolDayTime;
+  bool? _workedOnCocoaFarm;
+  String? _workFrequency;
+  bool? _observedWorking;
+  bool? _receivedRemuneration;
+  bool? _activityRemuneration;
+  bool? _wasSupervisedByAdult;
+  String? _longestLightDutyTime;
+  String? _longestNonSchoolDayTime;
+  String? _taskLocation;
+  String? _schoolDayTaskDuration;
+  String? _nonSchoolDayTaskDuration;
+  String? _taskLocationType;
+  String? _totalSchoolDayHours;
+  String? _totalNonSchoolDayHours;
+  bool? _wasSupervisedDuringTask;
+  final Set<String> _cocoaFarmTasksLast7Days = {};
+  bool? _hasReceivedSalary;
+  final TextEditingController _schoolDayTaskDurationController =
+      TextEditingController();
+  final Set<String> _cocoaFarmTasks = {};
+  final Set<String> _tasksLast12Months = {};
+  final Map<String, bool> _absenceReasons = {
+    'It was the holidays': false,
+    'He/she was sick': false,
+    'He/she was working': false,
+    'He/she was traveling': false,
+    'Other': false,
+  };
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _otherReasonController = TextEditingController();
+  final TextEditingController _otherReasonForSchoolController =
+      TextEditingController();
+  final TextEditingController _workForWhomOtherController =
+      TextEditingController();
+  final TextEditingController _whyWorkOtherController = TextEditingController();
+  String? _workForWhom;
+  final Set<String> _whyWorkReasons = {};
+  final TextEditingController _otherAbsenceReasonController =
+      TextEditingController();
+  final TextEditingController _missedDaysReasonController =
+      TextEditingController();
+  String? _selectedLeaveReason;
   String? _gender;
   bool? _isFarmerChild;
   bool? _canBeSurveyedNow;
-  DateTime? _selectedDate;
-
-  // ========== SURVEY AVAILABILITY ==========
-  final List<String> _surveyNotPossibleReasons = [];
-  final TextEditingController _otherReasonController = TextEditingController();
-  String? _respondentType;
-  final TextEditingController _otherRespondentTypeController =
-      TextEditingController();
-  final TextEditingController _respondentNameController =
-      TextEditingController();
-  final TextEditingController _otherRespondentSpecifyController =
-      TextEditingController();
-
-  // ========== BIRTH AND DOCUMENTATION ==========
   bool? _hasBirthCertificate;
-  final TextEditingController _noBirthCertificateReasonController =
-      TextEditingController();
   bool? _bornInCommunity;
   String? _birthCountry;
-
-  // ========== HOUSEHOLD RELATIONSHIP ==========
   String? _relationshipToHead;
   final TextEditingController _otherRelationshipController =
       TextEditingController();
-  final Map<String, bool> _notLivingWithFamilyReasons = {
-    'Child lives with other relatives': false,
-    'Child is an orphan': false,
-    'For education purposes': false,
-    'Family is too poor to take care of the child': false,
-    'Child is working to support family': false,
-    'Other (specify)': false,
-  };
-  final TextEditingController _otherNotLivingWithFamilyController =
+  List<String> _notWithFamilyReasons = [];
+  final TextEditingController _otherNotWithFamilyController =
       TextEditingController();
-
-  // ========== FAMILY DECISION INFORMATION ==========
-  String? _whoDecidedChildJoin;
-  final TextEditingController _otherPersonController = TextEditingController();
   bool? _childAgreedWithDecision;
   bool? _hasSpokenWithParents;
+  String? _neverBeenToSchool;
   String? _lastContactWithParents;
   String? _timeInHousehold;
   String? _whoAccompaniedChild;
   final TextEditingController _otherAccompaniedController =
       TextEditingController();
-
-  // ========== PARENT RESIDENCE INFORMATION ==========
+  String? _respondentType;
   String? _fatherResidence;
   String? _fatherCountry;
   final TextEditingController _otherFatherCountryController =
@@ -320,8 +359,12 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
   String? _motherCountry;
   final TextEditingController _otherMotherCountryController =
       TextEditingController();
-
-  // ========== EDUCATION INFORMATION ==========
+  final TextEditingController _birthYearController = TextEditingController();
+  final TextEditingController _leftSchoolYearController =
+      TextEditingController();
+  DateTime? _leftSchoolDate;
+  final TextEditingController _leftSchoolDateController =
+      TextEditingController();
   bool? _isCurrentlyEnrolled;
   bool? _hasEverBeenToSchool;
   final TextEditingController _schoolNameController = TextEditingController();
@@ -330,123 +373,6 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
   String? _schoolAttendanceFrequency;
   final Set<String> _availableSchoolSupplies = {};
 
-  final TextEditingController _leftSchoolYearController =
-      TextEditingController();
-  final TextEditingController _leftSchoolDateController =
-      TextEditingController();
-  DateTime? _leftSchoolDate;
-
-  String? _selectedEducationLevel;
-  String? _childLeaveSchoolReason;
-  final TextEditingController _otherLeaveReasonController =
-      TextEditingController();
-  String? _neverBeenToSchoolReason;
-  final TextEditingController _otherNeverSchoolReasonController =
-      TextEditingController();
-
-  // ========== SCHOOL ATTENDANCE (7 DAYS) ==========
-  bool? _attendedSchoolLast7Days;
-  String? _selectedLeaveReason;
-  final TextEditingController _otherAbsenceReasonController =
-      TextEditingController();
-  bool? _missedSchoolDays;
-  String? _selectedMissedReason;
-  final TextEditingController _otherMissedReasonController =
-      TextEditingController();
-
-  // ========== WORK INFORMATION (7 DAYS) ==========
-  bool? _workedInHouse;
-  bool? _workedOnCocoaFarm;
-  String? _workFrequency;
-  bool? _observedWorking;
-  final Set<String> _cocoaFarmTasks = {};
-
-  // ========== LIGHT TASKS (7 DAYS) ==========
-  bool? _receivedRemuneration;
-  String? _longestLightDutyTime;
-  String? _longestNonSchoolDayTime;
-  String? _taskLocation;
-  final TextEditingController _otherLocationController =
-      TextEditingController();
-  final TextEditingController _schoolDayTaskDurationController =
-      TextEditingController();
-  final TextEditingController _nonSchoolDayHoursController =
-      TextEditingController();
-  bool? _wasSupervisedByAdult;
-
-  // ========== LIGHT TASKS (12 MONTHS) ==========
-  final Set<String> _tasksLast12Months = {};
-  bool? _activityRemuneration;
-  String? _schoolDayTaskDuration;
-  String? _nonSchoolDayTaskDuration;
-  String? _taskLocationType;
-  String? _totalSchoolDayHours;
-  String? _totalNonSchoolDayHours;
-  bool? _wasSupervisedDuringTask;
-
-  // ========== DANGEROUS TASKS (7 DAYS) ==========
-  final Set<String> _cocoaFarmTasksLast7DaysDangerous = {};
-  bool? _hasReceivedSalary;
-  String? _taskDangerousLocation;
-  final TextEditingController _otherLocationDangerousController =
-      TextEditingController();
-  String? _longestSchoolDayTimeDangerous;
-  String? _longestNonSchoolDayTimeDangerous;
-  final TextEditingController _schoolDayHoursDangerousController =
-      TextEditingController();
-  final TextEditingController _nonSchoolDayDangerousHoursController =
-      TextEditingController();
-  bool? _wasSupervisedByAdultDangerous;
-
-  // ========== DANGEROUS TASKS (12 MONTHS) ==========
-  final Set<String> _cocoaFarmTasksLast12Months = {};
-  bool? _hasReceivedSalary12Months;
-  String? _taskDangerousLocation12Months;
-  final TextEditingController _otherLocationDangerousController12Months =
-      TextEditingController();
-  String? _longestSchoolDayTimeDangerous12Months;
-  String? _longestNonSchoolDayTimeDangerous12Months;
-  final TextEditingController _schoolDayHoursDangerousController12Months =
-      TextEditingController();
-  final TextEditingController _nonSchoolDayDangerousHoursController12Months =
-      TextEditingController();
-  bool? _wasSupervisedByAdultDangerous12Months;
-
-  // ========== WORK DETAILS ==========
-  String? _workForWhom;
-  final TextEditingController _workForWhomOtherController =
-      TextEditingController();
-  final Set<String> _whyWorkReasons = {};
-  final TextEditingController _whyWorkOtherController = TextEditingController();
-
-  // ========== HEALTH AND SAFETY ==========
-  bool? _appliedAgrochemicals;
-  bool? _onFarmDuringApplication;
-  bool? _sufferedInjury;
-  final TextEditingController _howWoundedController = TextEditingController();
-  final TextEditingController _whenWoundedController = TextEditingController();
-  DateTime? _woundedDate;
-  bool? _oftenFeelPains;
-  final Set<String> _helpReceived = {};
-  final TextEditingController _otherHelpController = TextEditingController();
-
-  // ========== PHOTO CONSENT ==========
-  bool? _parentConsentPhoto;
-  final TextEditingController _noConsentReasonController =
-      TextEditingController();
-  File? _childPhoto;
-
-  // ========== ADDITIONAL WORK HOURS CONTROLLERS ==========
-  final TextEditingController _totalHoursWorkedController =
-      TextEditingController();
-  final TextEditingController _totalHoursWorkedControllerDangerous =
-      TextEditingController();
-  final TextEditingController _totalHoursWorkedControllerNonSchoolDangerous =
-      TextEditingController();
-  final TextEditingController _schoolDayHoursController =
-      TextEditingController();
-
-  // ========== LISTS AND CONSTANTS ==========
   final List<String> _gradeLevels = [
     'Kindergarten 1',
     'Kindergarten 2',
@@ -532,15 +458,23 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     'Gyamfi'
   ];
 
-  // ========== ABSENCE REASONS ==========
-  final Map<String, bool> _absenceReasons = {
-    'It was the holidays': false,
-    'He/she was sick': false,
-    'He/she was working': false,
-    'He/she was traveling': false,
-    'Other': false,
-  };
-  final TextEditingController _otherReasonForSchoolController =
+  final List<String> _surveyNotPossibleReasons = [];
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _totalHoursWorkedController =
+      TextEditingController();
+  final TextEditingController _nonSchoolDayDangerousHoursController =
+      TextEditingController();
+  bool? _isSupervised;
+  DateTime? _selectedDate;
+  final TextEditingController _childNumberController = TextEditingController();
+  final TextEditingController _respondentNameController =
+      TextEditingController();
+  final TextEditingController _otherRespondentTypeController =
+      TextEditingController();
+  final TextEditingController _otherRespondentSpecifyController =
+      TextEditingController();
+  final TextEditingController _surnameController = TextEditingController();
+  final TextEditingController _noBirthCertificateReasonController =
       TextEditingController();
 
   // Camera functionality
@@ -618,44 +552,6 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     );
   }
 
-  Widget _buildArithmeticQuestion(String question, String answer) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          question,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
-        ),
-        Text(
-          'Right answer: $answer',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.green[600],
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReadingSentence(String sentence) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          sentence,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-
   // Modern helper methods
   Widget _buildModernTaskCheckbox12Months(String task) {
     return ModernCheckbox(
@@ -695,35 +591,69 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     required List<Map<String, dynamic>> options,
     required ValueChanged<T?> onChanged,
     String? subtitle,
+    bool isRequired = false,
+    String? errorMessage,
+    bool showError = false,
   }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          question,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textPrimary,
-            fontWeight: FontWeight.w500,fontSize: 14
+        // Wrap the Row in a Container with width constraints
+        Container(
+          width: double.infinity,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  question,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+              if (isRequired) ...[
+                const SizedBox(width: 4),
+                Text(
+                  '*',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
         if (subtitle != null) ...[
-          const SizedBox(height: _Spacing.sm),
+          const SizedBox(height: 4),
           Text(
             subtitle,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color:
-                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,fontSize: 13
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+        ],
+        if (showError && isRequired && groupValue == null) ...[
+          const SizedBox(height: 4),
+          Text(
+            errorMessage ?? 'This field is required',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+              fontSize: 12,
             ),
           ),
         ],
-        const SizedBox(height: _Spacing.md),
+        const SizedBox(height: 8),
         ...options.map((option) => ModernRadioButton<T>(
               value: option['value'] as T,
               groupValue: groupValue,
-              onChanged: onChanged,
+              onChanged: (value) {
+                onChanged(value);
+                // Trigger rebuild to update error state
+                if (mounted) setState(() {});
+              },
               title: option['title'] as String,
               subtitle: option['subtitle'] as String?,
             )),
@@ -743,7 +673,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
         Text(
           question,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,fontSize: 14
+                fontWeight: FontWeight.w500,fontSize: 13
               ),
         ),
         if (subtitle != null) ...[
@@ -751,7 +681,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],fontSize: 13
+                  color: Colors.grey[600],
                 ),
           ),
         ],
@@ -779,7 +709,7 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,fontSize: 14   
+                fontWeight: FontWeight.w500,
               ),
         ),
         const SizedBox(height: 8),
@@ -814,18 +744,47 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
     bool readOnly = false,
+    bool isRequired = false,  // All fields are optional by default
     VoidCallback? onTap,
     String? hintText,
     String? Function(String?)? validator,
     int maxLines = 1,
+    String? requiredMessage,
+    bool? isConditionallyRequired,  // For fields that are only required under certain conditions
+    bool isConditionMet = true,     // Whether the condition for required is met
   }) {
+    // Create a composite validator that checks both the custom validator and required status
+    String? validateField(String? value) {
+      // If there's a custom validator, use it first
+      if (validator != null) {
+        final customError = validator(value);
+        if (customError != null) return customError;
+      }
+      
+      // Check if field is required based on conditions
+      final bool isFieldRequired = isConditionallyRequired == true 
+          ? isConditionMet 
+          : isRequired;
+          
+      // If field is required, check if it's empty
+      if (isFieldRequired && (value == null || value.trim().isEmpty)) {
+        return requiredMessage ?? '$label is required';
+      }
+      
+      return null;
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          isRequired ? '$label *' : label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,fontSize: 14
+                fontWeight: FontWeight.w500,
+                fontSize: 14.0,
+                color: isRequired 
+                    ? Theme.of(context).colorScheme.error 
+                    : null,
               ),
         ),
         const SizedBox(height: 8),
@@ -843,15 +802,15 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  BorderSide(color: Theme.of(context).primaryColor, width: 2),
+              borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 12,
             ),
+            errorMaxLines: 2,
           ),
-          validator: validator,
+          validator: validateField,
         ),
       ],
     );
@@ -944,159 +903,189 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     }
   }
 
-  void _submitForm() {
-    // Allow form submission without validation
-    final childData = {
-      'childNumber': widget.childNumber,
-      'schoolDayHours': _schoolDayTaskDurationController.text.trim(),
-      'isFarmerChild': _isFarmerChild,
-      'childListNumber': _childNumberController.text.trim(),
-      'birthYear': _selectedDate?.year,
-      'canBeSurveyedNow': _canBeSurveyedNow,
-      'surveyNotPossibleReasons':
-          _canBeSurveyedNow == false ? _surveyNotPossibleReasons : [],
-      'otherReason': _canBeSurveyedNow == false &&
-              _surveyNotPossibleReasons.contains('other')
-          ? _otherReasonController.text.trim()
-          : null,
-      'respondentType': _canBeSurveyedNow == false ? _respondentType : null,
-      'otherRespondentType':
-          _canBeSurveyedNow == false && _respondentType == 'other'
-              ? _otherRespondentTypeController.text.trim()
-              : null,
-      'childName': _nameController.text.trim(),
-      'childSurname': _surnameController.text.trim(),
-      'childGender': _gender,
-      'childAge': _selectedDate != null
-          ? (DateTime.now().year - _selectedDate!.year).toString()
-          : '',
-      'birthYear': _selectedDate?.year.toString() ?? '',
-      'hasBirthCertificate': _hasBirthCertificate,
-      'bornInCommunity': _bornInCommunity,
-      'birthCountry': _birthCountry,
-      'relationshipToHead': _relationshipToHead,
-      'otherRelationship': _otherRelationshipController.text.trim(),
+  // No validation, just submit the form
+  Future<void> _submitForm() async {
+    debugPrint('Submitting form without validation...');
+    debugPrint('Child number: ${widget.childNumber}, Total children: ${widget.totalChildren}');
+    
+    // Show loading indicator
+    debugPrint('🔄 Showing loading dialog...');
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+    
+    // Delay to ensure the loading dialog is shown
+    Future.delayed(Duration.zero, () async {
+      debugPrint('🚀 Starting form submission process...');
 
-      'childAgreedWithDecision': _childAgreedWithDecision,
-      'hasSpokenWithParents': _hasSpokenWithParents,
-      'timeInHousehold': _timeInHousehold,
-      'whoAccompaniedChild': _whoAccompaniedChild,
-      'otherAccompanied': _otherAccompaniedController.text.trim(),
-      'fatherResidence': _fatherResidence,
-      'fatherCountry': _fatherCountry,
-      'otherFatherCountry': _otherFatherCountryController.text.trim(),
-      'motherResidence': _motherResidence,
-      'motherCountry': _motherCountry,
-      'otherMotherCountry': _otherMotherCountryController.text.trim(),
-      'isCurrentlyEnrolled': _isCurrentlyEnrolled,
-      'schoolName': _isCurrentlyEnrolled == true
-          ? _schoolNameController.text.trim()
-          : null,
-      'schoolType': _isCurrentlyEnrolled == true ? _schoolType : null,
-      'gradeLevel': _isCurrentlyEnrolled == true ? _gradeLevel : null,
-      'schoolAttendanceFrequency':
-          _isCurrentlyEnrolled == true ? _schoolAttendanceFrequency : null,
-      'availableSchoolSupplies': _isCurrentlyEnrolled == true
-          ? _availableSchoolSupplies.toList()
-          : null,
-      'hasEverBeenToSchool':
-          _isCurrentlyEnrolled == false ? _hasEverBeenToSchool : null,
-      'leftSchoolYear': _hasEverBeenToSchool == true
-          ? _leftSchoolYearController.text.trim()
-          : null,
-      'attendedSchoolLast7Days': _attendedSchoolLast7Days,
-      'missedSchoolDays': _missedSchoolDays,
-      'workedInHouse': _workedInHouse,
-      'workedOnCocoaFarm': _workedOnCocoaFarm,
-      'cocoaFarmTasks': _cocoaFarmTasks.toList(),
-      'workFrequency': _workFrequency,
-      'observedWorking': _observedWorking,
-      'receivedRemuneration': _receivedRemuneration,
-      'wasSupervisedByAdult': _wasSupervisedByAdult,
-      'longestLightDutyTime': _longestLightDutyTime,
-      'longestNonSchoolDayTime': _longestNonSchoolDayTime,
-      'tasksLast12Months': _tasksLast12Months.toList(),
-      'taskLocation': _taskLocation,
-      'otherTaskLocation': _otherLocationController.text.trim(),
-      'schoolDayHours': _schoolDayHoursController.text.trim(),
+      // If we get here, all validations passed
+      try {
+        final Map<String, dynamic> childData = {
+        'childNumber': widget.childNumber,
+        'isFarmerChild': _isFarmerChild,
+        'childListNumber': _childNumberController.text.trim(),
+        'birthDate': _selectedDate,
+        'birthYear': _selectedDate?.year,
+        'canBeSurveyedNow': _canBeSurveyedNow,
+        'surveyNotPossibleReasons':
+            _canBeSurveyedNow == false ? _surveyNotPossibleReasons : [],
+        'otherReason': _canBeSurveyedNow == false &&
+                _surveyNotPossibleReasons.contains('other')
+            ? _otherReasonController.text.trim()
+            : null,
+        'respondentType': _canBeSurveyedNow == false ? _respondentType : null,
+        'otherRespondentType':
+            _canBeSurveyedNow == false && _respondentType == 'other'
+                ? _otherRespondentTypeController.text.trim()
+                : null,
+        'childName': _nameController.text.trim(),
+        'childSurname': _surnameController.text.trim(),
+        'childGender': _gender,
+        'childAge': _selectedDate != null
+            ? (DateTime.now().year - _selectedDate!.year).toString()
+            : '',
+        'birthYear': _selectedDate?.year.toString() ?? '',
+        'hasBirthCertificate': _hasBirthCertificate,
+        'bornInCommunity': _bornInCommunity,
+        'birthCountry': _birthCountry,
+        'relationshipToHead': _relationshipToHead,
+        'otherRelationship': _otherRelationshipController.text.trim(),
+        'notWithFamilyReasons': _notWithFamilyReasons,
+        'otherNotWithFamilyReason': _otherNotWithFamilyController.text.trim(),
+        'childAgreedWithDecision': _childAgreedWithDecision,
+        'hasSpokenWithParents': _hasSpokenWithParents,
+        'timeInHousehold': _timeInHousehold,
+        'whoAccompaniedChild': _whoAccompaniedChild,
+        'otherAccompanied': _otherAccompaniedController.text.trim(),
+        'fatherResidence': _fatherResidence,
+        'fatherCountry': _fatherCountry,
+        'otherFatherCountry': _otherFatherCountryController.text.trim(),
+        'motherResidence': _motherResidence,
+        'motherCountry': _motherCountry,
+        'otherMotherCountry': _otherMotherCountryController.text.trim(),
+        'isCurrentlyEnrolled': _isCurrentlyEnrolled,
+        'schoolName': _isCurrentlyEnrolled == true
+            ? _schoolNameController.text.trim()
+            : null,
+        'schoolType': _isCurrentlyEnrolled == true ? _schoolType : null,
+        'gradeLevel': _isCurrentlyEnrolled == true ? _gradeLevel : null,
+        'schoolAttendanceFrequency':
+            _isCurrentlyEnrolled == true ? _schoolAttendanceFrequency : null,
+        'availableSchoolSupplies': _isCurrentlyEnrolled == true
+            ? _availableSchoolSupplies.toList()
+            : null,
+        'hasEverBeenToSchool':
+            _isCurrentlyEnrolled == false ? _hasEverBeenToSchool : null,
+        'leftSchoolYear': _hasEverBeenToSchool == true
+            ? _leftSchoolYearController.text.trim()
+            : null,
+        'attendedSchoolLast7Days': _attendedSchoolLast7Days,
+        'missedSchoolDays': _missedSchoolDays,
+        'workedInHouse': _workedInHouse,
+        'workedOnCocoaFarm': _workedOnCocoaFarm,
+        'cocoaFarmTasks': _cocoaFarmTasks.toList(),
+        'workFrequency': _workFrequency,
+        'observedWorking': _observedWorking,
+        'receivedRemuneration': _receivedRemuneration,
+        'wasSupervisedByAdult': _wasSupervisedByAdult,
+        'longestLightDutyTime': _longestLightDutyTime,
+        'longestNonSchoolDayTime': _longestNonSchoolDayTime,
+        'tasksLast12Months': _tasksLast12Months.toList(),
+        'taskLocation': _taskLocation,
+        'otherTaskLocation': _otherLocationController.text.trim(),
+        'schoolDayHours': _schoolDayHoursController.text.trim(),
+        'schoolDayTaskHours': _schoolDayTaskDurationController.text.trim(),
+        'parentConsentPhoto': _parentConsentPhoto,
+        'childPhotoPath': _childPhoto?.path,
+      };
 
-      // Light tasks 12 months fields
-      'activityRemuneration': _activityRemuneration,
-      'schoolDayTaskDuration': _schoolDayTaskDuration,
-      'nonSchoolDayTaskDuration': _nonSchoolDayTaskDuration,
-      'taskLocationType': _taskLocationType,
-      'totalSchoolDayHours': _totalSchoolDayHours,
-      'totalNonSchoolDayHours': _totalNonSchoolDayHours,
-      'wasSupervisedDuringTask': _wasSupervisedDuringTask,
-
-      // Work information
-      'workForWhom': _workForWhom,
-      'otherWorkForWhom': _workForWhomOtherController.text.trim(),
-      'whyWorkReasons': _whyWorkReasons.toList(),
-      'otherWhyWork': _whyWorkOtherController.text.trim(),
-
-      // Health and safety
-      'appliedAgrochemicals': _appliedAgrochemicals,
-      'onFarmDuringApplication': _onFarmDuringApplication,
-      'sufferedInjury': _sufferedInjury,
-      'howWounded': _howWoundedController.text.trim(),
-      'whenWounded': _whenWoundedController.text.trim(),
-      'oftenFeelPains': _oftenFeelPains,
-      'helpReceived': _helpReceived.toList(),
-      'otherHelp': _otherHelpController.text.trim(),
-
-      // Photo consent
-      'parentConsentPhoto': _parentConsentPhoto,
-      'noConsentReason': _noConsentReasonController.text.trim(),
-      'childPhotoPath': _childPhoto?.path,
-
-      // Dangerous tasks 7 days
-      'cocoaFarmTasksLast7Days': _cocoaFarmTasksLast7DaysDangerous.toList(),
-      'hasReceivedSalary': _hasReceivedSalary,
-      'taskDangerousLocation': _taskDangerousLocation,
-      'otherLocationDangerous': _otherLocationDangerousController.text.trim(),
-      'longestSchoolDayTimeDangerous': _longestSchoolDayTimeDangerous,
-      'longestNonSchoolDayTimeDangerous': _longestNonSchoolDayTimeDangerous,
-      'schoolDayHoursDangerous': _schoolDayHoursDangerousController.text.trim(),
-      'nonSchoolDayDangerousHours':
-          _nonSchoolDayDangerousHoursController.text.trim(),
-      'wasSupervisedByAdultDangerous': _wasSupervisedByAdultDangerous,
-
-      // Dangerous tasks 12 months
-      'cocoaFarmTasksLast12Months': _cocoaFarmTasksLast12Months.toList(),
-      'hasReceivedSalary12Months': _hasReceivedSalary12Months,
-      'taskDangerousLocation12Months': _taskDangerousLocation12Months,
-      'otherLocationDangerous12Months':
-          _otherLocationDangerousController12Months.text.trim(),
-      'longestSchoolDayTimeDangerous12Months':
-          _longestSchoolDayTimeDangerous12Months,
-      'longestNonSchoolDayTimeDangerous12Months':
-          _longestNonSchoolDayTimeDangerous12Months,
-      'schoolDayHoursDangerous12Months':
-          _schoolDayHoursDangerousController12Months.text.trim(),
-      'nonSchoolDayDangerousHours12Months':
-          _nonSchoolDayDangerousHoursController12Months.text.trim(),
-      'wasSupervisedByAdultDangerous12Months':
-          _wasSupervisedByAdultDangerous12Months,
-
-      // Education details
-      'selectedEducationLevel': _selectedEducationLevel,
-      'childLeaveSchoolReason': _childLeaveSchoolReason,
-      'otherLeaveReason': _otherLeaveReasonController.text.trim(),
-      'neverBeenToSchoolReason': _neverBeenToSchoolReason,
-      'otherNeverSchoolReason': _otherNeverSchoolReasonController.text.trim(),
-      'selectedLeaveReason': _selectedLeaveReason,
-      'otherAbsenceReason': _otherAbsenceReasonController.text.trim(),
-      'selectedMissedReason': _selectedMissedReason,
-      'otherMissedReason': _otherMissedReasonController.text.trim(),
-
-      // Family decision information
-      'whoDecidedChildJoin': _whoDecidedChildJoin,
-      'otherPersonDecided': _otherPersonController.text.trim(),
-      'lastContactWithParents': _lastContactWithParents,
-    };
-
-    Navigator.pop(context, childData);
+        debugPrint('📝 Form data prepared, sending to parent...');
+        debugPrint('   Child data: $childData');
+      
+      // Return the data to the parent
+      if (!mounted) {
+        debugPrint('❌ Widget is not mounted, aborting');
+        return;
+      }
+      
+      debugPrint('🔄 Dismissing loading dialog...');
+      try {
+        Navigator.of(context).pop(); // Dismiss loading dialog
+        debugPrint('✅ Loading dialog dismissed');
+      } catch (e) {
+        debugPrint('❌ Error dismissing dialog: $e');
+      }
+      
+      // Check if this is the last child
+      final isLastChild = widget.childNumber >= widget.totalChildren;
+      
+      debugPrint('📞 Preparing to call onComplete callback...');
+      debugPrint('   Child number: ${widget.childNumber}');
+      debugPrint('   Total children: ${widget.totalChildren}');
+      debugPrint('   Is last child: $isLastChild');
+      debugPrint('   Child data: $childData');
+      
+      // Close any open dialogs first
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      
+      // Add a small delay to ensure the dialog is dismissed
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      try {
+        if (widget.onComplete == null) {
+          debugPrint('❌ ERROR: onComplete callback is null!');
+          _showValidationError('System error: Cannot save child details');
+          return;
+        }
+        
+        debugPrint('🔹 Sending child data to parent...');
+        final result = {
+          'childData': childData,
+          'navigateToNextChild': !isLastChild,
+        };
+        
+        debugPrint('   Sending result: $result');
+        
+        // Call the callback
+        final callbackResult = widget.onComplete(result);
+        
+        // If the callback returns a Future, wait for it
+        if (callbackResult is Future) {
+          await callbackResult;
+        }
+        
+        debugPrint('✅ onComplete callback executed successfully');
+      } catch (e, stackTrace) {
+        debugPrint('❌ ERROR in onComplete callback: $e');
+        debugPrint('Stack trace: $stackTrace');
+        if (mounted) {
+          _showValidationError('Error saving child details: ${e.toString()}');
+        }
+      }  
+      } catch (e, stackTrace) {
+        // Handle any errors during form submission
+        debugPrint('EXCEPTION in form submission: $e');
+        debugPrint('Stack trace: $stackTrace');
+        
+        if (mounted) {
+          try {
+            Navigator.of(context).pop(); // Dismiss loading dialog
+          } catch (e) {
+            debugPrint('Error dismissing dialog: $e');
+          }
+          
+          _showValidationError('Error submitting form: ${e.toString()}');
+        }
+      }
+    }); // Close the Future.delayed
   }
 
   Future<void> _selectWoundedDate(BuildContext context) async {
@@ -1132,7 +1121,6 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
   }
 
   void _onChildNumberChanged() {
-    // Trigger a rebuild when the child number changes
     if (mounted) {
       setState(() {});
     }
@@ -1144,11 +1132,26 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     _childNumberController.addListener(_onChildNumberChanged);
   }
 
+  // Method to validate the form, can be called by parent
+  void _showValidationError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  bool validateForm() {
+    return true; // Always return true to bypass validation
+  }
+
   @override
   void dispose() {
     _childNumberController.removeListener(_onChildNumberChanged);
-
-    // Keep all existing disposals and add missing ones:
     _otherLocationController.dispose();
     _otherReasonController.dispose();
     _otherReasonForSchoolController.dispose();
@@ -1166,43 +1169,2448 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
     _surnameController.dispose();
     _noBirthCertificateReasonController.dispose();
     _otherRelationshipController.dispose();
-
+    _otherNotWithFamilyController.dispose();
     _otherAccompaniedController.dispose();
+    _otherLocationController.dispose();
     _schoolDayTaskDurationController.dispose();
     _nonSchoolDayHoursController.dispose();
     _howWoundedController.dispose();
     _whenWoundedController.dispose();
-    _otherLeaveReasonController.dispose();
     _otherHelpController.dispose();
     _noConsentReasonController.dispose();
-    _otherMissedReasonController.dispose();
-    _otherNeverSchoolReasonController.dispose();
-    _otherPersonController.dispose();
-
-    _workForWhomOtherController.dispose();
-    _whyWorkOtherController.dispose();
-    _otherNotLivingWithFamilyController.dispose();
-
-    // Dangerous tasks controllers (only one set):
-    _otherLocationDangerousController.dispose();
-    _schoolDayHoursDangerousController.dispose();
-    _nonSchoolDayDangerousHoursController.dispose();
-    _otherLocationDangerousController12Months.dispose();
-    _schoolDayHoursDangerousController12Months.dispose();
-    _nonSchoolDayDangerousHoursController12Months.dispose();
-
     super.dispose();
+  }
+
+  // ==================== SECTION BUILDERS ====================
+
+  Widget _buildBasicInformationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('BASIC INFORMATION'),
+        
+        // Farmer's Children Section
+        _buildModernRadioGroup<bool>(
+          question:
+              'Is the child among the list of children declared in the cover to be the farmer\'s children?',
+          groupValue: _isFarmerChild,
+          onChanged: (value) {
+            setState(() {
+              _isFarmerChild = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        _buildInfoCard('FARMER CHILDREN LIST'),
+
+        // Child Number Input
+        _buildModernTextField(
+          label:
+              'Enter the number attached to the child name in the cover so we can identify the child in question:',
+          controller: _childNumberController,
+          keyboardType: TextInputType.number,
+          hintText: 'Enter child number',
+        ),
+        const SizedBox(height: 24),
+
+        // Child's basic information
+        _buildModernTextField(
+          label: 'Child\'s First Name:',
+          controller: _nameController,
+          hintText: 'Enter child\'s first name',
+        ),
+        const SizedBox(height: 16),
+
+        _buildModernTextField(
+          label: 'Child\'s Surname:',
+          controller: _surnameController,
+          hintText: 'Enter child\'s surname',
+        ),
+        const SizedBox(height: 16),
+
+        // Child's Gender
+        _buildModernRadioGroup<String>(
+          question: 'Child\'s Gender:',
+          groupValue: _gender,
+          onChanged: (value) {
+            setState(() {
+              _gender = value;
+            });
+          },
+          options: [
+            {'value': 'Male', 'title': 'Male'},
+            {'value': 'Female', 'title': 'Female'},
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Year of Birth
+        _buildModernTextField(
+          label: 'Year of Birth:',
+          controller: _birthYearController,
+          readOnly: true,
+          onTap: () => _selectDate(context),
+          hintText: 'Select year of birth',
+        ),
+
+        // Birth certificate
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<bool>(
+          question: 'Does the child have a birth certificate?',
+          groupValue: _hasBirthCertificate,
+          onChanged: (value) {
+            setState(() {
+              _hasBirthCertificate = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // Show reason field if no birth certificate
+        if (_hasBirthCertificate == false) ...[
+          const SizedBox(height: 16),
+          _buildModernTextField(
+            label: 'If no, please specify why',
+            controller: _noBirthCertificateReasonController,
+            hintText: 'Enter reason for not having a birth certificate',
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSurveyInformationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('SURVEY INFORMATION'),
+
+        // Survey Availability
+        _buildModernRadioGroup<bool>(
+          question: 'Can the child be surveyed now?',
+          groupValue: _canBeSurveyedNow,
+          onChanged: (value) {
+            setState(() {
+              _canBeSurveyedNow = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // Show reasons if survey is not possible
+        if (_canBeSurveyedNow == false) ...[
+          const SizedBox(height: 24),
+          _buildModernCheckboxGroup(
+            question: 'If not, what are the reasons?',
+            values: {
+              'The child is at school': _surveyNotPossibleReasons
+                  .contains('the_child_is_at_school'),
+              'The child has gone to work on the cocoa farm':
+                  _surveyNotPossibleReasons.contains(
+                      'the_child_has_gone_to_work_on_the_cocoa_farm'),
+              'Child is busy doing housework': _surveyNotPossibleReasons
+                  .contains('child_is_busy_doing_housework'),
+              'Child works outside the household':
+                  _surveyNotPossibleReasons
+                      .contains('child_works_outside_the_household'),
+              'The child is too young': _surveyNotPossibleReasons
+                  .contains('the_child_is_too_young'),
+              'The child is sick':
+                  _surveyNotPossibleReasons.contains('the_child_is_sick'),
+              'The child has travelled': _surveyNotPossibleReasons
+                  .contains('the_child_has_travelled'),
+              'The child has gone out to play': _surveyNotPossibleReasons
+                  .contains('the_child_has_gone_out_to_play'),
+              'The child is sleeping': _surveyNotPossibleReasons
+                  .contains('the_child_is_sleeping'),
+              'Other reasons':
+                  _surveyNotPossibleReasons.contains('other_reasons'),
+            },
+            onChanged: (String reason, bool? selected) {
+              setState(() {
+                final key = reason.toLowerCase().replaceAll(' ', '_');
+                if (selected == true) {
+                  _surveyNotPossibleReasons.add(key);
+                } else {
+                  _surveyNotPossibleReasons.remove(key);
+                }
+              });
+            },
+          ),
+
+          // Respondent information
+          const SizedBox(height: 24),
+          _buildModernRadioGroup<String>(
+            question:
+                'Who is answering for the child since he/she is not available?',
+            groupValue: _respondentType,
+            onChanged: (value) {
+              setState(() {
+                _respondentType = value;
+              });
+            },
+            options: [
+              {
+                'value': 'the_parents_or_legal_guardians',
+                'title': 'The parents or legal guardians'
+              },
+              {
+                'value': 'another_family_member',
+                'title': 'Another family member of the child'
+              },
+              {
+                'value': 'child_siblings',
+                'title': 'One of the child\'s siblings'
+              },
+              {'value': 'other', 'title': 'Other'},
+            ],
+          ),
+
+          if (_respondentType != null) ...[
+            const SizedBox(height: 16),
+            if (_respondentType == 'other') ...[
+              _buildModernTextField(
+                label: 'Please specify',
+                controller: _otherRespondentTypeController,
+              ),
+            ],
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFamilyInformationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('FAMILY INFORMATION'),
+
+        // How long has the child been living in the household?
+        _buildModernRadioGroup<String>(
+          question:
+              'For how long has the child been living in the household?',
+          groupValue: _timeInHousehold,
+          onChanged: (String? value) {
+            setState(() {
+              _timeInHousehold = value;
+            });
+          },
+          options: [
+            {
+              'value': 'Born in the household',
+              'title': 'Born in the household'
+            },
+            {'value': 'Less than 1 year', 'title': 'Less than 1 year'},
+            {'value': '1-2 years', 'title': '1-2 years'},
+            {'value': '2-4 years old', 'title': '2-4 years old'},
+            {'value': '4-6 years old', 'title': '4-6 years old'},
+            {'value': '6-8 years old', 'title': '6-8 years old'},
+            {
+              'value': 'More than 8 years',
+              'title': 'More than 8 years'
+            },
+            {'value': 'Don\'t know', 'title': 'Don\'t know'},
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Father's residence
+        _buildModernRadioGroup<String>(
+          question: 'Where does the child\'s father live?',
+          groupValue: _fatherResidence,
+          onChanged: (String? value) {
+            setState(() {
+              _fatherResidence = value;
+            });
+          },
+          options: [
+            {
+              'value': 'In the same household',
+              'title': 'In the same household'
+            },
+            {
+              'value': 'In another household in the same village',
+              'title': 'In another household in the same village'
+            },
+            {
+              'value': 'In another household in the same region',
+              'title': 'In another household in the same region'
+            },
+            {
+              'value': 'In another household in another region',
+              'title': 'In another household in another region'
+            },
+            {'value': 'Abroad', 'title': 'Abroad'},
+            {'value': 'Parents deceased', 'title': 'Parents deceased'},
+            {
+              'value': 'Don\'t know/Don\'t want to answer',
+              'title': 'Don\'t know/Don\'t want to answer'
+            },
+          ],
+        ),
+
+        // Show country selection if father is abroad
+        if (_fatherResidence == 'Abroad') ...[
+          const SizedBox(height: 16),
+          _buildModernDropdown<String>(
+            label: 'Father\'s country of residence',
+            value: _fatherCountry,
+            items: _fatherCountries.map((String country) {
+              return DropdownMenuItem<String>(
+                value: country,
+                child: Text(country),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _fatherCountry = newValue;
+              });
+            },
+            hintText: 'Select country',
+          ),
+          if (_fatherCountry == 'Others to be specified') ...[
+            const SizedBox(height: 16),
+            _buildModernTextField(
+              label: 'Please specify country',
+              controller: _otherFatherCountryController,
+            ),
+          ],
+          const SizedBox(height: 16),
+        ],
+        const SizedBox(height: 24),
+
+        // Mother's residence
+        _buildModernRadioGroup<String>(
+          question: 'Where does the child\'s mother live?',
+          groupValue: _motherResidence,
+          onChanged: (String? value) {
+            setState(() {
+              _motherResidence = value;
+            });
+          },
+          options: [
+            {
+              'value': 'In the same household',
+              'title': 'In the same household'
+            },
+            {
+              'value': 'In another household in the same village',
+              'title': 'In another household in the same village'
+            },
+            {
+              'value': 'In another household in the same region',
+              'title': 'In another household in the same region'
+            },
+            {
+              'value': 'In another household in another region',
+              'title': 'In another household in another region'
+            },
+            {'value': 'Abroad', 'title': 'Abroad'},
+            {'value': 'Parents deceased', 'title': 'Parents deceased'},
+            {
+              'value': 'Don\'t know/Don\'t want to answer',
+              'title': 'Don\'t know/Don\'t want to answer'
+            },
+          ],
+        ),
+
+        // Show country selection if mother is abroad
+        if (_motherResidence == 'Abroad') ...[
+          const SizedBox(height: 16),
+          _buildModernDropdown<String>(
+            label: 'Mother\'s country of residence',
+            value: _motherCountry,
+            items: _fatherCountries.map((String country) {
+              return DropdownMenuItem<String>(
+                value: country,
+                child: Text(country),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _motherCountry = newValue;
+              });
+            },
+            hintText: 'Select country',
+          ),
+          if (_motherCountry == 'Others to be specified') ...[
+            const SizedBox(height: 16),
+            _buildModernTextField(
+              label: 'Please specify country',
+              controller: _otherMotherCountryController,
+            ),
+          ],
+          const SizedBox(height: 16),
+        ],
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildEducationInformationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('EDUCATION INFORMATION'),
+
+        // School enrollment
+        _buildModernRadioGroup<bool>(
+          question: 'Is the child currently enrolled in school?',
+          groupValue: _isCurrentlyEnrolled,
+          onChanged: (value) {
+            setState(() {
+              _isCurrentlyEnrolled = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // Currently enrolled section
+        if (_isCurrentlyEnrolled == true) ...[
+          const SizedBox(height: 16),
+          _buildModernTextField(
+            label: 'What is the name of the school?',
+            controller: _schoolNameController,
+            hintText: 'Enter school name',
+          ),
+        ],
+        if (_isCurrentlyEnrolled == true &&
+            _schoolNameController.text.trim().isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildModernRadioGroup<String>(
+            question: 'Is the school a public or private school?',
+            groupValue: _schoolType,
+            onChanged: (String? value) {
+              setState(() {
+                _schoolType = value;
+              });
+            },
+            options: [
+              {'value': 'Public', 'title': 'Public'},
+              {'value': 'Private', 'title': 'Private'},
+            ],
+          ),
+        ],
+        if (_isCurrentlyEnrolled == true &&
+            _schoolNameController.text.trim().isNotEmpty &&
+            _schoolType != null) ...[
+          const SizedBox(height: 16),
+          _buildModernDropdown<String>(
+            label: 'What grade is the child enrolled in?',
+            value: _gradeLevel,
+            items: _gradeLevels.map((String grade) {
+              return DropdownMenuItem<String>(
+                value: grade,
+                child: Text(grade),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _gradeLevel = newValue;
+              });
+            },
+            hintText: 'Select grade level',
+          ),
+        ],
+        if (_isCurrentlyEnrolled == true &&
+            _schoolNameController.text.trim().isNotEmpty &&
+            _schoolType != null &&
+            _gradeLevel != null) ...[
+          const SizedBox(height: 16),
+          _buildModernRadioGroup<String>(
+            question:
+            'How many times does the child go to school in a week?',
+            groupValue: _schoolAttendanceFrequency,
+            onChanged: (String? value) {
+              setState(() {
+                _schoolAttendanceFrequency = value;
+              });
+            },
+            options: [
+              {'value': 'Once', 'title': 'Once'},
+              {'value': 'Twice', 'title': 'Twice'},
+              {'value': 'Thrice', 'title': 'Thrice'},
+              {'value': 'Four times', 'title': 'Four times'},
+              {'value': 'Five times', 'title': 'Five times'},
+            ],
+          ),
+        ],
+        if (_schoolAttendanceFrequency != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Select the basic school needs that are available to the child:',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Column(
+              children: [
+                ModernCheckbox(
+                  value: _availableSchoolSupplies.contains('Books'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _availableSchoolSupplies.add('Books');
+                      } else {
+                        _availableSchoolSupplies.remove('Books');
+                      }
+                    });
+                  },
+                  title: 'Books',
+                ),
+                ModernCheckbox(
+                  value:
+                      _availableSchoolSupplies.contains('School bag'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _availableSchoolSupplies.add('School bag');
+                      } else {
+                        _availableSchoolSupplies.remove('School bag');
+                      }
+                    });
+                  },
+                  title: 'School bag',
+                ),
+                ModernCheckbox(
+                  value: _availableSchoolSupplies
+                      .contains('Pen / Pencils'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _availableSchoolSupplies.add('Pen / Pencils');
+                      } else {
+                        _availableSchoolSupplies
+                            .remove('Pen / Pencils');
+                      }
+                    });
+                  },
+                  title: 'Pen / Pencils',
+                ),
+                ModernCheckbox(
+                  value: _availableSchoolSupplies
+                      .contains('School Uniforms'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _availableSchoolSupplies.add('School Uniforms');
+                      } else {
+                        _availableSchoolSupplies
+                            .remove('School Uniforms');
+                      }
+                    });
+                  },
+                  title: 'School Uniforms',
+                ),
+                ModernCheckbox(
+                  value: _availableSchoolSupplies
+                      .contains('Shoes and Socks'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _availableSchoolSupplies.add('Shoes and Socks');
+                      } else {
+                        _availableSchoolSupplies
+                            .remove('Shoes and Socks');
+                      }
+                    });
+                  },
+                  title: 'Shoes and Socks',
+                ),
+                ModernCheckbox(
+                  value: _availableSchoolSupplies
+                      .contains('None of the above'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _availableSchoolSupplies.clear();
+                        _availableSchoolSupplies
+                            .add('None of the above');
+                      } else {
+                        _availableSchoolSupplies
+                            .remove('None of the above');
+                      }
+                    });
+                  },
+                  title: 'None of the above',
+                ),
+              ],
+            ),
+        ],
+
+        // Not currently enrolled section
+        if (_isCurrentlyEnrolled == false) ...[
+          const SizedBox(height: 16),
+          _buildModernRadioGroup<bool>(
+            question: 'Has the child ever been to school?',
+            groupValue: _hasEverBeenToSchool,
+            onChanged: (bool? value) {
+              setState(() {
+                _hasEverBeenToSchool = value;
+              });
+            },
+            options: [
+              {
+                'value': true,
+                'title': 'Yes, they went to school but stopped',
+                'subtitle': null,
+              },
+              {
+                'value': false,
+                'title': 'No, they have never been to school',
+                'subtitle': null,
+              },
+            ],
+          ),
+
+          // Additional sections for children who were enrolled but stopped
+          if (_hasEverBeenToSchool == true) ...[
+            const SizedBox(height: 16),
+            _buildModernTextField(
+              label: 'When did the child leave school?',
+              controller: _leftSchoolYearController,
+              keyboardType: TextInputType.number,
+              hintText: 'Enter year',
+            ),
+            const SizedBox(height: 16),
+            _buildModernTextField(
+              label: 'Or select exact date:',
+              controller: _leftSchoolDateController,
+              readOnly: true,
+              onTap: () => _selectLeftSchoolDate(context),
+              hintText: 'Select date',
+            ),
+
+            // Arithmetic Assessment Section
+            const SizedBox(height: 24),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                    color: Theme.of(context)
+                        .primaryColor
+                        .withOpacity(0.2)),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Arithmetic Reference',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 12),
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 8,
+                      children: [
+                        _ArithmeticItem(expression: '1 + 2 = 3'),
+                        _ArithmeticItem(expression: '2 + 3 = 5'),
+                        _ArithmeticItem(expression: '5 - 3 = 2'),
+                        _ArithmeticItem(expression: '9 - 4 = 5'),
+                        _ArithmeticItem(expression: '9 + 7 = 16'),
+                        _ArithmeticItem(expression: '3 × 7 = 21'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Reading Assessment Section
+            const SizedBox(height: 24),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                    color: Theme.of(context)
+                        .primaryColor
+                        .withOpacity(0.2)),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Reading Assessment',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 12),
+                    Text(
+                      '1. "This is Ama"\n'
+                      '2. "It is water"\n'
+                      '3. "I like to play with my friends"\n'
+                      '4. "I am going to school"\n'
+                      '5. "Kofi is crying loudly"\n'
+                      '6. "I am good at playing both Basketball and football"',
+                      style: TextStyle(fontSize: 16, height: 1.8),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // School attendance in past 7 days
+            const SizedBox(height: 24),
+            _buildModernRadioGroup<bool>(
+              question:
+                  'Has the child been to school in the past 7 days?',
+              groupValue: _attendedSchoolLast7Days,
+              onChanged: (bool? value) {
+                setState(() {
+                  _attendedSchoolLast7Days = value;
+                });
+              },
+              options: [
+                {'value': true, 'title': 'Yes'},
+                {'value': false, 'title': 'No'},
+              ],
+            ),
+
+            // Question about missing school days
+            const SizedBox(height: 16),
+            _buildModernRadioGroup<bool>(
+              question:
+                  'Has the child missed any school days in the past 7 days?',
+              groupValue: _missedSchoolDays,
+              onChanged: (bool? value) {
+                setState(() {
+                  _missedSchoolDays = value;
+                });
+              },
+              options: [
+                {'value': true, 'title': 'Yes'},
+                {'value': false, 'title': 'No'},
+              ],
+            ),
+
+            if (_missedSchoolDays == true) ...[
+              const SizedBox(height: 16),
+              _buildModernCheckboxGroup(
+                question: 'Why has the child missed school days?',
+                values: _absenceReasons,
+                onChanged: (String reason, bool? selected) {
+                  setState(() {
+                    _absenceReasons[reason] = selected ?? false;
+                  });
+                },
+              ),
+            ],
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildWorkInformationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('WORK INFORMATION'),
+
+        // Work-related questions
+        _buildModernRadioGroup<bool>(
+          question:
+              'In the past 7 days, has the child [${widget.childNumber}] worked in the house?',
+          groupValue: _workedInHouse,
+          onChanged: (value) {
+            setState(() {
+              _workedInHouse = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        _buildModernRadioGroup<bool>(
+          question:
+              'In the past 7 days, has the child [${widget.childNumber}] been working on the cocoa farm?',
+          groupValue: _workedOnCocoaFarm,
+          onChanged: (value) {
+            setState(() {
+              _workedOnCocoaFarm = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // Tasks performed on cocoa farm
+        if (_workedOnCocoaFarm == true) ...[
+          const SizedBox(height: 24),
+          Text(
+            'Which of these tasks has child [${widget.childNumber}] performed in the last 7 Days?',
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildModernTaskCheckbox(
+                  'Collect and gather fruits, pods, seeds after harvesting'),
+              _buildModernTaskCheckbox(
+                  'Extracting cocoa beans after shelling by an adult'),
+              _buildModernTaskCheckbox(
+                  'Wash beans, fruits, vegetables or tubers'),
+              _buildModernTaskCheckbox(
+                  'Prepare the germinators and pour the seeds into the germinators'),
+              _buildModernTaskCheckbox('Collecting firewood'),
+              _buildModernTaskCheckbox(
+                  'Help measure distances between plants during transplanting'),
+              _buildModernTaskCheckbox(
+                  'Sort and spread the beans, cereals and other vegetables for drying'),
+              _buildModernTaskCheckbox(
+                  'Putting cuttings on the mounds'),
+              _buildModernTaskCheckbox(
+                  'Holding bags or filling them with small containers for packaging'),
+              _buildModernTaskCheckbox(
+                  'Covering stored agricultural products with tarps'),
+              _buildModernTaskCheckbox(
+                  'To shell or dehusk seeds, plants and fruits by hand'),
+              _buildModernTaskCheckbox('Sowing seeds'),
+              _buildModernTaskCheckbox(
+                  'Transplant or put in the ground the cuttings or plants'),
+              _buildModernTaskCheckbox(
+                  'Harvesting legumes, fruits and other leafy products (corn, beans, soybeans, various vegetables)'),
+              _buildModernTaskCheckbox('None'),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Work frequency
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'How often has the child worked in the past 7 days?',
+          groupValue: _workFrequency,
+          onChanged: (String? value) {
+            setState(() {
+              _workFrequency = value;
+            });
+          },
+          options: [
+            {'value': 'Every day', 'title': 'Every day'},
+            {'value': '4-5 days', 'title': '4-5 days'},
+            {'value': '2-3 days', 'title': '2-3 days'},
+            {'value': 'Once', 'title': 'Once'},
+          ],
+        ),
+
+        // Observer question
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<bool>(
+          question:
+              'Did the enumerator observe the child [${widget.childNumber}] working in a real situation?',
+          groupValue: _observedWorking,
+          onChanged: (bool? value) {
+            setState(() {
+              _observedWorking = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // For whom does the child work question
+        if (_workedOnCocoaFarm == true) ...[
+          const SizedBox(height: 24),
+          _buildModernRadioGroup<String>(
+            question: 'For whom does the child work on cocoa farming?',
+            groupValue: _workForWhom,
+            onChanged: (String? value) {
+              setState(() {
+                _workForWhom = value;
+              });
+            },
+            options: [
+              {'value': 'parents', 'title': 'For his/her parents'},
+              {
+                'value': 'family_not_parents',
+                'title': 'For family, not parents'
+              },
+              {
+                'value': 'family_friends',
+                'title': 'For family friends'
+              },
+              {'value': 'other', 'title': 'Other'},
+            ],
+            subtitle: 'Obligatory if the child works in cocoa farming',
+          ),
+          if (_workForWhom == 'other') ...[
+            const SizedBox(height: 16),
+            _buildModernTextField(
+              label: 'Please specify',
+              controller: _workForWhomOtherController,
+            ),
+          ],
+        ],
+
+        // Why does the child work?
+        if (_workedOnCocoaFarm == true) ...[
+          const SizedBox(height: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Why does the child [${widget.childNumber}] work on cocoa farming?',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Column(
+                children: [
+                  ModernCheckbox(
+                    value: _whyWorkReasons.contains('own_money'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _whyWorkReasons.add('own_money');
+                        } else {
+                          _whyWorkReasons.remove('own_money');
+                        }
+                      });
+                    },
+                    title: 'To have his/her own money',
+                  ),
+                  ModernCheckbox(
+                    value: _whyWorkReasons.contains('increase_income'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _whyWorkReasons.add('increase_income');
+                        } else {
+                          _whyWorkReasons.remove('increase_income');
+                        }
+                      });
+                    },
+                    title: 'To increase household income',
+                  ),
+                  ModernCheckbox(
+                    value:
+                        _whyWorkReasons.contains('cannot_afford_adult'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _whyWorkReasons.add('cannot_afford_adult');
+                        } else {
+                          _whyWorkReasons.remove('cannot_afford_adult');
+                        }
+                      });
+                    },
+                    title: 'Household cannot afford adult\'s work',
+                  ),
+                  ModernCheckbox(
+                    value: _whyWorkReasons.contains('no_adult_labor'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _whyWorkReasons.add('no_adult_labor');
+                        } else {
+                          _whyWorkReasons.remove('no_adult_labor');
+                        }
+                      });
+                    },
+                    title: 'Household cannot find adult labor',
+                  ),
+                  ModernCheckbox(
+                    value: _whyWorkReasons.contains('learn_farming'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _whyWorkReasons.add('learn_farming');
+                        } else {
+                          _whyWorkReasons.remove('learn_farming');
+                        }
+                      });
+                    },
+                    title: 'To learn cocoa farming',
+                  ),
+                  ModernCheckbox(
+                    value: _whyWorkReasons.contains('other'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _whyWorkReasons.add('other');
+                        } else {
+                          _whyWorkReasons.remove('other');
+                        }
+                      });
+                    },
+                    title: 'Other (specify)',
+                  ),
+                  if (_whyWorkReasons.contains('other')) ...[
+                    const SizedBox(height: 8),
+                    _buildModernTextField(
+                      label: 'Please specify',
+                      controller: _whyWorkOtherController,
+                    ),
+                  ],
+                  ModernCheckbox(
+                    value: _whyWorkReasons.contains('dont_know'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _whyWorkReasons.add('dont_know');
+                        } else {
+                          _whyWorkReasons.remove('dont_know');
+                        }
+                      });
+                    },
+                    title: 'Does not know',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildLightTasks7DaysSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('LIGHT TASKS (7 DAYS)'),
+
+        // Light work explanation
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Text(
+            'Light work refers to tasks that do not interfere with a child\'s education, health, or development. Light work is permissible under certain conditions, typically for children above the minimum working age (which varies by country but is often around 13 or 15 years old) under the supervision of the parents or guardians.',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+
+        // Remuneration question for light tasks
+        _buildModernRadioGroup<bool>(
+          question:
+              'Did the child receive remuneration for light tasks?',
+          groupValue: _receivedRemuneration,
+          onChanged: (value) {
+            setState(() {
+              _receivedRemuneration = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // Time spent on light duty - School day
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'What was the longest time spent on light duty during a SCHOOL DAY in the last 7 days?',
+          groupValue: _longestLightDutyTime,
+          onChanged: (String? value) {
+            setState(() {
+              _longestLightDutyTime = value;
+            });
+          },
+          options: [
+            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+            {'value': '1-2 hours', 'title': '1-2 hours'},
+            {'value': '2-3 hours', 'title': '2-3 hours'},
+            {'value': '3-4 hours', 'title': '3-4 hours'},
+            {'value': '4-6 hours', 'title': '4-6 hours'},
+            {'value': '6-8 hours', 'title': '6-8 hours'},
+            {
+              'value': 'More than 8 hours',
+              'title': 'More than 8 hours'
+            },
+            {'value': 'Does not apply', 'title': 'Does not apply'},
+          ],
+        ),
+
+        // Time spent on light duty - Non-school day
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'What was the longest amount of time spent on light duty on a NON-SCHOOL DAY in the last 7 days?',
+          groupValue: _longestNonSchoolDayTime,
+          onChanged: (String? value) {
+            setState(() {
+              _longestNonSchoolDayTime = value;
+            });
+          },
+          options: [
+            {'value': '1-2 hours', 'title': '1-2 hours'},
+            {'value': '2-3 hours', 'title': '2-3 hours'},
+            {'value': '3-4 hours', 'title': '3-4 hours'},
+            {'value': '4-6 hours', 'title': '4-6 hours'},
+            {'value': '6-8 hours', 'title': '6-8 hours'},
+            {
+              'value': 'More than 8 hours',
+              'title': 'More than 8 hours'
+            },
+            {'value': 'Does not apply', 'title': 'Does not apply'},
+          ],
+        ),
+
+        // Adult supervision question for light tasks
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<bool>(
+          question:
+              'Was the child under supervision of an adult when performing light tasks?',
+          groupValue: _wasSupervisedByAdult,
+          onChanged: (value) {
+            setState(() {
+              _wasSupervisedByAdult = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // Task location for light tasks
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question: 'Where were the light tasks done?',
+          groupValue: _taskLocation,
+          onChanged: (String? value) {
+            setState(() {
+              _taskLocation = value;
+            });
+          },
+          options: [
+            {'value': 'On family farm', 'title': 'On family farm'},
+            {
+              'value': 'As a hired labourer on another farm',
+              'title': 'As a hired labourer on another farm'
+            },
+            {
+              'value': 'School farms/compounds',
+              'title': 'School farms/compounds'
+            },
+            {
+              'value': 'Teachers farms (during communal labour)',
+              'title': 'Teachers farms (during communal labour)'
+            },
+            {
+              'value': 'Church farms or cleaning activities',
+              'title': 'Church farms or cleaning activities'
+            },
+            {
+              'value': 'Helping a community member for free',
+              'title': 'Helping a community member for free'
+            },
+            {'value': 'Other', 'title': 'Other'},
+          ],
+        ),
+
+        if (_taskLocation == 'Other') ...[
+          const SizedBox(height: 16),
+          _buildModernTextField(
+            label: 'Please specify',
+            controller: _otherLocationController,
+          ),
+        ],
+
+        // Total hours on school days for light tasks
+        const SizedBox(height: 24),
+        _buildModernTextField(
+          label:
+              'How many hours in total did the child spend on light tasks during SCHOOL DAYS in the past 7 days?',
+          controller: _schoolDayTaskDurationController,
+          keyboardType: TextInputType.number,
+          hintText: 'Enter hours (0-1016)',
+        ),
+
+        // Tasks in last 12 months - only show if worked on cocoa farm in past 7 days
+        if (_workedOnCocoaFarm == true) ...[
+          const SizedBox(height: 24),
+          Text(
+            'Which of these tasks has child [${widget.childNumber}] performed in the last 12 months?',
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildModernTaskCheckbox12Months(
+                  'Collect and gather fruits, pods, seeds after harvesting'),
+              _buildModernTaskCheckbox12Months(
+                  'Extracting cocoa beans after shelling by an adult'),
+              _buildModernTaskCheckbox12Months(
+                  'Wash beans, fruits, vegetables or tubers'),
+              _buildModernTaskCheckbox12Months(
+                  'Prepare the germinators and pour the seeds into the germinators'),
+              _buildModernTaskCheckbox12Months('Collecting firewood'),
+              _buildModernTaskCheckbox12Months(
+                  'Help measure distances between plants during transplanting'),
+              _buildModernTaskCheckbox12Months(
+                  'Sort and spread the beans, cereals and other vegetables for drying'),
+              _buildModernTaskCheckbox12Months(
+                  'Putting cuttings on the mounds'),
+              _buildModernTaskCheckbox12Months(
+                  'Holding bags or filling them with small containers for packaging de produits agricoles'),
+              _buildModernTaskCheckbox12Months(
+                  'Covering stored agricultural products with tarps'),
+              _buildModernTaskCheckbox12Months(
+                  'Shell or dehusk seeds, plants and fruits by hand'),
+              _buildModernTaskCheckbox12Months('Sowing seeds'),
+              _buildModernTaskCheckbox12Months(
+                  'Transplant or put in the ground the cuttings or plants'),
+              _buildModernTaskCheckbox12Months(
+                  'Harvesting legumes, fruits and other leafy products (corn, beans, soybeans, various vegetables)'),
+              _buildModernTaskCheckbox12Months('None'),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildLightTasks12MonthsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('LIGHT TASK (12 MONTHS)'),
+
+        // Activity remuneration question for 12 months
+        _buildModernRadioGroup<bool>(
+          question:
+              'Did the child receive any remuneration for light tasks in the past 12 months?',
+          groupValue: _activityRemuneration,
+          onChanged: (bool? value) {
+            setState(() {
+              _activityRemuneration = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // School day task duration question for 12 months
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'What was the longest time spent on light tasks during a SCHOOL DAY in the past 12 months?',
+          groupValue: _schoolDayTaskDuration,
+          onChanged: (String? value) {
+            setState(() {
+              _schoolDayTaskDuration = value;
+            });
+          },
+          options: [
+            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+            {'value': '1-2 hours', 'title': '1-2 hours'},
+            {'value': '2-3 hours', 'title': '2-3 hours'},
+            {'value': '3-4 hours', 'title': '3-4 hours'},
+            {'value': '4-6 hours', 'title': '4-6 hours'},
+            {'value': '6-8 hours', 'title': '6-8 hours'},
+            {
+              'value': 'More than 8 hours',
+              'title': 'More than 8 hours'
+            },
+            {'value': 'Does not apply', 'title': 'Does not apply'},
+          ],
+        ),
+
+        // Non-school day task duration question for 12 months
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'What was the longest time spent on light tasks on a NON-SCHOOL DAY in the past 12 months?',
+          groupValue: _nonSchoolDayTaskDuration,
+          onChanged: (String? value) {
+            setState(() {
+              _nonSchoolDayTaskDuration = value;
+            });
+          },
+          options: [
+            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+            {'value': '1-2 hours', 'title': '1-2 hours'},
+            {'value': '2-3 hours', 'title': '2-3 hours'},
+            {'value': '3-4 hours', 'title': '3-4 hours'},
+            {'value': '4-6 hours', 'title': '4-6 hours'},
+            {'value': '6-8 hours', 'title': '6-8 hours'},
+            {
+              'value': 'More than 8 hours',
+              'title': 'More than 8 hours'
+            },
+          ],
+        ),
+
+        // Task location question for 12 months
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'Where were the light tasks done in the past 12 months?',
+          groupValue: _taskLocationType,
+          onChanged: (String? value) {
+            setState(() {
+              _taskLocationType = value;
+            });
+          },
+          options: [
+            {'value': 'On family farm', 'title': 'On family farm'},
+            {
+              'value': 'As a hired labourer on another farm',
+              'title': 'As a hired labourer on another farm'
+            },
+            {
+              'value': 'School farms/compounds',
+              'title': 'School farms/compounds'
+            },
+            {
+              'value': 'Teachers farms (during communal labour)',
+              'title': 'Teachers farms (during communal labour)'
+            },
+            {
+              'value': 'Church farms or cleaning activities',
+              'title': 'Church farms or cleaning activities'
+            },
+            {
+              'value': 'Helping a community member for free',
+              'title': 'Helping a community member for free'
+            },
+            {'value': 'Other', 'title': 'Other'},
+          ],
+        ),
+
+        // Total hours on school days question for 12 months
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'How many hours in total did the child spend on light tasks during SCHOOL DAYS in the past 12 months?',
+          groupValue: _totalSchoolDayHours,
+          onChanged: (String? value) {
+            setState(() {
+              _totalSchoolDayHours = value;
+            });
+          },
+          options: [
+            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+            {'value': '1-2 hours', 'title': '1-2 hours'},
+            {'value': '2-4 hours', 'title': '2-4 hours'},
+            {'value': '4-6 hours', 'title': '4-6 hours'},
+            {'value': '6-8 hours', 'title': '6-8 hours'},
+            {
+              'value': 'More than 8 hours',
+              'title': 'More than 8 hours'
+            },
+            {'value': 'Not applicable', 'title': 'Not applicable'},
+          ],
+        ),
+
+        // Total hours on non-school days question for 12 months
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'How many hours in total did the child spend on light tasks during NON-SCHOOL DAYS in the past 12 months?',
+          groupValue: _totalNonSchoolDayHours,
+          onChanged: (String? value) {
+            setState(() {
+              _totalNonSchoolDayHours = value;
+            });
+          },
+          options: [
+            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+            {'value': '1-2 hours', 'title': '1-2 hours'},
+            {'value': '2-4 hours', 'title': '2-4 hours'},
+            {'value': '4-6 hours', 'title': '4-6 hours'},
+            {'value': '6-8 hours', 'title': '6-8 hours'},
+            {
+              'value': 'More than 8 hours',
+              'title': 'More than 8 hours'
+            },
+            {'value': 'Not applicable', 'title': 'Not applicable'},
+          ],
+        ),
+
+        // Adult supervision question for 12 months
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<bool>(
+          question:
+              'Was the child under supervision of an adult when performing light tasks in the past 12 months?',
+          groupValue: _wasSupervisedDuringTask,
+          onChanged: (bool? value) {
+            setState(() {
+              _wasSupervisedDuringTask = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDangerousTasksSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('DANGEROUS TASKS (7 DAYS)'),
+
+        // Cocoa farm tasks question for dangerous tasks (7 days)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Which of the following DANGEROUS tasks has the child [${widget.childNumber}] done in the last 7 days on the cocoa farm?',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Column(
+              children: [
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days.contains(
+                      'Use of machetes for weeding or pruning (Clearing)'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days.add(
+                            'Use of machetes for weeding or pruning (Clearing)');
+                      } else {
+                        _cocoaFarmTasksLast7Days.remove(
+                            'Use of machetes for weeding or pruning (Clearing)');
+                      }
+                    });
+                  },
+                  title:
+                      'Use of machetes for weeding or pruning (Clearing)',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Felling of trees'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days
+                            .add('Felling of trees');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Felling of trees');
+                      }
+                    });
+                  },
+                  title: 'Felling of trees',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Burning of plots'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days
+                            .add('Burning of plots');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Burning of plots');
+                      }
+                    });
+                  },
+                  title: 'Burning of plots',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Game hunting with a weapon'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days
+                            .add('Game hunting with a weapon');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Game hunting with a weapon');
+                      }
+                    });
+                  },
+                  title: 'Game hunting with a weapon',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Woodcutter\'s work'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days
+                            .add('Woodcutter\'s work');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Woodcutter\'s work');
+                      }
+                    });
+                  },
+                  title: 'Woodcutter\'s work',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Charcoal production'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days
+                            .add('Charcoal production');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Charcoal production');
+                      }
+                    });
+                  },
+                  title: 'Charcoal production',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Stump removal'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days.add('Stump removal');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Stump removal');
+                      }
+                    });
+                  },
+                  title: 'Stump removal',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Digging holes'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days.add('Digging holes');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Digging holes');
+                      }
+                    });
+                  },
+                  title: 'Digging holes',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days.contains(
+                      'Working with a machete or any other sharp tool'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days.add(
+                            'Working with a machete or any other sharp tool');
+                      } else {
+                        _cocoaFarmTasksLast7Days.remove(
+                            'Working with a machete or any other sharp tool');
+                      }
+                    });
+                  },
+                  title:
+                      'Working with a machete or any other sharp tool',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Handling of agrochemicals'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days
+                            .add('Handling of agrochemicals');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Handling of agrochemicals');
+                      }
+                    });
+                  },
+                  title: 'Handling of agrochemicals',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('Driving motorized vehicles'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days
+                            .add('Driving motorized vehicles');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('Driving motorized vehicles');
+                      }
+                    });
+                  },
+                  title: 'Driving motorized vehicles',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days.contains(
+                      'Carrying heavy loads (Boys: 14-16 years old>15kg /16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days.add(
+                            'Carrying heavy loads (Boys: 14-16 years old>15kg /16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)');
+                      } else {
+                        _cocoaFarmTasksLast7Days.remove(
+                            'Carrying heavy loads (Boys: 14-16 years old>15kg /16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)');
+                      }
+                    });
+                  },
+                  title:
+                      'Carrying heavy loads (Boys: 14-16 years old>15kg /16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days.contains(
+                      'Night work on farm (between 6pm and 6am)'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days.add(
+                            'Night work on farm (between 6pm and 6am)');
+                      } else {
+                        _cocoaFarmTasksLast7Days.remove(
+                            'Night work on farm (between 6pm and 6am)');
+                      }
+                    });
+                  },
+                  title: 'Night work on farm (between 6pm and 6am)',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast7Days
+                      .contains('None of the above'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast7Days.clear();
+                        _cocoaFarmTasksLast7Days
+                            .add('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast7Days
+                            .remove('None of the above');
+                      }
+                    });
+                  },
+                  title: 'None of the above',
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // Salary question for dangerous tasks (7 days)
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<bool>(
+          question:
+              'Has the child [${widget.childNumber}] received a salary for DANGEROUS tasks in the last 7 days?',
+          groupValue: _hasReceivedSalary,
+          onChanged: (bool? value) {
+            setState(() {
+              _hasReceivedSalary = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // Task location question for dangerous tasks (7 days)
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'Where were the DANGEROUS tasks done in the last 7 days?',
+          groupValue: _taskLocationType,
+          onChanged: (String? value) {
+            setState(() {
+              _taskLocationType = value;
+            });
+          },
+          options: [
+            {'value': 'On family farm', 'title': 'On family farm'},
+            {
+              'value': 'As a hired labourer on another farm',
+              'title': 'As a hired labourer on another farm'
+            },
+            {
+              'value': 'School farms/compounds',
+              'title': 'School farms/compounds'
+            },
+            {
+              'value': 'Teachers farms (during communal labour)',
+              'title': 'Teachers farms (during communal labour)'
+            },
+            {
+              'value': 'Church farms or cleaning activities',
+              'title': 'Church farms or cleaning activities'
+            },
+            {
+              'value': 'Helping a community member for free',
+              'title': 'Helping a community member for free'
+            },
+            {'value': 'Other', 'title': 'Other'},
+          ],
+        ),
+
+        if (_taskLocationType == 'Other') ...[
+          const SizedBox(height: 16),
+          _buildModernTextField(
+            label: 'Please specify',
+            controller: _otherLocationController,
+          ),
+        ],
+
+        // Longest time spent on dangerous task during school day (7 days)
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'What was the longest time spent on DANGEROUS tasks during a SCHOOL DAY in the last 7 days?',
+          groupValue: _longestSchoolDayTime,
+          onChanged: (String? value) {
+            setState(() {
+              _longestSchoolDayTime = value;
+            });
+          },
+          options: [
+            {
+              'value': 'Less than one hour',
+              'title': 'Less than one hour'
+            },
+            {'value': '1 hour', 'title': '1 hour'},
+            {'value': '2 hours', 'title': '2 hours'},
+            {'value': '3-4 hours', 'title': '3-4 hours'},
+            {'value': '4-6 hours', 'title': '4-6 hours'},
+            {'value': '6-8 hours', 'title': '6-8 hours'},
+            {
+              'value': 'More than 8 hours',
+              'title': 'More than 8 hours'
+            },
+            {'value': 'Does not apply', 'title': 'Does not apply'},
+          ],
+        ),
+
+        // Longest time spent on dangerous task during non-school day (7 days)
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<String>(
+          question:
+              'What was the longest time spent on DANGEROUS tasks during a NON-SCHOOL DAY in the last 7 days?',
+          groupValue: _longestNonSchoolDayTime,
+          onChanged: (String? value) {
+            setState(() {
+              _longestNonSchoolDayTime = value;
+            });
+          },
+          options: [
+            {
+              'value': 'Less than one hour',
+              'title': 'Less than one hour'
+            },
+            {'value': '1-2 hours', 'title': '1-2 hours'},
+            {'value': '2-3 hours', 'title': '2-3 hours'},
+            {'value': '3-4 hours', 'title': '3-4 hours'},
+            {'value': '4-6 hours', 'title': '4-6 hours'},
+            {'value': '6-8 hours', 'title': '6-8 hours'},
+            {
+              'value': 'More than 8 hours',
+              'title': 'More than 8 hours'
+            },
+            {'value': 'Does not apply', 'title': 'Does not apply'},
+          ],
+        ),
+
+        // School day hours input for dangerous tasks (7 days)
+        const SizedBox(height: 24),
+        _buildModernTextField(
+          label:
+              'How many hours has the child worked on DANGEROUS tasks during SCHOOL DAYS in the last 7 days?',
+          controller: _schoolDayHoursDangerousController,
+          keyboardType: TextInputType.number,
+          hintText: 'Enter number of hours',
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter the number of hours';
+            }
+            final hours = double.tryParse(value);
+            if (hours == null || hours < 0) {
+              return 'Please enter a valid number';
+            }
+            return null;
+          },
+        ),
+
+        // Non-school day hours input for dangerous tasks (7 days)
+        const SizedBox(height: 24),
+        _buildModernTextField(
+          label:
+              'How many hours has the child worked on DANGEROUS tasks during NON-SCHOOL DAYS in the last 7 days?',
+          controller: _nonSchoolDayHoursController,
+          keyboardType: TextInputType.number,
+          hintText: 'Enter number of hours',
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter the number of hours';
+            }
+            final hours = double.tryParse(value);
+            if (hours == null || hours < 0) {
+              return 'Please enter a valid number';
+            }
+            return null;
+          },
+        ),
+
+        // Adult supervision question for dangerous tasks (7 days)
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<bool>(
+          question:
+              'Was the child under supervision of an adult when performing DANGEROUS tasks?',
+          groupValue: _wasSupervisedByAdult,
+          onChanged: (bool? value) {
+            setState(() {
+              _wasSupervisedByAdult = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // DANGEROUS TASKS (12 MONTHS) Section
+        _buildSectionHeader('DANGEROUS TASKS (12 MONTHS)'),
+
+        // Salary question for dangerous tasks (12 months)
+        const SizedBox(height: 24),
+        _buildModernRadioGroup<bool>(
+          question:
+              'Has the child [${widget.childNumber}] received a salary for DANGEROUS tasks in the past 12 months?',
+          groupValue: _receivedSalaryForTasks,
+          onChanged: (bool? value) {
+            setState(() {
+              _receivedSalaryForTasks = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        // Tasks in last 12 months for dangerous tasks
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Which of the following DANGEROUS tasks has the child done in the last 12 months on the cocoa farm?',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Column(
+              children: [
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months.contains(
+                      'Use of machetes for weeding or pruning (Clearing)'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months.add(
+                            'Use of machetes for weeding or pruning (Clearing)');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months.remove(
+                            'Use of machetes for weeding or pruning (Clearing)');
+                      }
+                    });
+                  },
+                  title:
+                      'Use of machetes for weeding or pruning (Clearing)',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Felling of trees'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Felling of trees');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Felling of trees');
+                      }
+                    });
+                  },
+                  title: 'Felling of trees',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Burning of plots'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Burning of plots');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Burning of plots');
+                      }
+                    });
+                  },
+                  title: 'Burning of plots',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Game hunting with a weapon'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Game hunting with a weapon');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Game hunting with a weapon');
+                      }
+                    });
+                  },
+                  title: 'Game hunting with a weapon',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Woodcutter\'s work'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Woodcutter\'s work');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Woodcutter\'s work');
+                      }
+                    });
+                  },
+                  title: 'Woodcutter\'s work',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Charcoal production'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Charcoal production');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Charcoal production');
+                      }
+                    });
+                  },
+                  title: 'Charcoal production',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Stump removal'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Stump removal');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Stump removal');
+                      }
+                    });
+                  },
+                  title: 'Stump removal',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Digging holes'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Digging holes');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Digging holes');
+                      }
+                    });
+                  },
+                  title: 'Digging holes',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months.contains(
+                      'Working with a machete or any other sharp tool'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months.add(
+                            'Working with a machete or any other sharp tool');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months.remove(
+                            'Working with a machete or any other sharp tool');
+                      }
+                    });
+                  },
+                  title:
+                      'Working with a machete or any other sharp tool',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Handling of agrochemicals'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Handling of agrochemicals');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Handling of agrochemicals');
+                      }
+                    });
+                  },
+                  title: 'Handling of agrochemicals',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('Driving motorized vehicles'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months
+                            .add('Driving motorized vehicles');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('Driving motorized vehicles');
+                      }
+                    });
+                  },
+                  title: 'Driving motorized vehicles',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months.contains(
+                      'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months.add(
+                            'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months.remove(
+                            'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)');
+                      }
+                    });
+                  },
+                  title:
+                      'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months.contains(
+                      'Night work on farm (between 6pm and 6am)'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months.add(
+                            'Night work on farm (between 6pm and 6am)');
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months.remove(
+                            'Night work on farm (between 6pm and 6am)');
+                      }
+                    });
+                  },
+                  title: 'Night work on farm (between 6pm and 6am)',
+                ),
+                ModernCheckbox(
+                  value: _cocoaFarmTasksLast12Months
+                      .contains('None of the above'),
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _cocoaFarmTasksLast12Months.clear();
+                        _cocoaFarmTasksLast12Months
+                            .add('None of the above');
+                      } else {
+                        _cocoaFarmTasksLast12Months
+                            .remove('None of the above');
+                      }
+                    });
+                  },
+                  title: 'None of the above',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHealthAndSafetySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('HEALTH AND SAFETY'),
+
+        // Has the child ever applied or sprayed agrochemicals on the farm?
+        _buildModernRadioGroup<bool>(
+          question:
+              'Has the child ever applied or sprayed agrochemicals on the farm?',
+          groupValue: _appliedAgrochemicals,
+          onChanged: (bool? value) {
+            setState(() {
+              _appliedAgrochemicals = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Was the child on the farm during application of agrochemicals?
+        _buildModernRadioGroup<bool>(
+          question:
+              'Was the child on the farm during application of agrochemicals?',
+          groupValue: _onFarmDuringApplication,
+          onChanged: (bool? value) {
+            setState(() {
+              _onFarmDuringApplication = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Recently, has the child suffered any injury?
+        _buildModernRadioGroup<bool>(
+          question: 'Recently, has the child suffered any injury?',
+          groupValue: _sufferedInjury,
+          onChanged: (bool? value) {
+            setState(() {
+              _sufferedInjury = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        if (_sufferedInjury == true) ...[
+          const SizedBox(height: 24),
+          // How did the child get wounded?
+          _buildModernTextField(
+            label: 'How did the child get wounded?',
+            controller: _howWoundedController,
+            hintText: 'Describe how the injury occurred',
+            maxLines: 3,
+            validator: (value) {
+              if (_sufferedInjury == true && (value == null || value.trim().isEmpty)) {
+                return 'Please describe how the child got wounded';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          // When was the child wounded?
+          _buildModernTextField(
+            label: 'When was the child wounded?',
+            controller: _whenWoundedController,
+            readOnly: true,
+            onTap: () => _selectWoundedDate(context),
+            hintText: 'Select date of injury',
+            validator: (value) {
+              if (_sufferedInjury == true &&
+                  (value == null || value.trim().isEmpty)) {
+                return 'Please select when the child was wounded';
+              }
+              return null;
+            },
+          ),
+        ],
+        const SizedBox(height: 24),
+
+        _buildModernRadioGroup<bool>(
+          question: 'Does the child often feel pains or aches?',
+          groupValue: _oftenFeelPains,
+          onChanged: (bool? value) {
+            setState(() {
+              _oftenFeelPains = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        if (_sufferedInjury == true || _oftenFeelPains == true) ...[
+          const SizedBox(height: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'What help did the child receive to get better?',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Column(
+                children: [
+                  ModernCheckbox(
+                    value: _helpReceived.contains('adults_household'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _helpReceived.add('adults_household');
+                        } else {
+                          _helpReceived.remove('adults_household');
+                        }
+                      });
+                    },
+                    title:
+                        'The adults of the household looked after him/her',
+                  ),
+                  ModernCheckbox(
+                    value: _helpReceived.contains('adults_community'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _helpReceived.add('adults_community');
+                        } else {
+                          _helpReceived.remove('adults_community');
+                        }
+                      });
+                    },
+                    title: 'Adults of the community looked after him/her',
+                  ),
+                  ModernCheckbox(
+                    value: _helpReceived.contains('medical_facility'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _helpReceived.add('medical_facility');
+                        } else {
+                          _helpReceived.remove('medical_facility');
+                        }
+                      });
+                    },
+                    title:
+                        'The child was sent to the closest medical facility',
+                  ),
+                  ModernCheckbox(
+                    value: _helpReceived.contains('no_help'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _helpReceived.clear();
+                          _helpReceived.add('no_help');
+                        } else {
+                          _helpReceived.remove('no_help');
+                        }
+                      });
+                    },
+                    title: 'The child did not receive any help',
+                  ),
+                  ModernCheckbox(
+                    value: _helpReceived.contains('other'),
+                    onChanged: (bool? selected) {
+                      setState(() {
+                        if (selected == true) {
+                          _helpReceived.add('other');
+                        } else {
+                          _helpReceived.remove('other');
+                        }
+                      });
+                    },
+                    title: 'Other',
+                  ),
+                  if (_helpReceived.contains('other')) ...[
+                    const SizedBox(height: 8),
+                    _buildModernTextField(
+                      label: 'Please specify',
+                      controller: _otherHelpController,
+                      validator: (value) {
+                        if (_helpReceived.contains('other') &&
+                            (value == null || value.isEmpty)) {
+                          return 'Please specify the help received';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 24),
+
+        // Photo Consent Section
+        _buildSectionHeader('PHOTO CONSENT'),
+
+        _buildModernRadioGroup<bool>(
+          question:
+              'Does the parent consent to the taking of a picture of the child?',
+          groupValue: _parentConsentPhoto,
+          onChanged: (bool? value) {
+            setState(() {
+              _parentConsentPhoto = value;
+            });
+          },
+          options: [
+            {'value': true, 'title': 'Yes'},
+            {'value': false, 'title': 'No'},
+          ],
+        ),
+
+        if (_parentConsentPhoto == false) ...[
+          const SizedBox(height: 16),
+          _buildModernTextField(
+            label: 'If no, please specify reason',
+            controller: _noConsentReasonController,
+            hintText: 'Enter reason for not consenting to photo',
+            validator: (value) {
+              if (_parentConsentPhoto == false &&
+                  (value == null || value.trim().isEmpty)) {
+                return 'Please specify the reason for not consenting';
+              }
+              return null;
+            },
+          ),
+        ],
+
+        if (_parentConsentPhoto == true) ...[
+          const SizedBox(height: 24),
+          _buildPhotoSection(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return Column(
+      children: [
+        const SizedBox(height: 32),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              debugPrint('Submit button tapped');
+              _submitForm();
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: double.infinity,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).primaryColor,
+                    Theme.of(context).primaryColor.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Text(
+                  'SAVE CHILD DETAILS',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: Text('Child ${widget.childNumber} of ${widget.totalChildren}'),
-      //   backgroundColor: Theme.of(context).primaryColor,
-      //   foregroundColor: Colors.white,
-      //   elevation: 0,
-      // ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -1211,1592 +3619,53 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 24),
+              
+              // Basic Information Section
+              _buildBasicInformationSection(),
+              
+              SizedBox( height: 20,),
+              // Survey Information Section
+              _buildSurveyInformationSection(),
 
-              // ========== FARMER'S CHILDREN SECTION ==========
-              _buildModernRadioGroup<bool>(
-                question:
-                    'Is the child among the list of children declared in the cover to be the farmer\'s children?',
-                groupValue: _isFarmerChild,
-                onChanged: (value) {
-                  setState(() {
-                    _isFarmerChild = value;
-                  });
-                },
-                options: [
-                  {'value': true, 'title': 'Yes'},
-                  {'value': false, 'title': 'No'},
-                ],
-              ),
-              const SizedBox(height: 24),
+              SizedBox( height: 20,),
+              
+              // Family Information Section
+              _buildFamilyInformationSection(),
 
-              _buildInfoCard('FARMER CHILDREN LIST'),
+              SizedBox( height: 20,),
+              
+              // Education Information Section
+              _buildEducationInformationSection(),
 
-              // Child Number Input - Only show if child is among farmer's children
-              if (_isFarmerChild == true) ...[
-                _buildModernTextField(
-                  label:
-                      'Enter the number attached to the child name in the cover so we can identify the child in question:',
-                  controller: _childNumberController,
-                  keyboardType: TextInputType.number,
-                  hintText: 'Enter child number',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter the child number';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-              ],
+              SizedBox( height: 20,),
+              
+              // Work Information Section
+              _buildWorkInformationSection(),
 
-              // ========== SURVEY AVAILABILITY ==========
-              _buildModernRadioGroup<bool>(
-                question: 'Can the child be surveyed now?',
-                groupValue: _canBeSurveyedNow,
-                onChanged: (value) {
-                  setState(() {
-                    _canBeSurveyedNow = value;
-                  });
-                },
-                options: [
-                  {'value': true, 'title': 'Yes'},
-                  {'value': false, 'title': 'No'},
-                ],
-              ),
+              SizedBox( height: 20,),
+              
+              // Light Tasks Section (7 days)
+              _buildLightTasks7DaysSection(),
 
-              // Show reasons if survey is not possible
-              if (_canBeSurveyedNow == false) ...[
-                const SizedBox(height: 24),
-                _buildModernCheckboxGroup(
-                  question: 'If not, what are the reasons?',
-                  values: {
-                    'The child is at school': _surveyNotPossibleReasons
-                        .contains('the_child_is_at_school'),
-                    'The child has gone to work on the cocoa farm':
-                        _surveyNotPossibleReasons.contains(
-                            'the_child_has_gone_to_work_on_the_cocoa_farm'),
-                    'Child is busy doing housework': _surveyNotPossibleReasons
-                        .contains('child_is_busy_doing_housework'),
-                    'Child works outside the household':
-                        _surveyNotPossibleReasons
-                            .contains('child_works_outside_the_household'),
-                    'The child is too young': _surveyNotPossibleReasons
-                        .contains('the_child_is_too_young'),
-                    'The child is sick':
-                        _surveyNotPossibleReasons.contains('the_child_is_sick'),
-                    'The child has travelled': _surveyNotPossibleReasons
-                        .contains('the_child_has_travelled'),
-                    'The child has gone out to play': _surveyNotPossibleReasons
-                        .contains('the_child_has_gone_out_to_play'),
-                    'The child is sleeping': _surveyNotPossibleReasons
-                        .contains('the_child_is_sleeping'),
-                    'Other reasons':
-                        _surveyNotPossibleReasons.contains('other_reasons'),
-                  },
-                  onChanged: (String reason, bool? selected) {
-                    setState(() {
-                      final key = reason.toLowerCase().replaceAll(' ', '_');
-                      if (selected == true) {
-                        _surveyNotPossibleReasons.add(key);
-                      } else {
-                        _surveyNotPossibleReasons.remove(key);
-                      }
-                    });
-                  },
-                ),
+              SizedBox( height: 20,),
+              
+              // Light Tasks Section (12 months)
+              _buildLightTasks12MonthsSection(),
+              SizedBox( height: 20,),
+              
+              // Dangerous Tasks Section
+              _buildDangerousTasksSection(),
 
-                // Respondent information
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<String>(
-                  question:
-                      'Who is answering for the child since he/she is not available?',
-                  groupValue: _respondentType,
-                  onChanged: (value) {
-                    setState(() {
-                      _respondentType = value;
-                    });
-                  },
-                  options: [
-                    {
-                      'value': 'the_parents_or_legal_guardians',
-                      'title': 'The parents or legal guardians'
-                    },
-                    {
-                      'value': 'another_family_member',
-                      'title': 'Another family member of the child'
-                    },
-                    {
-                      'value': 'child_siblings',
-                      'title': 'One of the child\'s siblings'
-                    },
-                    {'value': 'other', 'title': 'Other'},
-                  ],
-                ),
+              SizedBox( height: 20,),
+              
+              // Health and Safety Section
+              _buildHealthAndSafetySection(),
 
-                if (_respondentType != null) ...[
-                  const SizedBox(height: 16),
-                  if (_respondentType == 'other') ...[
-                    _buildModernTextField(
-                      label: 'Please specify',
-                      controller: _otherRespondentTypeController,
-                      validator: (value) {
-                        if (_respondentType == 'other' &&
-                            (value == null || value.isEmpty)) {
-                          return 'Please specify who is answering for the child';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ],
-              ],
+              SizedBox( height: 20,),
 
-              // ========== PERSONAL INFORMATION SECTION ==========
-              // Show child details if they can be surveyed OR if we're collecting info about unavailable children
-              if (_canBeSurveyedNow == true || _canBeSurveyedNow == false) ...[
-                _buildSectionHeader('PERSONAL INFORMATION'),
-
-                // Show child's name fields only if not a farmer's child
-                if (_isFarmerChild == false) ...[
-                  _buildModernTextField(
-                    label: 'Child\'s First Name:',
-                    controller: _nameController,
-                    hintText: 'Enter child\'s first name',
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter the child\'s first name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildModernTextField(
-                    label: 'Child\'s Surname:',
-                    controller: _surnameController,
-                    hintText: 'Enter child\'s surname',
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter the child\'s surname';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Child's Gender
-                _buildModernRadioGroup<String>(
-                  question: 'Gender of the child',
-                  groupValue: _gender,
-                  onChanged: (value) {
-                    setState(() {
-                      _gender = value;
-                    });
-                  },
-                  options: [
-                    {'value': 'Male', 'title': 'Male'},
-                    {'value': 'Female', 'title': 'Female'},
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Year of Birth
-                _buildModernTextField(
-                  label: 'Year of Birth:',
-                  controller: _birthYearController,
-                  readOnly: true,
-                  onTap: () => _selectDate(context),
-                  hintText: 'Select year of birth',
-                  validator: (value) {
-                    if (_selectedDate == null) {
-                      return 'Please select year of birth';
-                    }
-                    final birthYear = _selectedDate!.year;
-                    if (birthYear < 2007 || birthYear > 2020) {
-                      return 'Year of birth must be between 2007 and 2020';
-                    }
-                    return null;
-                  },
-                ),
-
-                // Birth certificate
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<bool>(
-                  question: 'Does the child have a birth certificate?',
-                  groupValue: _hasBirthCertificate,
-                  onChanged: (value) {
-                    setState(() {
-                      _hasBirthCertificate = value;
-                    });
-                  },
-                  options: [
-                    {'value': true, 'title': 'Yes'},
-                    {'value': false, 'title': 'No'},
-                  ],
-                ),
-
-                // Show reason field if no birth certificate
-                if (_hasBirthCertificate == false) ...[
-                  const SizedBox(height: 16),
-                  _buildModernTextField(
-                    label: 'If no, please specify why',
-                    controller: _noBirthCertificateReasonController,
-                    hintText: 'Enter reason for not having a birth certificate',
-                    validator: (value) {
-                      if (_hasBirthCertificate == false &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Please specify why the child does not have a birth certificate';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Born in community
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<String>(
-                  question: 'Is the child born in this community?',
-                  groupValue: _bornInCommunity == null
-                      ? null
-                      : _bornInCommunity!
-                          ? 'same_community'
-                          : _birthCountry == 'same_district'
-                              ? 'same_district'
-                              : _birthCountry == 'same_region'
-                                  ? 'same_region'
-                                  : _birthCountry == 'other_ghana_region'
-                                      ? 'other_ghana_region'
-                                      : 'other_country',
-                  onChanged: (value) {
-                    setState(() {
-                      _bornInCommunity = value == 'same_community';
-                      if (value == 'same_community') {
-                        _birthCountry = null;
-                      } else if (value == 'same_district') {
-                        _birthCountry = 'same_district';
-                      } else if (value == 'same_region') {
-                        _birthCountry = 'same_region';
-                      } else if (value == 'other_ghana_region') {
-                        _birthCountry = 'other_ghana_region';
-                      } else if (value == 'other_country') {
-                        _birthCountry = 'other_country';
-                      }
-                    });
-                  },
-                  options: [
-                    {'value': 'same_community', 'title': 'Yes'},
-                    {
-                      'value': 'same_district',
-                      'title':
-                          'No, he was born in this district but different community within the district'
-                    },
-                    {
-                      'value': 'same_region',
-                      'title':
-                          'No, he was born in this region but different district within the region'
-                    },
-                    {
-                      'value': 'other_ghana_region',
-                      'title': 'No, he was born in another region of Ghana'
-                    },
-                    {
-                      'value': 'other_country',
-                      'title': 'No, he was born in another country'
-                    },
-                  ],
-                ),
-
-                // Country of birth (shown only if born in another country)
-                if (_birthCountry == 'other_country') ...[
-                  const SizedBox(height: 16),
-                  _buildModernDropdown<String>(
-                    label: 'In which country was the child born?',
-                    value:
-                        _birthCountry == 'other_country' ? null : _birthCountry,
-                    items: _countries
-                        .where((c) => c != 'Ghana')
-                        .map((String country) {
-                      return DropdownMenuItem<String>(
-                        value: country,
-                        child: Text(country),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _birthCountry = newValue;
-                      });
-                    },
-                    hintText: 'Select country',
-                    validator: (value) {
-                      if (_birthCountry == 'other_country' &&
-                          (value == null || value.isEmpty)) {
-                        return 'Please select the country of birth';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Relationship to head of household
-                const SizedBox(height: 24),
-                _buildModernDropdown<String>(
-                  label:
-                      'Relationship of the child to the head of the household',
-                  value: _relationshipToHead,
-                  items: [
-                    'Son/daughter',
-                    'Brother/Sister',
-                    'Son-in-law/Daughter-in-law',
-                    'Grandson/Granddaughter',
-                    'Niece/nephew',
-                    'Cousin',
-                    'Child of the worker',
-                    'Child of the farm owner',
-                    'Other (please specify)'
-                  ].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _relationshipToHead = newValue;
-                    });
-                  },
-                  hintText: 'Select relationship',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a relationship';
-                    }
-                    return null;
-                  },
-                ),
-
-                if (_relationshipToHead == 'Other (please specify)') ...[
-                  const SizedBox(height: 16),
-                  _buildModernTextField(
-                    label: 'If other please specify',
-                    controller: _otherRelationshipController,
-                    validator: (value) {
-                      if (_relationshipToHead == 'Other (please specify)' &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Please specify the relationship';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-
-                // Show family living situation question if child is not a direct family member
-                if (_relationshipToHead == 'Child of the worker' ||
-                    _relationshipToHead == 'Child of the farm owner' ||
-                    _relationshipToHead == 'Other (please specify)') ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    'Why does the child [${widget.childNumber}] not live with his/her family?',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ..._notLivingWithFamilyReasons.entries.map((entry) {
-                    return ModernCheckbox(
-                      value: entry.value,
-                      onChanged: (bool? selected) {
-                        setState(() {
-                          _notLivingWithFamilyReasons[entry.key] =
-                              selected ?? false;
-                        });
-                      },
-                      title: entry.key,
-                    );
-                  }).toList(),
-                  if (_notLivingWithFamilyReasons['Other (specify)'] ==
-                      true) ...[
-                    const SizedBox(height: 8),
-                    _buildModernTextField(
-                      label: 'Other reason',
-                      controller: _otherNotLivingWithFamilyController,
-                      validator: (value) {
-                        if (_notLivingWithFamilyReasons['Other (specify)'] ==
-                                true &&
-                            (value == null || value.trim().isEmpty)) {
-                          return 'Please specify the reason';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                ],
-              ],
-
-              // ========== FAMILY DECISION SECTION ==========
-              // Show these questions for non-farmer children
-              if (_isFarmerChild == false) ...[
-                _buildSectionHeader('FAMILY DECISION INFORMATION'),
-
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<String>(
-                  question:
-                      'Who decided that the child [${widget.childNumber}] should come into the household?',
-                  groupValue: _whoDecidedChildJoin,
-                  onChanged: (String? value) {
-                    setState(() {
-                      _whoDecidedChildJoin = value;
-                    });
-                  },
-                  options: [
-                    {'value': 'myself', 'title': 'Myself'},
-                    {'value': 'father_mother', 'title': 'Father / Mother'},
-                    {'value': 'grandparents', 'title': 'Grandparents'},
-                    {'value': 'other_family', 'title': 'Other family members'},
-                    {
-                      'value': 'external_recruiter',
-                      'title': 'An external recruiter or agency external'
-                    },
-                    {
-                      'value': 'other_person',
-                      'title': 'Other person (specify)'
-                    },
-                  ],
-                ),
-
-                // Show text field if "Other person" is selected
-                if (_whoDecidedChildJoin == 'other_person') ...[
-                  const SizedBox(height: 16),
-                  _buildModernTextField(
-                    label: 'Please specify other person',
-                    controller: _otherPersonController,
-                    validator: (value) {
-                      if (_whoDecidedChildJoin == 'other_person' &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Please specify who decided';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-                const SizedBox(height: 16),
-
-                // Child agreement question
-                if (_whoDecidedChildJoin == 'father_mother' ||
-                    _whoDecidedChildJoin == 'grandparents' ||
-                    _whoDecidedChildJoin == 'other_family' ||
-                    _whoDecidedChildJoin == 'external_recruiter' ||
-                    _whoDecidedChildJoin == 'other_person') ...[
-                  const SizedBox(height: 24),
-                  _buildModernRadioGroup<bool>(
-                    question:
-                        'Did the child [${widget.childNumber}] agree with this decision?',
-                    groupValue: _childAgreedWithDecision,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _childAgreedWithDecision = value;
-                      });
-                    },
-                    options: [
-                      {'value': true, 'title': 'Yes'},
-                      {'value': false, 'title': 'No'},
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Has the child seen/spoken with parents question
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<bool>(
-                  question:
-                      'Has the child [${widget.childNumber}] seen and/or spoken with his/her parents in the past year?',
-                  groupValue: _hasSpokenWithParents,
-                  onChanged: (bool? value) {
-                    setState(() {
-                      _hasSpokenWithParents = value;
-                    });
-                  },
-                  options: [
-                    {'value': true, 'title': 'Yes'},
-                    {'value': false, 'title': 'No'},
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Last contact with parents question
-                if (_hasSpokenWithParents != null) ...[
-                  const SizedBox(height: 24),
-                  _buildModernRadioGroup<String>(
-                    question:
-                        'When was the last time the child saw and/or talked with mom and/or dad?',
-                    groupValue: _lastContactWithParents,
-                    onChanged: (String? value) {
-                      setState(() {
-                        _lastContactWithParents = value;
-                      });
-                    },
-                    options: [
-                      {'value': 'max_1_week', 'title': 'Max 1 week'},
-                      {'value': 'max_1_month', 'title': 'Max 1 month'},
-                      {'value': 'max_1_year', 'title': 'Max 1 year'},
-                      {
-                        'value': 'more_than_1_year',
-                        'title': 'More than 1 year'
-                      },
-                      {'value': 'never', 'title': 'Never'},
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ],
-
-              // ========== FAMILY INFORMATION SECTION ==========
-              _buildSectionHeader('FAMILY INFORMATION'),
-
-              // How long has the child been living in the household?
-              _buildModernRadioGroup<String>(
-                question:
-                    'For how long has the child been living in the household?',
-                groupValue: _timeInHousehold,
-                onChanged: (String? value) {
-                  setState(() {
-                    _timeInHousehold = value;
-                  });
-                },
-                options: [
-                  {
-                    'value': 'Born in the household',
-                    'title': 'Born in the household'
-                  },
-                  {'value': 'Less than 1 year', 'title': 'Less than 1 year'},
-                  {'value': '1-2 years', 'title': '1-2 years'},
-                  {'value': '2-4 years old', 'title': '2-4 years old'},
-                  {'value': '4-6 years old', 'title': '4-6 years old'},
-                  {'value': '6-8 years old', 'title': '6-8 years old'},
-                  {'value': 'More than 8 years', 'title': 'More than 8 years'},
-                  {'value': 'Don\'t know', 'title': 'Don\'t know'},
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Who accompanied the child question - only for non-farmer children
-              if (_isFarmerChild == false) ...[
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<String>(
-                  question:
-                      'Who accompanied the child [${widget.childNumber}] to come here?',
-                  groupValue: _whoAccompaniedChild,
-                  onChanged: (String? value) {
-                    setState(() {
-                      _whoAccompaniedChild = value;
-                    });
-                  },
-                  options: [
-                    {'value': 'came_alone', 'title': 'Came alone'},
-                    {'value': 'father_mother', 'title': 'Father / Mother'},
-                    {'value': 'grandparents', 'title': 'Grandparents'},
-                    {
-                      'value': 'other_family_member',
-                      'title': 'Other family member'
-                    },
-                    {'value': 'with_recruit', 'title': 'With a recruit'},
-                    {'value': 'other', 'title': 'Other'},
-                  ],
-                ),
-
-                // Show text field if "Other" is selected
-                if (_whoAccompaniedChild == 'other') ...[
-                  const SizedBox(height: 16),
-                  _buildModernTextField(
-                    label: 'Please specify who accompanied the child',
-                    controller: _otherAccompaniedController,
-                    validator: (value) {
-                      if (_whoAccompaniedChild == 'other' &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Please specify who accompanied the child';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-                const SizedBox(height: 16),
-              ],
-
-              // ========== PARENT RESIDENCE SECTION ==========
-              // Father's residence
-              const SizedBox(height: 24),
-              _buildModernRadioGroup<String>(
-                question:
-                    'Where does the child\'s father live [${widget.childNumber}]?',
-                groupValue: _fatherResidence,
-                onChanged: (String? value) {
-                  setState(() {
-                    _fatherResidence = value;
-                  });
-                },
-                options: [
-                  {
-                    'value': 'In the same household',
-                    'title': 'In the same household'
-                  },
-                  {
-                    'value': 'In another household in the same village',
-                    'title': 'In another household in the same village'
-                  },
-                  {
-                    'value': 'In another household in the same region',
-                    'title': 'In another household in the same region'
-                  },
-                  {
-                    'value': 'In another household in another region',
-                    'title': 'In another household in another region'
-                  },
-                  {'value': 'Abroad', 'title': 'Abroad'},
-                  {'value': 'Parents deceased', 'title': 'Parents deceased'},
-                  {
-                    'value': 'Don\'t know/Don\'t want to answer',
-                    'title': 'Don\'t know/Don\'t want to answer'
-                  },
-                ],
-              ),
-
-              // Show country selection if father is abroad
-              if (_fatherResidence == 'Abroad') ...[
-                const SizedBox(height: 16),
-                _buildModernDropdown<String>(
-                  label: 'Father\'s country of residence',
-                  value: _fatherCountry,
-                  items: _fatherCountries.map((String country) {
-                    return DropdownMenuItem<String>(
-                      value: country,
-                      child: Text(country),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _fatherCountry = newValue;
-                    });
-                  },
-                  hintText: 'Select country',
-                  validator: (value) {
-                    if (_fatherResidence == 'Abroad' &&
-                        (value == null || value.isEmpty)) {
-                      return 'Please select a country';
-                    }
-                    return null;
-                  },
-                ),
-                if (_fatherCountry == 'Others to be specified') ...[
-                  const SizedBox(height: 16),
-                  _buildModernTextField(
-                    label: 'Please specify country',
-                    controller: _otherFatherCountryController,
-                    validator: (value) {
-                      if (_fatherCountry == 'Others to be specified' &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Please specify the country';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-                const SizedBox(height: 16),
-              ],
-
-              // Mother's residence
-              const SizedBox(height: 24),
-              _buildModernRadioGroup<String>(
-                question:
-                    'Where does the child\'s mother live [${widget.childNumber}]?',
-                groupValue: _motherResidence,
-                onChanged: (String? value) {
-                  setState(() {
-                    _motherResidence = value;
-                  });
-                },
-                options: [
-                  {
-                    'value': 'In the same household',
-                    'title': 'In the same household'
-                  },
-                  {
-                    'value': 'In another household in the same village',
-                    'title': 'In another household in the same village'
-                  },
-                  {
-                    'value': 'In another household in the same region',
-                    'title': 'In another household in the same region'
-                  },
-                  {
-                    'value': 'In another household in another region',
-                    'title': 'In another household in another region'
-                  },
-                  {'value': 'Abroad', 'title': 'Abroad'},
-                  {'value': 'Parents deceased', 'title': 'Parents deceased'},
-                  {
-                    'value': 'Don\'t know/Don\'t want to answer',
-                    'title': 'Don\'t know/Don\'t want to answer'
-                  },
-                ],
-              ),
-
-              // Show country selection if mother is abroad
-              if (_motherResidence == 'Abroad') ...[
-                const SizedBox(height: 16),
-                _buildModernDropdown<String>(
-                  label: 'Mother\'s country of residence',
-                  value: _motherCountry,
-                  items: _fatherCountries.map((String country) {
-                    return DropdownMenuItem<String>(
-                      value: country,
-                      child: Text(country),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _motherCountry = newValue;
-                    });
-                  },
-                  hintText: 'Select country',
-                  validator: (value) {
-                    if (_motherResidence == 'Abroad' &&
-                        (value == null || value.isEmpty)) {
-                      return 'Please select a country';
-                    }
-                    return null;
-                  },
-                ),
-                if (_motherCountry == 'Others to be specified') ...[
-                  const SizedBox(height: 16),
-                  _buildModernTextField(
-                    label: 'Please specify country',
-                    controller: _otherMotherCountryController,
-                    validator: (value) {
-                      if (_motherCountry == 'Others to be specified' &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Please specify the country';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-                const SizedBox(height: 16),
-              ],
-
-              // ========== EDUCATION SECTION ==========
-              // Only show education questions if child can be surveyed now
-              if (_canBeSurveyedNow == true) ...[
-                _buildSectionHeader('EDUCATION INFORMATION'),
-
-                // School enrollment
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<bool>(
-                  question: 'Is the child currently enrolled in school?',
-                  groupValue: _isCurrentlyEnrolled,
-                  onChanged: (value) {
-                    setState(() {
-                      _isCurrentlyEnrolled = value;
-                    });
-                  },
-                  options: [
-                    {'value': true, 'title': 'Yes'},
-                    {'value': false, 'title': 'No'},
-                  ],
-                ),
-
-                // Currently enrolled section
-                if (_isCurrentlyEnrolled == true) ...[
-                  const SizedBox(height: 16),
-                  _buildModernTextField(
-                    label: 'What is the name of the school?',
-                    controller: _schoolNameController,
-                    validator: (value) {
-                      if (_isCurrentlyEnrolled == true &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Please enter the school name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildModernRadioGroup<String>(
-                    question: 'Is the school a public or private school?',
-                    groupValue: _schoolType,
-                    onChanged: (String? value) {
-                      setState(() {
-                        _schoolType = value;
-                      });
-                    },
-                    options: [
-                      {'value': 'Public', 'title': 'Public'},
-                      {'value': 'Private', 'title': 'Private'},
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildModernDropdown<String>(
-                    label: 'What grade is the child enrolled in?',
-                    value: _gradeLevel,
-                    items: _gradeLevels.map((String grade) {
-                      return DropdownMenuItem<String>(
-                        value: grade,
-                        child: Text(grade),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _gradeLevel = newValue;
-                      });
-                    },
-                    hintText: 'Select grade level',
-                    validator: (value) {
-                      if (_isCurrentlyEnrolled == true && value == null) {
-                        return 'Please select a grade level';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildModernRadioGroup<String>(
-                    question:
-                        'How many times does the child go to school in a week?',
-                    groupValue: _schoolAttendanceFrequency,
-                    onChanged: (String? value) {
-                      setState(() {
-                        _schoolAttendanceFrequency = value;
-                      });
-                    },
-                    options: [
-                      {'value': 'Once', 'title': 'Once'},
-                      {'value': 'Twice', 'title': 'Twice'},
-                      {'value': 'Thrice', 'title': 'Thrice'},
-                      {'value': 'Four times', 'title': 'Four times'},
-                      {'value': 'Five times', 'title': 'Five times'},
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Select the basic school needs that are available to the child:',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Column(
-                    children: [
-                      ModernCheckbox(
-                        value: _availableSchoolSupplies.contains('Books'),
-                        onChanged: (bool? selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _availableSchoolSupplies.add('Books');
-                            } else {
-                              _availableSchoolSupplies.remove('Books');
-                            }
-                          });
-                        },
-                        title: 'Books',
-                      ),
-                      ModernCheckbox(
-                        value: _availableSchoolSupplies.contains('School bag'),
-                        onChanged: (bool? selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _availableSchoolSupplies.add('School bag');
-                            } else {
-                              _availableSchoolSupplies.remove('School bag');
-                            }
-                          });
-                        },
-                        title: 'School bag',
-                      ),
-                      ModernCheckbox(
-                        value:
-                            _availableSchoolSupplies.contains('Pen / Pencils'),
-                        onChanged: (bool? selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _availableSchoolSupplies.add('Pen / Pencils');
-                            } else {
-                              _availableSchoolSupplies.remove('Pen / Pencils');
-                            }
-                          });
-                        },
-                        title: 'Pen / Pencils',
-                      ),
-                      ModernCheckbox(
-                        value: _availableSchoolSupplies
-                            .contains('School Uniforms'),
-                        onChanged: (bool? selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _availableSchoolSupplies.add('School Uniforms');
-                            } else {
-                              _availableSchoolSupplies
-                                  .remove('School Uniforms');
-                            }
-                          });
-                        },
-                        title: 'School Uniforms',
-                      ),
-                      ModernCheckbox(
-                        value: _availableSchoolSupplies
-                            .contains('Shoes and Socks'),
-                        onChanged: (bool? selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _availableSchoolSupplies.add('Shoes and Socks');
-                            } else {
-                              _availableSchoolSupplies
-                                  .remove('Shoes and Socks');
-                            }
-                          });
-                        },
-                        title: 'Shoes and Socks',
-                      ),
-                      ModernCheckbox(
-                        value: _availableSchoolSupplies
-                            .contains('None of the above'),
-                        onChanged: (bool? selected) {
-                          setState(() {
-                            if (selected == true) {
-                              _availableSchoolSupplies.clear();
-                              _availableSchoolSupplies.add('None of the above');
-                            } else {
-                              _availableSchoolSupplies
-                                  .remove('None of the above');
-                            }
-                          });
-                        },
-                        title: 'None of the above',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Not currently enrolled section
-                if (_isCurrentlyEnrolled == false) ...[
-                  const SizedBox(height: 16),
-                  _buildModernRadioGroup<bool>(
-                    question: 'Has the child ever been to school?',
-                    groupValue: _hasEverBeenToSchool,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _hasEverBeenToSchool = value;
-                      });
-                    },
-                    options: [
-                      {
-                        'value': true,
-                        'title': 'Yes, they went to school but stopped',
-                        'subtitle': null
-                      },
-                      {
-                        'value': false,
-                        'title': 'No, they have never been to school',
-                        'subtitle': null
-                      },
-                    ],
-                  ),
-
-                  // Additional sections for children who were enrolled but stopped
-                  if (_hasEverBeenToSchool == true) ...[
-                    const SizedBox(height: 16),
-                    _buildModernTextField(
-                      label: 'When did the child leave school?',
-                      controller: _leftSchoolDateController,
-                      readOnly: true,
-                      onTap: () => _selectLeftSchoolDate(context),
-                      hintText: 'Select date',
-                      validator: (value) {
-                        if (_hasEverBeenToSchool == true &&
-                            (value == null || value.isEmpty)) {
-                          return 'Please select the date';
-                        }
-                        if (_leftSchoolDate != null) {
-                          final birthYear = _selectedDate?.year;
-                          final currentYear = DateTime.now().year;
-                          final leftSchoolYear = _leftSchoolDate!.year;
-
-                          if (birthYear != null &&
-                              leftSchoolYear <= birthYear) {
-                            return 'The year cannot be before the year of birth of the child';
-                          }
-                          if (leftSchoolYear > currentYear) {
-                            return 'The year cannot be after the current year ($currentYear)';
-                          }
-                          if (birthYear != null &&
-                              leftSchoolYear < birthYear + 4) {
-                            return 'Check that the child was at least 4 years old when he/she left school';
-                          }
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildModernRadioGroup<String>(
-                      question:
-                          'What is the education level of [${widget.childNumber}]?',
-                      groupValue: _selectedEducationLevel,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _selectedEducationLevel = value;
-                        });
-                      },
-                      options: [
-                        {
-                          'value': 'pre_school',
-                          'title': 'Pre-school (Kindergarten)'
-                        },
-                        {'value': 'primary', 'title': 'Primary'},
-                        {'value': 'jss_middle', 'title': 'JSS/Middle school'},
-                        {
-                          'value': 'sss_olevel',
-                          'title':
-                              'SSS/\'O\'-level/\'A\'-level (including vocational & technical training)'
-                        },
-                        {
-                          'value': 'university',
-                          'title': 'University or higher'
-                        },
-                        {'value': 'not_applicable', 'title': 'Not applicable'},
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildModernRadioGroup<String>(
-                      question:
-                          'What is the main reason for the child [${widget.childNumber}] leaving school?',
-                      groupValue: _childLeaveSchoolReason,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _childLeaveSchoolReason = value;
-                        });
-                      },
-                      options: [
-                        {
-                          'value': 'school_too_far',
-                          'title': 'The school is too far away'
-                        },
-                        {
-                          'value': 'tuition_fees_high',
-                          'title': 'Tuition fees for private school too high'
-                        },
-                        {
-                          'value': 'poor_academic_performance',
-                          'title': 'Poor academic performance'
-                        },
-                        {
-                          'value': 'insecurity',
-                          'title': 'Insecurity in the area'
-                        },
-                        {'value': 'learn_trade', 'title': 'To learn a trade'},
-                        {
-                          'value': 'early_pregnancy',
-                          'title': 'Early pregnancy'
-                        },
-                        {
-                          'value': 'child_not_want',
-                          'title':
-                              'The child did not want to go to school anymore'
-                        },
-                        {
-                          'value': 'cant_afford_materials',
-                          'title':
-                              'Parents can\'t afford Teaching and Learning Materials'
-                        },
-                        {'value': 'other', 'title': 'Other'},
-                        {'value': 'does_not_know', 'title': 'Does not know'},
-                      ],
-                    ),
-                    if (_childLeaveSchoolReason == 'other') ...[
-                      const SizedBox(height: 16),
-                      _buildModernTextField(
-                        label: 'Please specify reason',
-                        controller: _otherLeaveReasonController,
-                        validator: (value) {
-                          if (_childLeaveSchoolReason == 'other' &&
-                              (value == null || value.trim().isEmpty)) {
-                            return 'Please specify the reason';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ],
-
-                  // Never been to school section
-                  if (_hasEverBeenToSchool == false) ...[
-                    const SizedBox(height: 16),
-                    _buildModernRadioGroup<String>(
-                      question:
-                          'Why has the child [${widget.childNumber}] never been to school before?',
-                      groupValue: _neverBeenToSchoolReason,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _neverBeenToSchoolReason = value;
-                        });
-                      },
-                      options: [
-                        {
-                          'value': 'school_too_far',
-                          'title': 'The school is too far away'
-                        },
-                        {
-                          'value': 'tuition_fees_high',
-                          'title': 'Tuition fees too high'
-                        },
-                        {
-                          'value': 'too_young',
-                          'title': 'Too young to be in school'
-                        },
-                        {
-                          'value': 'insecurity',
-                          'title': 'Insecurity in the region'
-                        },
-                        {
-                          'value': 'learn_trade',
-                          'title': 'To learn a trade (apprenticeship)'
-                        },
-                        {
-                          'value': 'child_not_want',
-                          'title': 'The child doesn\'t want to go to school'
-                        },
-                        {
-                          'value': 'cant_afford_materials',
-                          'title':
-                              'Parents can\'t afford TLMs and/or enrollment fees'
-                        },
-                        {'value': 'other', 'title': 'Other'},
-                      ],
-                    ),
-                    if (_neverBeenToSchoolReason == 'other') ...[
-                      const SizedBox(height: 16),
-                      _buildModernTextField(
-                        label: 'Please specify reason',
-                        controller: _otherNeverSchoolReasonController,
-                        validator: (value) {
-                          if (_neverBeenToSchoolReason == 'other' &&
-                              (value == null || value.trim().isEmpty)) {
-                            return 'Please specify the reason';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ],
-                ],
-
-                // ========== SCHOOL ATTENDANCE (7 DAYS) ==========
-                // Only show if child is currently enrolled
-                if (_isCurrentlyEnrolled == true) ...[
-                  const SizedBox(height: 24),
-                  _buildModernRadioGroup<bool>(
-                    question:
-                        'Has the child been to school in the past 7 days?',
-                    groupValue: _attendedSchoolLast7Days,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _attendedSchoolLast7Days = value;
-                      });
-                    },
-                    options: [
-                      {'value': true, 'title': 'Yes'},
-                      {'value': false, 'title': 'No'},
-                    ],
-                  ),
-                  if (_attendedSchoolLast7Days == false) ...[
-                    const SizedBox(height: 24),
-                    _buildModernRadioGroup<String>(
-                      question: 'Why has the child not been to school?',
-                      groupValue: _selectedLeaveReason,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _selectedLeaveReason = value;
-                        });
-                      },
-                      options: [
-                        {'value': 'holidays', 'title': 'It was the holidays'},
-                        {'value': 'sick', 'title': 'He/she was sick'},
-                        {'value': 'working', 'title': 'He/she was working'},
-                        {'value': 'traveling', 'title': 'He/she was traveling'},
-                        {'value': 'other', 'title': 'Other'},
-                      ],
-                    ),
-                    if (_selectedLeaveReason == 'other') ...[
-                      const SizedBox(height: 16),
-                      _buildModernTextField(
-                        label: 'Please specify reason',
-                        controller: _otherAbsenceReasonController,
-                        validator: (value) {
-                          if (_selectedLeaveReason == 'other' &&
-                              (value == null || value.trim().isEmpty)) {
-                            return 'Please specify the reason';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                  ],
-                  const SizedBox(height: 24),
-                  _buildModernRadioGroup<bool>(
-                    question:
-                        'Has the child [${widget.childNumber}] missed school days the past 7 days?',
-                    groupValue: _missedSchoolDays,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _missedSchoolDays = value;
-                      });
-                    },
-                    options: [
-                      {'value': true, 'title': 'Yes'},
-                      {'value': false, 'title': 'No'},
-                    ],
-                  ),
-                  if (_missedSchoolDays == true) ...[
-                    const SizedBox(height: 24),
-                    _buildModernRadioGroup<String>(
-                      question: 'Why did the child miss school?',
-                      groupValue: _selectedMissedReason,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _selectedMissedReason = value;
-                        });
-                      },
-                      options: [
-                        {'value': 'sick', 'title': 'He/she was sick'},
-                        {'value': 'working', 'title': 'He/she was working'},
-                        {'value': 'traveled', 'title': 'He/she traveled'},
-                        {'value': 'other', 'title': 'Other'},
-                      ],
-                    ),
-                    if (_selectedMissedReason == 'other') ...[
-                      const SizedBox(height: 16),
-                      _buildModernTextField(
-                        label: 'Please specify reason',
-                        controller: _otherMissedReasonController,
-                        validator: (value) {
-                          if (_selectedMissedReason == 'other' &&
-                              (value == null || value.trim().isEmpty)) {
-                            return 'Please specify the reason';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                  ],
-                ],
-
-                // ========== ARITHMETIC AND READING ASSESSMENT ==========
-                // Only show for children who can be surveyed and have education history
-                Builder(
-                  builder: (context) {
-                    final childAge = _selectedDate != null
-                        ? DateTime.now().year - _selectedDate!.year
-                        : null;
-                    final showAssessment = childAge != null &&
-                        _canBeSurveyedNow == true &&
-                        (_isCurrentlyEnrolled == true ||
-                            (_isCurrentlyEnrolled == false &&
-                                _hasEverBeenToSchool == true));
-
-                    if (showAssessment) {
-                      return Column(
-                        children: [
-                          // Arithmetic Assessment
-                          const SizedBox(height: 24),
-                          Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                  color: Theme.of(context)
-                                      .primaryColor
-                                      .withOpacity(0.2)),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Arithmetic Assessment',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color:
-                                              Theme.of(context).primaryColor)),
-                                  const SizedBox(height: 12),
-                                  // Add arithmetic questions based on age...
-                                  const Text('Reference Examples:',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 8),
-                                  const Wrap(
-                                      spacing: 16,
-                                      runSpacing: 8,
-                                      children: [
-                                        _ArithmeticItem(
-                                            expression: '1 + 2 = 3'),
-                                        _ArithmeticItem(
-                                            expression: '2 + 3 = 5'),
-                                        _ArithmeticItem(
-                                            expression: '5 - 3 = 2'),
-                                        _ArithmeticItem(
-                                            expression: '9 - 4 = 5'),
-                                        _ArithmeticItem(
-                                            expression: '9 + 7 = 16'),
-                                        _ArithmeticItem(
-                                            expression: '3 × 7 = 21'),
-                                      ]),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // Reading Assessment
-                          const SizedBox(height: 24),
-                          Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                  color: Theme.of(context)
-                                      .primaryColor
-                                      .withOpacity(0.2)),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Reading Assessment',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color:
-                                              Theme.of(context).primaryColor)),
-                                  const SizedBox(height: 12),
-                                  // Add reading sentences based on age...
-                                  const Text('All Reference Sentences:',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 8),
-                                  const Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text('1. "This is Ama"'),
-                                        Text('2. "It is water"'),
-                                        Text(
-                                            '3. "I like to play with my friends"'),
-                                        Text('4. "I am going to school"'),
-                                        Text('5. "Kofi is crying loudly"'),
-                                        Text(
-                                            '6. "I am good at playing both Basketball and football"'),
-                                      ]),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    } else {
-                      return const SizedBox.shrink();
-                    }
-                  },
-                ),
-              ],
-
-              // ========== WORK INFORMATION SECTION ==========
-              // Only show work questions if child can be surveyed
-              if (_canBeSurveyedNow == true) ...[
-                _buildSectionHeader('WORK INFORMATION'),
-
-                // Work in house
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<bool>(
-                  question:
-                      'In the past 7 days, has the child [${widget.childNumber}] worked in the house?',
-                  groupValue: _workedInHouse,
-                  onChanged: (value) {
-                    setState(() {
-                      _workedInHouse = value;
-                    });
-                  },
-                  options: [
-                    {'value': true, 'title': 'Yes'},
-                    {'value': false, 'title': 'No'},
-                  ],
-                ),
-
-                // Work on cocoa farm
-                const SizedBox(height: 24),
-                _buildModernRadioGroup<bool>(
-                  question:
-                      'In the past 7 days, has the child [${widget.childNumber}] been working on the cocoa farm?',
-                  groupValue: _workedOnCocoaFarm,
-                  onChanged: (value) {
-                    setState(() {
-                      _workedOnCocoaFarm = value;
-                    });
-                  },
-                  options: [
-                    {'value': true, 'title': 'Yes'},
-                    {'value': false, 'title': 'No'},
-                  ],
-                ),
-
-                // Continue with the rest of your work-related questions...
-                // [Add LIGHT TASKS, DANGEROUS TASKS, WORK DETAILS sections here following the same pattern]
-              ],
-
-              // ========== HEALTH AND SAFETY SECTION ==========
-              _buildSectionHeader('HEALTH AND SAFETY'),
-
-              // Health questions (show for all children)
-              const SizedBox(height: 24),
-              _buildModernRadioGroup<bool>(
-                question:
-                    'Has the child ever applied or sprayed agrochemicals on the farm?',
-                groupValue: _appliedAgrochemicals,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _appliedAgrochemicals = value;
-                  });
-                },
-                options: [
-                  {'value': true, 'title': 'Yes'},
-                  {'value': false, 'title': 'No'},
-                ],
-              ),
-
-              // Continue with other health questions...
-
-              // ========== PHOTO CONSENT SECTION ==========
-              _buildSectionHeader('PHOTO CONSENT'),
-
-              _buildModernRadioGroup<bool>(
-                question:
-                    'Does the parent consent to the taking of a picture of the child?',
-                groupValue: _parentConsentPhoto,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _parentConsentPhoto = value;
-                  });
-                },
-                options: [
-                  {'value': true, 'title': 'Yes'},
-                  {'value': false, 'title': 'No'},
-                ],
-              ),
-
-              if (_parentConsentPhoto == false) ...[
-                const SizedBox(height: 16),
-                _buildModernTextField(
-                  label: 'If no, please specify reason',
-                  controller: _noConsentReasonController,
-                  hintText: 'Enter reason for not consenting to photo',
-                  validator: (value) {
-                    if (_parentConsentPhoto == false &&
-                        (value == null || value.trim().isEmpty)) {
-                      return 'Please specify the reason for not consenting';
-                    }
-                    return null;
-                  },
-                ),
-              ],
-
-              if (_parentConsentPhoto == true) ...[
-                const SizedBox(height: 24),
-                _buildPhotoSection(),
-              ],
-
-              // // ========== NAVIGATION BUTTONS ==========
-              // const SizedBox(height: 32),
-              // Row(
-              //   children: [
-              //     // Previous button
-              //     Expanded(
-              //       child: Container(
-              //         height: 56,
-              //         decoration: BoxDecoration(
-              //           border:
-              //               Border.all(color: Theme.of(context).primaryColor),
-              //           borderRadius: BorderRadius.circular(16),
-              //         ),
-              //         child: Material(
-              //           color: Colors.transparent,
-              //           child: InkWell(
-              //             onTap: () {
-              //               Navigator.pop(context);
-              //             },
-              //             borderRadius: BorderRadius.circular(16),
-              //             child: Center(
-              //               child: Text('PREVIOUS',
-              //                   style: TextStyle(
-              //                       color: Theme.of(context).primaryColor,
-              //                       fontSize: 16,
-              //                       fontWeight: FontWeight.w600,
-              //                       letterSpacing: 0.5)),
-              //             ),
-              //           ),
-              //         ),
-              //       ),
-              //     ),
-              //     const SizedBox(width: 16),
-              //     // Next button
-              //     Expanded(
-              //       child: Container(
-              //         height: 56,
-              //         decoration: BoxDecoration(
-              //           gradient: LinearGradient(
-              //               colors: [
-              //                 Theme.of(context).primaryColor,
-              //                 Theme.of(context).primaryColor.withOpacity(0.8)
-              //               ],
-              //               begin: Alignment.topLeft,
-              //               end: Alignment.bottomRight),
-              //           borderRadius: BorderRadius.circular(16),
-              //           boxShadow: [
-              //             BoxShadow(
-              //                 color: Theme.of(context)
-              //                     .primaryColor
-              //                     .withOpacity(0.3),
-              //                 blurRadius: 10,
-              //                 offset: const Offset(0, 4))
-              //           ],
-              //         ),
-              //         child: Material(
-              //           color: Colors.transparent,
-              //           child: InkWell(
-              //             onTap: () {
-              //               if (_formKey.currentState?.validate() ?? false) {
-              //                 _submitForm();
-              //                 Navigator.push(
-              //                     context,
-              //                     MaterialPageRoute(
-              //                         builder: (context) =>
-              //                             const SensitizationPage()));
-              //               }
-              //             },
-              //             borderRadius: BorderRadius.circular(16),
-              //             child: const Center(
-              //                 child: Text('NEXT',
-              //                     style: TextStyle(
-              //                         color: Colors.white,
-              //                         fontSize: 16,
-              //                         fontWeight: FontWeight.w600,
-              //                         letterSpacing: 0.5))),
-              //           ),
-              //         ),
-              //       ),
-              //     ),
-              //   ],
-              // ),
-              const SizedBox(height: 16),
+              
+              // Submit Button
+              _buildSubmitButton(),
             ],
           ),
         ),

@@ -33,7 +33,8 @@ class IdentificationOfOwnerData {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  /// Converts the model to a JSON-compatible map
+  Map<String, dynamic> toJson() {
     return {
       'ownerName': ownerName,
       'ownerFirstName': ownerFirstName,
@@ -43,17 +44,25 @@ class IdentificationOfOwnerData {
       'yearsWithOwner': yearsWithOwner,
     };
   }
+  
+  /// For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
 
-  factory IdentificationOfOwnerData.fromMap(Map<String, dynamic> map) {
+  /// Creates an IdentificationOfOwnerData from a JSON map
+  factory IdentificationOfOwnerData.fromJson(Map<String, dynamic> json) {
     return IdentificationOfOwnerData(
-      ownerName: map['ownerName'] ?? '',
-      ownerFirstName: map['ownerFirstName'] ?? '',
-      nationality: map['nationality'],
-      specificNationality: map['specificNationality'],
-      otherNationality: map['otherNationality'] ?? '',
-      yearsWithOwner: map['yearsWithOwner'] ?? '',
+      ownerName: json['ownerName'] ?? '',
+      ownerFirstName: json['ownerFirstName'] ?? '',
+      nationality: json['nationality'],
+      specificNationality: json['specificNationality'],
+      otherNationality: json['otherNationality'] ?? '',
+      yearsWithOwner: json['yearsWithOwner'] ?? '',
     );
   }
+  
+  /// For backward compatibility
+  factory IdentificationOfOwnerData.fromMap(Map<String, dynamic> map) => 
+      IdentificationOfOwnerData.fromJson(map);
 
   static IdentificationOfOwnerData empty() {
     return const IdentificationOfOwnerData();

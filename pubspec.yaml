@@ -46,8 +46,12 @@ dependencies:
   dio: ^5.9.0
   get: ^4.7.2
   url_launcher: ^6.3.2
+  connectivity_plus: ^5.0.2
   shared_preferences: ^2.5.3
   google_maps_flutter: ^2.5.0
+  lottie: ^2.7.0
+  collection: ^1.18.0
+  nested: ^1.0.0
 #  printing: ^5.11.1
 #  pdf: ^3.10.10
 #  pdf_render: 1.4.12
@@ -92,7 +96,7 @@ flutter:
 
   assets:
     - assets/images/
-
+    - assets/animations/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

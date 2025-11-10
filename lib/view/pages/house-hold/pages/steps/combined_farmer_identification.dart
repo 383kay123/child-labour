@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/controller/models/adult_info_model.dart';
@@ -332,6 +333,7 @@ class _VisitInformationContent extends StatefulWidget {
   final WorkersInFarmData workersData;
   final AdultsInformationData adultsData;
   final List<String> validationErrors;
+  final GlobalKey<FormState>? formKey;
 
   const _VisitInformationContent({
     Key? key,
@@ -342,6 +344,7 @@ class _VisitInformationContent extends StatefulWidget {
     required this.workersData,
     required this.adultsData,
     required this.validationErrors,
+    this.formKey,
   }) : super(key: key);
 
   @override
@@ -579,7 +582,7 @@ void animateToPage(int page, {Duration duration = const Duration(milliseconds: 3
                   DropdownButtonFormField<String>(
                     value: _countryOfOrigin,
                     decoration: const InputDecoration(
-                      labelText: 'If Non Ghanaian , specify country of origin',
+                      labelText: 'If Non Ghanaian, specify country of origin',
                     ),
                     items: [
                       'Burkina Faso',
@@ -598,11 +601,16 @@ void animateToPage(int page, {Duration duration = const Duration(milliseconds: 3
                         child: Text(country),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _countryOfOrigin = value;
-                        _updateData();
-                      });
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _countryOfOrigin = newValue;
+                          if (newValue != 'Other') {
+                            _otherCountryController.clear();
+                          }
+                          _updateData();
+                        });
+                      }
                     },
                   ),
 
@@ -1527,6 +1535,10 @@ class _WorkersInFarmContentState extends State<_WorkersInFarmContent> {
 class CombinedFarmIdentificationPageState
     extends State<CombinedFarmIdentificationPage> {
   late PageController _pageController;
+  
+  // Form keys for each subpage
+  final GlobalKey<FormState> visitInfoFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> adultsFormKey = GlobalKey<FormState>();
   // Public getter for the page controller
   PageController get pageController => _pageController;
   late int _currentPageIndex;
@@ -1537,6 +1549,13 @@ class CombinedFarmIdentificationPageState
   IdentificationOfOwnerData _ownerData = IdentificationOfOwnerData.empty();
   WorkersInFarmData _workersData = WorkersInFarmData.empty();
   AdultsInformationData _adultsData = AdultsInformationData.empty();
+  
+  // Public getters for the private fields
+  VisitInformationData get visitInfoData => _visitInfoData;
+  IdentificationOfOwnerData get ownerData => _ownerData;
+  WorkersInFarmData get workersData => _workersData;
+  AdultsInformationData get adultsData => _adultsData;
+  int get currentPageIndex => _currentPageIndex;
 
   // Validation state
   final Map<int, List<String>> _validationErrors = {};
@@ -1637,6 +1656,89 @@ class CombinedFarmIdentificationPageState
     }
   }
 
+  /// Saves the form data
+  /// Returns true if save was successful, false otherwise
+  Future<bool> saveData() async {
+    try {
+      // Validate all pages before saving
+      for (int i = 0; i < _totalPages; i++) {
+        if (!_validatePage(i)) {
+          // If any page is invalid, show error and return false
+          final errors = _validationErrors[i] ?? [];
+          if (errors.isNotEmpty) {
+            _showValidationError(errors.first);
+          }
+          return false;
+        }
+      }
+
+      // All validations passed, proceed with save
+      // Here you would typically save the data to your database or state management
+      // Log detailed debug information about the data being saved
+      debugPrint('\n=== SAVING FORM DATA ===');
+      
+      // Visit Info
+      debugPrint('\n--- VISIT INFORMATION ---');
+      debugPrint('Respondent Name Correct: ${_visitInfoData.respondentNameCorrect ?? 'Not specified'}');
+      debugPrint('Corrected Name: ${_visitInfoData.correctedRespondentName.isNotEmpty ? _visitInfoData.correctedRespondentName : 'Not specified'}');
+      debugPrint('Nationality: ${_visitInfoData.respondentNationality ?? 'Not specified'}');
+      debugPrint('Country of Origin: ${_visitInfoData.countryOfOrigin ?? 'Not specified'}');
+      debugPrint('Other Country: ${_visitInfoData.otherCountry.isNotEmpty ? _visitInfoData.otherCountry : 'Not specified'}');
+      debugPrint('Is Farm Owner: ${_visitInfoData.isFarmOwner ?? 'Not specified'}');
+      debugPrint('Farm Ownership Type: ${_visitInfoData.farmOwnershipType ?? 'Not specified'}');
+      
+      // Owner Data
+      debugPrint('\n--- OWNER IDENTIFICATION ---');
+      debugPrint('Full JSON: ${_ownerData.toJson()}');
+      
+      // Workers Data
+      debugPrint('\n--- WORKERS IN FARM ---');
+      debugPrint('Full JSON: ${_workersData.toJson()}');
+      
+      // Adults Data
+      debugPrint('\n--- ADULTS INFORMATION ---');
+      debugPrint('Full JSON: ${_adultsData.toJson()}');
+      
+      debugPrint('\n=== END OF SAVED DATA ===\n');
+
+      return true;
+    } catch (e) {
+      debugPrint('Error saving form data: $e');
+      return false;
+    }
+  }
+
+  /// Validates the page at the given index and returns true if valid
+  bool _validatePage(int pageIndex) {
+    List<String> errors;
+    
+    switch (pageIndex) {
+      case 0:
+        errors = _validateVisitInformation();
+        break;
+      case 1:
+        errors = _validateOwnerIdentification();
+        break;
+      case 2:
+        errors = _validateWorkersInFarm();
+        break;
+      case 3:
+        errors = _validateAdultsInformation();
+        break;
+      default:
+        errors = [];
+    }
+    
+    // Store validation errors for UI display
+    if (errors.isNotEmpty) {
+      setState(() {
+        _validationErrors[pageIndex] = errors;
+      });
+      return false;
+    }
+    return true;
+  }
+
   /// Validates the current page and returns true if valid
   bool validateCurrentPage() {
     final errors = getCurrentPageErrors();
@@ -1673,49 +1775,30 @@ class CombinedFarmIdentificationPageState
     }
   }
 
-  /// Validation for Visit Information Page - FIXED
+  /// Validation for Visit Information Page - All fields are optional
   List<String> _validateVisitInformation() {
     final errors = <String>[];
     final data = _visitInfoData;
     
     // Debug: Log current visit info data
-    debugPrint('=== Visit Information Validation ===');
-    debugPrint('Respondent Name Correct: ${data.respondentNameCorrect}');
-    debugPrint('Corrected Name: ${data.correctedRespondentName}');
-    debugPrint('Nationality: ${data.respondentNationality}');
-    debugPrint('Country of Origin: ${data.countryOfOrigin}');
-    debugPrint('Other Country: ${data.otherCountry}');
-    debugPrint('Is Farm Owner: ${data.isFarmOwner}');
-    debugPrint('Farm Ownership Type: ${data.farmOwnershipType}');
-    debugPrint('===================================');
-
-    // Validate respondent name correctness
-    if (data.respondentNameCorrect == null) {
-      errors.add('Please specify if the respondent name is correct');
-    } else if (data.respondentNameCorrect == 'No') {
-      if (data.correctedRespondentName.isEmpty) {
-        errors.add('Please provide the correct respondent name');
-      }
-    }
-
-    // Validate nationality
-    if (data.respondentNationality == null) {
-      errors.add('Please specify the respondent\'s nationality');
-    } else if (data.respondentNationality == 'Non-Ghanaian') {
-      if (data.countryOfOrigin == null) {
-        errors.add('Please specify the country of origin');
-      } else if (data.countryOfOrigin == 'Other' && data.otherCountry.isEmpty) {
-        errors.add('Please specify the other country of origin');
-      }
-    }
-
-    // Validate farm ownership
-    if (data.isFarmOwner == null) {
-      errors.add('Please specify if the respondent is the farm owner');
-    } else if (data.farmOwnershipType == null) {
-      errors.add('Please specify the farm ownership type');
-    }
-
+    final debugInfo = '''
+=== Visit Information Validation ===
+Respondent Name Correct: ${data.respondentNameCorrect ?? 'Not specified'}
+Corrected Name: ${data.correctedRespondentName.isNotEmpty ? data.correctedRespondentName : 'Not specified'}
+Nationality: ${data.respondentNationality ?? 'Not specified'}
+Country of Origin: ${data.countryOfOrigin ?? 'Not specified'}
+Other Country: ${data.otherCountry.isNotEmpty ? data.otherCountry : 'Not specified'}
+Is Farm Owner: ${data.isFarmOwner ?? 'Not specified'}
+Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
+===================================
+''';
+    
+    // Print to console
+    debugPrint(debugInfo);
+    
+    // All fields are now optional, so no validation errors will be added
+    // The form will save whatever data is available
+    
     return errors;
   }
 
@@ -1724,34 +1807,13 @@ class CombinedFarmIdentificationPageState
     final errors = <String>[];
     final data = _ownerData;
 
-    // Validate owner name
-    if (data.ownerName.isEmpty) {
-      errors.add('Please enter the name of the owner');
-    }
-
-    // Validate owner first name
-    if (data.ownerFirstName.isEmpty) {
-      errors.add('Please enter the first name of the owner');
-    }
-
-    // Validate nationality
-    if (data.nationality == null) {
-      errors.add('Please specify the owner\'s nationality');
-    } else if (data.nationality == 'national') {
-      if (data.specificNationality == null) {
-        errors.add('Please specify the specific nationality');
-      } else if (data.specificNationality == 'other' && data.otherNationality.isEmpty) {
-        errors.add('Please specify the other nationality');
-      }
-    }
-
-    // Validate years with owner
-    if (data.yearsWithOwner.isEmpty) {
-      errors.add('Please specify how many years with current owner');
-    } else {
+    // All fields are optional, no validation needed
+    
+    // Only validate years if provided
+    if (data.yearsWithOwner.isNotEmpty) {
       final years = int.tryParse(data.yearsWithOwner);
       if (years == null || years < 0) {
-        errors.add('Please enter a valid number of years');
+        errors.add('Please enter a valid number of years or leave the field empty');
       }
     }
 
@@ -1957,79 +2019,37 @@ class CombinedFarmIdentificationPageState
     _notifyCanProceed();
   }
 
-  void _submitForm() {
-    // Validate all pages before submission
-    bool allPagesValid = true;
-    List<String> allErrors = [];
-
-    for (int i = 0; i < _totalPages; i++) {
-      _currentPageIndex = i;
-      final errors = getCurrentPageErrors();
-      if (errors.isNotEmpty) {
-        allPagesValid = false;
-        allErrors.addAll(errors);
-        _showValidationError(errors.first);
-        break;
+  Future<void> _submitForm() async {
+    try {
+      // Save all current data without triggering navigation
+      await saveCurrentPageData();
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Form saved successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      
+      // Don't call widget.onSubmit() here as it might trigger navigation
+      // Just save the data and stay on the current page
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving form: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
-
-    if (!allPagesValid) {
-      return;
-    }
-
-    final allData = {
-      'visitInformation': _visitInfoData.toMap(),
-      'ownerIdentification': _ownerData.toMap(),
-      'workersInFarm': _workersData.toMap(),
-      'adultsInformation': _adultsData.toMap(),
-    };
-
-    print('Submitting all data: $allData');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Submit Survey',
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600, color: Colors.blue.shade700)),
-        content: Text(
-            'Are you sure you want to submit the farm identification survey?',
-            style: GoogleFonts.inter(color: Colors.grey.shade700)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel',
-                style: GoogleFonts.inter(color: Colors.grey.shade600)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Survey submitted successfully!',
-                      style: GoogleFonts.inter()),
-                  backgroundColor: Colors.green.shade600,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-              );
-              widget.onSubmit?.call();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child:
-                Text('Submit', style: GoogleFonts.inter(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -2084,6 +2104,7 @@ class CombinedFarmIdentificationPageState
                   workersData: _workersData,
                   adultsData: _adultsData,
                   validationErrors: _validationErrors[0] ?? [],
+                  formKey: visitInfoFormKey,
                 ),
 
                 // Page 2: Identification of Owner
@@ -2104,7 +2125,8 @@ class CombinedFarmIdentificationPageState
                 AdultsInformationContent(
                   data: _adultsData,
                   onDataChanged: _updateAdultsData,
-                  validationErrors: _validationErrors[3] ?? [],
+                  validationErrors: _currentPageIndex == 3 ? _validationErrors[3] ?? [] : const [],
+                  formKey: adultsFormKey,
                 )
               ],
             ),
@@ -2137,5 +2159,70 @@ class CombinedFarmIdentificationPageState
       }
     });
     _notifyCanProceed();
+  }
+
+  /// Saves the current page's data without validation
+  Future<void> saveCurrentPageData() async {
+    try {
+      // Get the current page data and save it
+      switch (_currentPageIndex) {
+        case 0: // Visit Information
+          if (visitInfoFormKey.currentState != null) {
+            visitInfoFormKey.currentState!.save();
+            // Trigger parent to save this page's data
+            if (widget.onPageChanged != null) {
+              widget.onPageChanged!(_currentPageIndex);
+            }
+          }
+          break;
+          
+        case 1: // Owner Identification
+          // The _ownerData is already updated through _updateOwnerData
+          if (widget.onPageChanged != null) {
+            widget.onPageChanged!(_currentPageIndex);
+          }
+          break;
+          
+        case 2: // Workers in Farm
+          // The _workersData is already updated through _updateWorkersData
+          if (widget.onPageChanged != null) {
+            widget.onPageChanged!(_currentPageIndex);
+          }
+          break;
+          
+        case 3: // Adults Information
+          // The _adultsData is already updated through _updateAdultsData
+          if (widget.onPageChanged != null) {
+            widget.onPageChanged!(_currentPageIndex);
+          }
+          break;
+      }
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Page data saved successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      
+      return Future.value();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving page data: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return Future.error(e);
+    }
   }
 }

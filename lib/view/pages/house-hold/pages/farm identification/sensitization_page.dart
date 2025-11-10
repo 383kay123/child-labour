@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-
-import '../../../../../controller/models/sensitization_model.dart';
+import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/db/daos/sensitization_dao.dart';
+import 'package:human_rights_monitor/controller/models/sensitization_model.dart';
 
 /// A reusable widget that displays a section title with consistent styling.
 class SectionTitle extends StatelessWidget {
@@ -72,6 +73,38 @@ class SensitizationPage extends StatefulWidget {
 class _SensitizationPageState extends State<SensitizationPage> {
   late bool _isAcknowledged;
   bool _isCheckboxValid = true;
+  
+  // Expose a method to validate the form
+  bool validate() {
+    setState(() {
+      _isCheckboxValid = _isAcknowledged;
+    });
+    return _isCheckboxValid;
+  }
+
+  /// Saves the sensitization acknowledgment data to the database
+  /// [farmIdentificationId] - The ID of the farm identification record to associate with this data
+  Future<bool> saveData(int farmIdentificationId) async {
+    try {
+      if (!_isAcknowledged) {
+        debugPrint('Sensitization not acknowledged, skipping save');
+        return false;
+      }
+
+      // Get the database helper instance
+      final db = LocalDBHelper.instance;
+      final sensitizationDao = SensitizationDao(dbHelper: db);
+      
+      // Use the acknowledge method which handles both insert and update
+      await sensitizationDao.acknowledge(farmIdentificationId);
+      
+      debugPrint('✅ Sensitization data saved successfully');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error saving sensitization data: $e');
+      return false;
+    }
+  }
 
   @override
   void initState() {
@@ -83,12 +116,13 @@ class _SensitizationPageState extends State<SensitizationPage> {
     setState(() {
       _isAcknowledged = value;
       _isCheckboxValid = true; // Clear error when user interacts
+      // Update the parent immediately when checkbox state changes
       widget.onSensitizationChanged(
-        widget.sensitizationData.copyWith(
-          isAcknowledged: value,
-          acknowledgedAt: value ? DateTime.now() : null,
-        ),
-      );
+  widget.sensitizationData.copyWith(
+    isAcknowledged: value,
+    acknowledgedAt: value ? DateTime.now() : null,
+  ),
+);
     });
   }
 
@@ -142,7 +176,7 @@ class _SensitizationPageState extends State<SensitizationPage> {
               child: Row(
                 children: [
                   Checkbox(
-                    value: widget.sensitizationData.isAcknowledged ?? false,
+                    value: _isAcknowledged,
                     onChanged: (bool? value) {
                       _onCheckboxChanged(value ?? false);
                     },

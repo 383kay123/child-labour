@@ -22,13 +22,20 @@ class _Spacing {
 }
 
 class EndOfCollectionPage extends StatefulWidget {
-  const EndOfCollectionPage({Key? key}) : super(key: key);
+  final VoidCallback onComplete;
+  final VoidCallback onPrevious;
+  
+  const EndOfCollectionPage({
+    Key? key,
+    required this.onComplete,
+    required this.onPrevious,
+  }) : super(key: key);
 
   @override
-  _EndOfCollectionPageState createState() => _EndOfCollectionPageState();
+  State<EndOfCollectionPage> createState() => EndOfCollectionPageState();
 }
 
-class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
+class EndOfCollectionPageState extends State<EndOfCollectionPage> {
   // Form controllers and state
   final TextEditingController _remarksController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
@@ -50,10 +57,17 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
 
   /// Tag for logging purposes
   static const String _logTag = 'EndOfCollectionPage';
+  
+  // Public getters for private fields
+  File? get respondentImage => _respondentImage;
+  File? get producerSignatureImage => _producerSignatureImage;
+  String? get gpsCoordinates => _gpsCoordinates;
+  TimeOfDay? get endTime => _endTime;
+  TextEditingController get remarksController => _remarksController;
 
   /// Validates if all required fields are filled
   /// Returns true if all required fields have values, false otherwise
-  bool get _isFormComplete {
+  bool get isFormComplete {
     final isComplete = _respondentImage != null &&
         _producerSignatureImage != null &&
         _gpsCoordinates != null &&
@@ -172,10 +186,10 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
   /// Submits the form and navigates to the completion page
   /// Logs all submitted data before navigation
   /// If the form is not complete, logs a warning and shows an error message to the user
-  Future<void> _submitForm() async {
+  Future<void> submitForm() async {
     developer.log('Form submission initiated', name: _logTag);
 
-    if (_isFormComplete) {
+    if (isFormComplete) {
       try {
         // Log all submitted data
         developer.log('Form submission data:', name: _logTag);
@@ -192,18 +206,18 @@ class _EndOfCollectionPageState extends State<EndOfCollectionPage> {
             '- Additional Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'None'}',
             name: _logTag);
 
-        // Update the survey status to submitted (1)
-        final dbHelper = LocalDBHelper.instance;
-        final latestSurvey = await dbHelper.getLatestCoverPageData();
+        // // Update the survey status to submitted (1)
+        // final dbHelper = LocalDBHelper.instance;
+        // final latestSurvey = await dbHelper.getLatestCoverPageData();
 
-        if (latestSurvey != null) {
-          await dbHelper.updateCoverPageStatus(
-            id: latestSurvey['id'],
-            status: 1, // 1 for submitted
-            updatedAt: DateTime.now().toIso8601String(),
-          );
-          developer.log('Updated survey status to submitted', name: _logTag);
-        }
+        // if (latestSurvey != null) {
+        //   await dbHelper.updateCoverPageStatus(
+        //     id: latestSurvey['id'],
+        //     status: 1, // 1 for submitted
+           
+        //   );
+        //   developer.log('Updated survey status to submitted', name: _logTag);
+        // }
 
         // Navigate to completion page
         if (mounted) {

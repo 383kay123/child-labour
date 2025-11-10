@@ -39,6 +39,14 @@ class SensitizationData {
 
   @override
   String toString() => 'SensitizationData(isAcknowledged: $isAcknowledged, acknowledgedAt: $acknowledgedAt)';
+
+  /// Converts the [SensitizationData] object to a Map for database storage.
+  Map<String, dynamic> toMap() {
+    return {
+      'is_acknowledged': isAcknowledged ? 1 : 0,
+      'acknowledged_at': acknowledgedAt?.toIso8601String(),
+    };
+  }
 }
 
 /// A class containing all the sensitization content for the application.

@@ -2,6 +2,9 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/db/daos/sensitization_questions_dao.dart';
+import 'package:human_rights_monitor/controller/models/sensitization_questions_model.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../theme/app_theme.dart';
@@ -16,71 +19,182 @@ class _Spacing {
 }
 
 class SensitizationQuestionsPage extends StatefulWidget {
-  const SensitizationQuestionsPage({Key? key}) : super(key: key);
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final bool validateOnly;
+
+  const SensitizationQuestionsPage({
+    Key? key,
+    required this.onPrevious,
+    required this.onNext,
+    this.validateOnly = false,
+  }) : super(key: key);
 
   @override
-  _SensitizationQuestionsPageState createState() =>
-      _SensitizationQuestionsPageState();
+  SensitizationQuestionsPageState createState() =>
+      SensitizationQuestionsPageState();
 }
 
-class _SensitizationQuestionsPageState
-    extends State<SensitizationQuestionsPage> {
+class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> {
   // Form key for validation and form state management
   final _formKey = GlobalKey<FormState>();
-
-  /// Tracks if household has been sensitized
-  bool? hasSensitizedHousehold;
-
-  /// Tracks if sensitization on protection was conducted
-  bool? hasSensitizedOnProtection;
-
-  /// Tracks if sensitization on safe labor was conducted
-  bool? hasSensitizedOnSafeLabour;
-
-  /// Controller for female adults count input
+  
+  // Form controllers
   final TextEditingController _femaleAdultsController = TextEditingController();
-
-  /// Controller for male adults count input
   final TextEditingController _maleAdultsController = TextEditingController();
-
-  /// Tracks if picture consent was given
-  bool? _consentForPicture;
-
-  /// Controller for consent reason input (when consent is not given)
-  final TextEditingController _consentReasonController =
-      TextEditingController();
-
-  /// Stores the captured sensitization image
-  File? _sensitizationImage;
-
-  /// Stores the captured household with user image
-  File? _householdWithUserImage;
-
-  /// Image picker instance for camera operations
-  final ImagePicker _picker = ImagePicker();
-
-  /// Controller for capturing user reactions/feedback
+  final TextEditingController _consentReasonController = TextEditingController();
   final TextEditingController _reactionController = TextEditingController();
-
-  /// Tag for logging purposes
+  
+  // Form state variables
+  bool? hasSensitizedHousehold;
+  bool? hasSensitizedOnProtection;
+  bool? hasSensitizedOnSafeLabour;
+  bool? _consentForPicture;
+  
+  // Image handling
+  File? _sensitizationImage;
+  File? _householdWithUserImage;
+  final ImagePicker _picker = ImagePicker();
+  
+  // For logging
   static const String _logTag = 'SensitizationQuestionsPage';
 
-  /// Validates if all required form fields are filled
-  bool get _isFormComplete {
-    final isComplete = hasSensitizedHousehold != null &&
-        hasSensitizedOnProtection != null &&
-        hasSensitizedOnSafeLabour != null &&
-        _femaleAdultsController.text.isNotEmpty &&
-        _maleAdultsController.text.isNotEmpty &&
-        _consentForPicture != null &&
-        (_consentForPicture == true ||
-            _consentReasonController.text.isNotEmpty) &&
-        _sensitizationImage != null &&
-        _householdWithUserImage != null &&
-        _reactionController.text.isNotEmpty;
+ 
+  /// Validates the form and returns true if all fields are valid
+  /// [silent] - If true, won't show error messages (used for parent validation)
+  bool validateForm({bool silent = false}) {
+    // First validate the form state
+    if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
+      if (!silent) {
+        _showErrorSnackBar('Please fill in all required fields');
+      }
+      return false;
+    }
 
-    developer.log('Form validation - Complete: $isComplete', name: _logTag);
-    return isComplete;
+    bool isValid = true;
+    String? firstError;
+    
+    // Check each required field and track the first error
+    if (hasSensitizedHousehold == null) {
+      firstError ??= 'Please indicate if you have sensitized the household members';
+      isValid = false;
+    }
+    
+    if (hasSensitizedOnProtection == null) {
+      firstError ??= 'Please indicate if you have sensitized on protection';
+      isValid = false;
+    }
+    
+    if (hasSensitizedOnSafeLabour == null) {
+      firstError ??= 'Please indicate if you have sensitized on safe labor';
+      isValid = false;
+    }
+    
+    if (_femaleAdultsController.text.isEmpty) {
+      firstError ??= 'Please enter the number of female adults';
+      isValid = false;
+    }
+    
+    if (_maleAdultsController.text.isEmpty) {
+      firstError ??= 'Please enter the number of male adults';
+      isValid = false;
+    }
+    
+    if (_consentForPicture == null) {
+      firstError ??= 'Please indicate if consent for picture was given';
+      isValid = false;
+    } else if (_consentForPicture == false && _consentReasonController.text.isEmpty) {
+      firstError ??= 'Please provide a reason for not giving consent';
+      isValid = false;
+    }
+    
+    if (_sensitizationImage == null) {
+      firstError ??= 'Please take a sensitization picture';
+      isValid = false;
+    }
+    
+    if (_householdWithUserImage == null) {
+      firstError ??= 'Please take a picture with the household';
+      isValid = false;
+    }
+    
+    if (_reactionController.text.isEmpty) {
+      firstError ??= 'Please provide your reaction/feedback';
+      isValid = false;
+    }
+    
+    // Only show error message if not in silent mode and there's an error
+    if (!silent && !isValid && firstError != null) {
+      _showErrorSnackBar(firstError);
+    }
+    
+    developer.log('Form validation - Valid: $isValid', name: _logTag);
+    return isValid;
+  }
+  
+  /// Saves the sensitization questions data to the database
+  /// [farmIdentificationId] - The ID of the farm identification record to associate with this data
+  Future<bool> saveData(int farmIdentificationId) async {
+    try {
+      // First validate the form
+      if (!validateForm(silent: true)) {
+        developer.log('Form validation failed, not saving data', name: _logTag);
+        return false;
+      }
+
+      // Get the database helper instance
+      final questionsDao = SensitizationQuestionsDao(dbHelper: LocalDBHelper.instance);
+      
+      // Create a SensitizationQuestionsData model with the current state
+      final model = SensitizationQuestionsData(
+        hasSensitizedHousehold: hasSensitizedHousehold,
+        hasSensitizedOnProtection: hasSensitizedOnProtection,
+        hasSensitizedOnSafeLabour: hasSensitizedOnSafeLabour,
+        femaleAdultsCount: _femaleAdultsController.text,
+        maleAdultsCount: _maleAdultsController.text,
+        consentForPicture: _consentForPicture,
+        consentReason: _consentForPicture == false ? _consentReasonController.text : '',
+        sensitizationImagePath: _sensitizationImage?.path,
+        householdWithUserImagePath: _householdWithUserImage?.path,
+        parentsReaction: _reactionController.text,
+      );
+
+      // Check if a record already exists for this farm identification
+      final existingRecord = await questionsDao.getByFarmIdentificationId(farmIdentificationId);
+      
+      // Save the data
+      if (existingRecord == null) {
+        // Insert new record
+        await questionsDao.insert(model, farmIdentificationId);
+      } else {
+        // Update existing record - use the ID from the existing record
+        // Note: This assumes the SensitizationQuestionsDao.update method takes a farmId parameter
+        await questionsDao.update(model, farmIdentificationId);
+      }
+      
+      developer.log('✅ Sensitization questions data saved successfully', name: _logTag);
+      return true;
+    } catch (e) {
+      developer.log('❌ Error saving sensitization questions data: $e', name: _logTag);
+      return false;
+    }
+  }
+  
+  /// Shows an error message to the user
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
   }
 
   /// Captures an image using the device camera
@@ -385,35 +499,35 @@ class _SensitizationQuestionsPageState
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      // backgroundColor:
-      //     isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
       // appBar: AppBar(
-      //   title: Text(
-      //     'Sensitization Questions',
-      //     style: theme.textTheme.titleLarge?.copyWith(
-      //       color: Colors.white,
-      //       fontWeight: FontWeight.w600,
-      //     ),
-      //   ),
-      //   backgroundColor: AppTheme.primaryColor,
+      //   title: const Text('Sensitization Questions'),
+      //   backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
       //   elevation: 0,
-      //   centerTitle: true,
+      //   iconTheme: IconThemeData(
+      //     color: isDark ? Colors.white : AppTheme.primaryColor,
+      //   ),
       // ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(_Spacing.lg),
+          SingleChildScrollView(
+            padding: const EdgeInsets.only(
+              left: 16.0,
+              right: 16.0,
+              top: 16.0,
+              bottom: 100.0, // Space for bottom buttons
+            ),
+            child: Form(
+              key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Question 1: Good Parenting Sensitization
+                  // Question 1: Sensitization Status
                   _buildQuestionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '1. Have you sensitized the household members on Good Parenting?',
+                          '1. Have you sensitized the household members?',
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: isDark
                                 ? AppTheme.darkTextSecondary
@@ -618,31 +732,34 @@ class _SensitizationQuestionsPageState
                     ),
                   ),
 
-                  // Question 7: Sensitization Session Picture
-                  _buildImageSection(
-                    title:
-                        '7. Please take a picture of the sensitization session',
-                    note:
-                        'Note: Please take a picture of the household with your face showing as well as the household members',
-                    image: _sensitizationImage,
-                    onTakePicture: () => _takePicture(false),
-                    buttonText: _sensitizationImage == null
-                        ? 'Take Picture of Session'
-                        : 'Retake Session Picture',
-                  ),
+                  // Show image sections only if consent was given
+                  if (_consentForPicture == true) ...[
+                    // Question 7: Sensitization Session Picture
+                    _buildImageSection(
+                      title:
+                          '7. Please take a picture of the **sensitization being done** with the your back facing the camera and the faces of the household showing',
+                      note:
+                          'Note: Please take a picture of the household with your face showing as well as the household members',
+                      image: _sensitizationImage,
+                      onTakePicture: () => _takePicture(false),
+                      buttonText: _sensitizationImage == null
+                          ? 'Take Picture of Session'
+                          : 'Retake Session Picture',
+                    ),
 
-                  // Question 8: Household with User Picture
-                  _buildImageSection(
-                    title:
-                        '8. Please take a picture of the household with your face showing',
-                    note:
-                        'Note: Ensure your face is clearly visible along with the household members',
-                    image: _householdWithUserImage,
-                    onTakePicture: () => _takePicture(true),
-                    buttonText: _householdWithUserImage == null
-                        ? 'Take Picture with Household'
-                        : 'Retake Household Picture',
-                  ),
+                    // Question 8: Household with User Picture
+                    _buildImageSection(
+                      title:
+                          '8. Please take a picture of the household with your face showing',
+                      note:
+                          'Note: Ensure your face is clearly visible along with the household members',
+                      image: _householdWithUserImage,
+                      onTakePicture: () => _takePicture(true),
+                      buttonText: _householdWithUserImage == null
+                          ? 'Take Picture with Household'
+                          : 'Retake Household Picture',
+                    ),
+                  ],
 
                   // Question 9: Parents' Reaction
                   _buildQuestionCard(
@@ -656,11 +773,13 @@ class _SensitizationQuestionsPageState
                     ),
                   ),
 
-                  const SizedBox(height: 80), // Space for bottom button
+                  const SizedBox(height: 20), // Extra space before the bottom buttons
                 ],
               ),
             ),
           ),
+          
+        
         ],
       ),
     );

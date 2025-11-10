@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 class ChildrenHouseholdModel {
+  final int? id;
   final String? hasChildrenInHousehold;
   final int numberOfChildren;
   final int children5To17;
@@ -6,6 +9,7 @@ class ChildrenHouseholdModel {
   final DateTime? timestamp;
 
   ChildrenHouseholdModel({
+    this.id,
     this.hasChildrenInHousehold,
     this.numberOfChildren = 0,
     this.children5To17 = 0,
@@ -25,6 +29,7 @@ class ChildrenHouseholdModel {
 
   factory ChildrenHouseholdModel.fromJson(Map<String, dynamic> json) {
     return ChildrenHouseholdModel(
+      id: json['id'],
       hasChildrenInHousehold: json['hasChildrenInHousehold'],
       numberOfChildren: json['numberOfChildren'] ?? 0,
       children5To17: json['children5To17'] ?? 0,
@@ -36,8 +41,25 @@ class ChildrenHouseholdModel {
     );
   }
 
+  factory ChildrenHouseholdModel.fromMap(Map<String, dynamic> map) {
+    return ChildrenHouseholdModel(
+      id: map['id'],
+      hasChildrenInHousehold: map['has_children_in_household'],
+      numberOfChildren: map['number_of_children'] ?? 0,
+      children5To17: map['children_5_to_17'] ?? 0,
+      childrenDetails: map['children_details'] != null
+          ? List<Map<String, dynamic>>.from(
+              jsonDecode(map['children_details']))
+          : [],
+      timestamp: map['created_at'] != null
+          ? DateTime.parse(map['created_at'])
+          : DateTime.now(),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'hasChildrenInHousehold': hasChildrenInHousehold,
       'numberOfChildren': numberOfChildren,
       'children5To17': children5To17,
@@ -47,6 +69,7 @@ class ChildrenHouseholdModel {
   }
 
   ChildrenHouseholdModel copyWith({
+    int? id,
     String? hasChildrenInHousehold,
     int? numberOfChildren,
     int? children5To17,

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+
 import 'Startsurvey.dart';
+
 
 class Homepage extends StatelessWidget {
   const Homepage({super.key});
@@ -9,6 +11,35 @@ class Homepage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // FloatingActionButton(
+          //   heroTag: 'farmer_identification',
+          //   onPressed: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //         builder: (context) => const FarmerIdentificationTestPage(),
+          //       ),
+          //     );
+          //   },
+          //   backgroundColor: Colors.purple,
+          //   tooltip: 'Farmer Identification',
+          //   child: const Icon(Icons.agriculture, color: Colors.white),
+          // ),
+          // const SizedBox(height: 10),
+          // FloatingActionButton(
+          //   heroTag: 'test_cover',
+          //   onPressed: () {
+          //     Navigator.pushNamed(context, '/test-cover');
+          //   },
+          //   backgroundColor: Colors.blue,
+          //   child: const Icon(Icons.article, color: Colors.white),
+          // ),
+          // const SizedBox(height: 10),
+        ],
+      ),
       // backgroundColor: const Color(0xFFF8F9FA),
       // appBar: AppBar(
       //   backgroundColor: AppTheme.primaryColor,

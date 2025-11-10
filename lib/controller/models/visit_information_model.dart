@@ -44,7 +44,8 @@ class VisitInformationData {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  /// Converts the model to a JSON-compatible map
+  Map<String, dynamic> toJson() {
     return {
       'respondentNameCorrect': respondentNameCorrect,
       'respondentNationality': respondentNationality,
@@ -89,4 +90,21 @@ class VisitInformationData {
   String toString() {
     return 'VisitInformationData(respondentNameCorrect: $respondentNameCorrect, respondentNationality: $respondentNationality, countryOfOrigin: $countryOfOrigin, isFarmOwner: $isFarmOwner, farmOwnershipType: $farmOwnershipType, correctedRespondentName: $correctedRespondentName, respondentOtherNames: $respondentOtherNames, otherCountry: $otherCountry)';
   }
+  
+  /// Creates a VisitInformationData from a JSON map
+  factory VisitInformationData.fromJson(Map<String, dynamic> json) {
+    return VisitInformationData(
+      respondentNameCorrect: json['respondentNameCorrect'],
+      respondentNationality: json['respondentNationality'],
+      countryOfOrigin: json['countryOfOrigin'],
+      isFarmOwner: json['isFarmOwner'],
+      farmOwnershipType: json['farmOwnershipType'],
+      correctedRespondentName: json['correctedRespondentName'] ?? '',
+      respondentOtherNames: json['respondentOtherNames'] ?? '',
+      otherCountry: json['otherCountry'] ?? '',
+    );
+  }
+  
+  /// For backward compatibility
+  Map<String, dynamic> toMap() => toJson();
 }

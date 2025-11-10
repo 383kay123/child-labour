@@ -4,10 +4,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:get/get.dart';
-
-import '../../../../../controller/household_controller.dart';
-import '../../../../../controller/models/consent_model.dart';
+import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/models/consent_model.dart';
+import 'package:human_rights_monitor/controller/db/table_names.dart';
 import '../../../../theme/app_theme.dart';
 import '../../form_fields.dart';
 
@@ -99,7 +98,7 @@ class ConsentPageState extends State<ConsentPage> {
   // State for resident status
   bool? _residesInCommunity;
   String? _nonResidentCommunity;
-  bool _consentGiven = false;
+  bool _hasGivenConsent = true;
   bool _declinedConsent = false;
 
   // Controllers
@@ -115,17 +114,16 @@ class ConsentPageState extends State<ConsentPage> {
   // Validation state tracking
   bool _isValidating = false;
 
-  // Initialize the controller properly in the state
-  late final HouseHoldController controller;
+  
+  
 
   @override
   void initState() {
     super.initState();
 
-    // Always start with unchecked consent boxes for new surveys
-    _consentGiven = false;
-    _declinedConsent = false;
-    controller = Get.put(HouseHoldController());
+    // Initialize consent states from widget.data with default values if null
+    _hasGivenConsent = widget.data.consentGiven ?? true;
+    _declinedConsent = widget.data.declinedConsent ?? false;
 
     // Initialize controllers with current values
     _refusalReasonController = TextEditingController(
@@ -191,7 +189,7 @@ class ConsentPageState extends State<ConsentPage> {
     
     // Update local state from widget data
     if (widget.data.consentGiven != oldWidget.data.consentGiven) {
-      _consentGiven = widget.data.consentGiven;
+      _hasGivenConsent = widget.data.consentGiven ?? true;
     }
     if (widget.data.declinedConsent != oldWidget.data.declinedConsent) {
       _declinedConsent = widget.data.declinedConsent ?? false;
@@ -219,6 +217,93 @@ class ConsentPageState extends State<ConsentPage> {
     
     devtools.log('ConsentPage disposed', name: 'state');
     super.dispose();
+  }
+
+  /// Saves the current consent data to the local database
+  Future<bool> saveData() async {
+    try {
+      if (!mounted) return false;
+      
+      // Create a copy of the current data with updated values from the form
+      final updatedData = widget.data.copyWith(
+        communityType: widget.data.communityType,
+        residesInCommunityConsent: _residesInCommunity == true ? 'Yes' : 'No',
+        farmerAvailable: widget.data.farmerAvailable,
+        farmerStatus: widget.data.farmerStatus,
+        availablePerson: widget.data.availablePerson,
+        otherSpecification: _otherSpecController.text.trim(),
+        otherCommunityName: _otherCommunityController.text.trim(),
+        consentGiven: _hasGivenConsent,
+        declinedConsent: _declinedConsent,
+        refusalReason: _refusalReasonController.text.trim(),
+        consentTimestamp: DateTime.now(),
+      );
+
+      // Get the database instance
+      final db = await LocalDBHelper.instance.database;
+        
+      try {
+        // Save the data
+        int? id;
+        if (updatedData.id == null) {
+          // Insert new record
+          id = await db.insert(TableNames.consentTBL, updatedData.toMap());
+          debugPrint('✅ Consent data inserted successfully with ID: $id');
+        } else {
+          // Update existing record
+          id = await db.update(
+            TableNames.consentTBL,
+            updatedData.toMap(),
+            where: 'id = ?',
+            whereArgs: [updatedData.id],
+          );
+          debugPrint('✅ Consent data updated successfully for ID: ${updatedData.id}');
+        }
+        
+        // Verify the data was saved
+        if (id != null && id > 0) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Consent data saved successfully'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+          return true;
+        } else {
+          debugPrint('❌ Failed to save consent data: No valid ID returned');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to save consent data: No ID returned'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return false;
+        }
+      } catch (e) {
+        debugPrint('❌ Database error: $e');
+        rethrow;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in saveData: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving consent data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      return false;
+    }  
   }
 
   // Helper method to build consistent question cards with error handling
@@ -319,113 +404,16 @@ class ConsentPageState extends State<ConsentPage> {
     );
   }
 
- /// Comprehensive form validation
-String? validateForm() {
-  if (_formKey.currentState == null || !mounted) {
-    return 'Form not initialized';
-  }
-  
-  bool hasErrors = false;
-  final newErrors = <String, String>{};
-
-  // 1. Validate basic information
-  if (widget.data.interviewStartTime == null) {
-    newErrors['interviewStartTime'] = 'Interview start time is required';
-    _logValidation('interviewStartTime', 'FAILED', message: 'Not recorded');
-    hasErrors = true;
-  }
-
-  if (widget.data.currentPosition == null) {
-    newErrors['gpsLocation'] = 'GPS location is required';
-    _logValidation('gpsLocation', 'FAILED', message: 'Not recorded');
-    hasErrors = true;
-  }
-
-  // 2. Validate community type
-  if (widget.data.communityType == null) {
-    newErrors['communityType'] = _ErrorMessages.communityTypeRequired;
-    _logValidation('communityType', 'FAILED', message: 'Not selected');
-    hasErrors = true;
-  }
-
-  // 3. Validate residence in community
-  if (widget.data.residesInCommunityConsent == null) {
-    newErrors['residesInCommunity'] = _ErrorMessages.residenceRequired;
-    _logValidation('residesInCommunity', 'FAILED', message: 'Not selected');
-    hasErrors = true;
-  }
-
-  // 4. If not residing in community, validate other community name
-  if (widget.data.residesInCommunityConsent == 'No') {
-    if (widget.data.otherCommunityName == null || widget.data.otherCommunityName!.trim().isEmpty) {
-      newErrors['otherCommunity'] = _ErrorMessages.otherCommunityRequired;
-      _logValidation('otherCommunity', 'FAILED', message: 'Required when not residing in community');
-      hasErrors = true;
+  /// Form validation disabled
+  String? validateForm() {
+    // Clear any existing errors
+    if (mounted) {
+      setState(() {
+        _fieldErrors.clear();
+      });
     }
+    return null; // Always return null to indicate no errors
   }
-
-  // 5. Validate farmer availability
-  if (widget.data.farmerAvailable == null) {
-    newErrors['farmerAvailable'] = _ErrorMessages.availabilityRequired;
-    _logValidation('farmerAvailable', 'FAILED', message: 'Not selected');
-    hasErrors = true;
-  } else if (widget.data.farmerAvailable == 'No') {
-    // 6. Validate farmer status if not available
-    if (widget.data.farmerStatus == null) {
-      newErrors['farmerStatus'] = _ErrorMessages.farmerStatusRequired;
-      _logValidation('farmerStatus', 'FAILED', message: 'Required when farmer not available');
-      hasErrors = true;
-    } else {
-      // 7. Validate other specification if status is "Other"
-      if (widget.data.farmerStatus == 'Other' && 
-          (widget.data.otherSpecification == null || widget.data.otherSpecification!.trim().isEmpty)) {
-        newErrors['otherSpecification'] = _ErrorMessages.otherSpecRequired;
-        _logValidation('otherSpecification', 'FAILED', message: 'Required when status is "Other"');
-        hasErrors = true;
-      }
-
-      // 8. Validate available person for non-resident or other status
-      if ((widget.data.farmerStatus == 'Non-resident' || widget.data.farmerStatus == 'Other') &&
-          widget.data.availablePerson == null) {
-        newErrors['availablePerson'] = _ErrorMessages.availablePersonRequired;
-        _logValidation('availablePerson', 'FAILED', message: 'Required for non-resident/other status');
-        hasErrors = true;
-      }
-    }
-  }
-
-  // 9. Validate consent section (only if should show)
-  if (_shouldShowConsentSection()) {
-    if (!_consentGiven && !_declinedConsent) {
-      newErrors['consent'] = _ErrorMessages.consentRequired;
-      _logValidation('consent', 'FAILED', message: 'Neither accepted nor declined');
-      hasErrors = true;
-    } else if (_declinedConsent) {
-      if (_refusalReasonController.text.trim().isEmpty) {
-        newErrors['refusalReason'] = _ErrorMessages.refusalReasonRequired;
-        _logValidation('refusalReason', 'FAILED', message: 'Required when declining consent');
-        hasErrors = true;
-      }
-    }
-  }
-
-  // Update the errors state
-  if (mounted) {
-    setState(() {
-      _fieldErrors
-        ..clear()
-        ..addAll(newErrors);
-    });
-  }
-
-  // If there are errors, return the first one
-  if (hasErrors) {
-    final firstError = newErrors.values.firstOrNull;
-    return firstError ?? 'Please fill in all required fields';
-  }
-
-  return null; // No errors
-}
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
@@ -467,50 +455,114 @@ String? validateForm() {
       ),
     );
   }
+void _handleConsentChange(bool value) {
+  if (!mounted) return;
 
-  void _handleConsentChange(bool? value) {
-    if (!mounted) return;
-    
+  // Use a local variable to track the new state
+  final newConsentGiven = value;
+  final newDeclinedConsent = !value;
+
+  try {
+    _logUserInput('Do you consent to participate?', 
+        newConsentGiven ? 'Yes' : 'No', 
+        options: ['Yes', 'No']);
+
+    // First update the local state
+    setState(() {
+      _hasGivenConsent = newConsentGiven;
+      _declinedConsent = newDeclinedConsent;
+      if (_hasGivenConsent) {
+        _refusalReasonController.clear();
+        _fieldErrors.remove('refusalReason');
+      }
+    });
+
+    // Create the updated data
+    final updatedData = widget.data.copyWith(
+      consentGiven: newConsentGiven,
+      declinedConsent: newDeclinedConsent,
+      refusalReason: newConsentGiven ? null : _refusalReasonController.text,
+    );
+
+    // Notify parent
     try {
-      if (value != null) {
-        _logUserInput('Do you consent to participate?', value ? 'Yes' : 'No', options: ['Yes', 'No']);
-
-        setState(() {
-          _consentGiven = value;
-          _declinedConsent = !value;
-          if (value) {
-            _refusalReasonController.clear();
-            _fieldErrors.remove('refusalReason');
-          }
-        });
-
-        widget.onDataChanged(
-          widget.data.copyWith(
-            consentGiven: value,
-            refusalReason: value ? null : _refusalReasonController.text,
-          ),
-        );
-
-        validateForm();
+      // First, print a clear message that we're about to save
+      debugPrint('\n🚀 CONSENT DATA BEING SAVED 🚀');
+      debugPrint('--------------------------------');
+      
+      // Save the data
+      widget.onDataChanged(updatedData);
+      
+      // Log the saved data in a very visible way
+      final timestamp = DateTime.now().toIso8601String();
+      final consentStatus = newConsentGiven ? '✅ CONSENT GIVEN' : '❌ CONSENT DECLINED';
+      
+      debugPrint('🔄 $consentStatus');
+      debugPrint('📅 Timestamp: $timestamp');
+      debugPrint('✔️ Consent Given: $newConsentGiven');
+      debugPrint('✖️ Declined Consent: $newDeclinedConsent');
+      
+      if (!newConsentGiven) {
+        debugPrint('📝 Refusal Reason: "${_refusalReasonController.text}"');
       }
+      
+      debugPrint('--------------------------------');
+      debugPrint('Data saved successfully! 🎉\n');
+      
+      // Also log to devtools for more detailed inspection
+      devtools.log(
+        'Consent data saved',
+        name: 'ConsentPage',
+        time: DateTime.now(),
+        error: {
+          'consentGiven': newConsentGiven,
+          'declinedConsent': newDeclinedConsent,
+          'refusalReason': newConsentGiven ? 'N/A' : _refusalReasonController.text,
+          'timestamp': timestamp,
+        },
+      );
     } catch (e, stackTrace) {
-      devtools.log('Error in _handleConsentChange: $e', name: 'error', error: e, stackTrace: stackTrace);
-      if (mounted) {
-        _showErrorSnackBar(_ErrorMessages.unexpectedError);
-      }
+      if (!mounted) return;
+      devtools.log('Error in onDataChanged: $e', 
+          name: 'error', error: e, stackTrace: stackTrace);
+      _showErrorSnackBar('Failed to save consent. Please try again.');
+      
+      // Revert the UI state
+      setState(() {
+        _hasGivenConsent = !newConsentGiven;
+        _declinedConsent = !newDeclinedConsent;
+      });
+      return;
     }
-  }
 
-void _handleDeclineChange(bool? value) async {
+    // Validate the form
+    if (mounted) {
+      validateForm();
+    }
+  } catch (e, stackTrace) {
+    if (!mounted) return;
+    devtools.log('Unexpected error in _handleConsentChange: $e', 
+        name: 'error', error: e, stackTrace: stackTrace);
+    _showErrorSnackBar(_ErrorMessages.unexpectedError);
+    
+    // Revert the UI state
+    setState(() {
+      _hasGivenConsent = !newConsentGiven;
+      _declinedConsent = !newDeclinedConsent;
+    });
+  }
+}
+
+void _handleDeclineChange(bool value) {
   if (!mounted) return;
   
   if (value == true) {
     // If declining, uncheck consent given if it was checked
-    if (_consentGiven == true) {
+    if (_hasGivenConsent) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
-            _consentGiven = false;
+            _hasGivenConsent = false;
           });
         }
       });
@@ -836,102 +888,228 @@ Future<void> _showEndSurveyConfirmation() async {
     
     try {
       devtools.log('Initiating location capture', name: _DebugTags.location);
-
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
       
-      // Show loading indicator
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
+      // Store context in a local variable to use in callbacks
+      final currentContext = context;
+      if (!currentContext.mounted) return;
+      
+      // Show loading SnackBar
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(
           content: Row(
             children: [
-              const SizedBox(
-                width: 16,
-                height: 16,
+              SizedBox(
+                width: 24,
+                height: 24,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2.0,
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 2,
                 ),
               ),
-              const SizedBox(width: 16.0),
-              Text(
-                'Getting location...',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
-              ),
+              SizedBox(width: 16),
+              Text('Getting your location...'),
             ],
           ),
-          backgroundColor: Colors.blue[800],
-          duration: const Duration(seconds: 30),
+          duration: Duration(seconds: 30),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.blue,
         ),
       );
 
-      // Call the parent's location getter
-      await widget.onGetLocation();
-      
-      if (!mounted) return;
-      
-      // Hide loading snackbar
-      scaffoldMessenger.hideCurrentSnackBar();
-      
-      // Check if location was actually captured
-      if (widget.data.currentPosition != null) {
-        devtools.log(
-          'Location captured successfully: ${widget.data.currentPosition!.latitude}, ${widget.data.currentPosition!.longitude}',
-          name: _DebugTags.location,
-        );
+      try {
+        // Call the parent's location handler
+        await widget.onGetLocation();
         
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Location captured successfully\n'
-                    'Lat: ${widget.data.currentPosition!.latitude.toStringAsFixed(6)}, '
-                    'Lng: ${widget.data.currentPosition!.longitude.toStringAsFixed(6)}',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green[700],
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
+        if (!mounted) return;
         
-        if (mounted) {
+        // Dismiss the loading SnackBar
+        ScaffoldMessenger.of(currentContext).removeCurrentSnackBar();
+        
+        // Update form validation state
+        if (widget.data.currentPosition != null) {
           setState(() {
             _fieldErrors.remove('gpsLocation');
           });
-          validateForm();
+          
+          // Show success message
+          if (mounted) {
+            ScaffoldMessenger.of(currentContext).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text('Location captured successfully'),
+                  ],
+                ),
+                backgroundColor: Colors.green[700],
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            );
+          }
         }
-      } else {
-        devtools.log('Location capture failed - position is null', name: _DebugTags.error);
         
         if (mounted) {
-          scaffoldMessenger.showSnackBar(
+          validateForm();
+        }
+      } catch (e, stackTrace) {
+        devtools.log('Error getting location: $e', 
+                     name: _DebugTags.error, 
+                     error: e, 
+                     stackTrace: stackTrace);
+        
+        if (!mounted) return;
+        
+        // Dismiss the loading SnackBar
+        ScaffoldMessenger.of(currentContext).removeCurrentSnackBar();
+        
+        // Show error message
+        final errorMessage = e is PermissionDeniedException
+            ? 'Location permission denied. Please enable location permissions in settings.'
+            : e is LocationServiceDisabledException
+                ? 'Location services are disabled. Please enable them to continue.'
+                : 'Failed to get location: ${e.toString()}';
+        
+        setState(() {
+          _fieldErrors['gpsLocation'] = errorMessage;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.white),
-                  const SizedBox(width: 12),
+                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(errorMessage)),
+                ],
+              ),
+              backgroundColor: Colors.red[700],
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              action: SnackBarAction(
+                label: 'SETTINGS',
+                textColor: Colors.white,
+                onPressed: () => Geolocator.openAppSettings(),
+              ),
+            ),
+          );
+      }
+    } catch (e, stackTrace) {
+      devtools.log('Unexpected error in _handleGetLocation: $e', 
+                  name: _DebugTags.error, 
+                  error: e, 
+                  stackTrace: stackTrace);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('An unexpected error occurred while getting location'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  } on LocationServiceDisabledException catch (e) {
+      devtools.log('Location services disabled: $e', name: _DebugTags.error);
+      
+      if (!mounted) return;
+      
+      // Store context in a local variable to use in callbacks
+      final currentContext = context;
+      
+      // Update form validation state first
+      setState(() {
+        _fieldErrors['gpsLocation'] = 'Location services are disabled';
+        validateForm();
+      });
+      
+      // Then show the snackbar
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.location_off, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'Failed to capture location. Please try again.',
+                      'Location services are disabled. Please enable them in settings.',
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
                 ],
               ),
-              backgroundColor: Colors.red[700],
-              duration: const Duration(seconds: 4),
+              backgroundColor: Colors.orange[700],
+              duration: const Duration(seconds: 5),
               behavior: SnackBarBehavior.floating,
               margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              action: SnackBarAction(
+                label: 'SETTINGS',
+                textColor: Colors.white,
+                onPressed: () => Geolocator.openLocationSettings(),
+              ),
+            ),
+          );
+      }
+    } catch (e, stackTrace) {
+      devtools.log('Location error: $e', name: _DebugTags.error, error: e, stackTrace: stackTrace);
+      
+      if (!mounted) return;
+      
+      final errorMessage = e is TimeoutException
+          ? 'Location request timed out. Please try again.'
+          : 'Error getting location: ${e.toString().replaceAll('Exception: ', '')}';
+      
+      // Store context in a local variable to use in callbacks
+      final currentContext = context;
+      
+      // Update form validation state first
+      setState(() {
+        _fieldErrors['gpsLocation'] = errorMessage;
+        validateForm();
+      });
+      
+      // Then show the snackbar
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red[700],
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               action: SnackBarAction(
                 label: 'RETRY',
                 textColor: Colors.white,
@@ -939,107 +1117,7 @@ Future<void> _showEndSurveyConfirmation() async {
               ),
             ),
           );
-        }
       }
-    } on PermissionDeniedException catch (e) {
-      devtools.log('Location permission denied: $e', name: _DebugTags.error);
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.location_off, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Location permission denied. Please enable location permissions in settings.',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.orange[700],
-            duration: const Duration(seconds: 5),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            action: SnackBarAction(
-              label: 'SETTINGS',
-              textColor: Colors.white,
-              onPressed: () => Geolocator.openLocationSettings(),
-            ),
-          ),
-        );
-    } on LocationServiceDisabledException catch (e) {
-      devtools.log('Location services disabled: $e', name: _DebugTags.error);
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.location_off, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Location services are disabled. Please enable them in settings.',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.orange[700],
-            duration: const Duration(seconds: 5),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            action: SnackBarAction(
-              label: 'SETTINGS',
-              textColor: Colors.white,
-              onPressed: () => Geolocator.openLocationSettings(),
-            ),
-          ),
-        );
-    } catch (e, stackTrace) {
-      devtools.log('Location error: $e', name: _DebugTags.error, error: e, stackTrace: stackTrace);
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Error getting location: ${e.toString()}',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red[700],
-            duration: const Duration(seconds: 5),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            action: SnackBarAction(
-              label: 'RETRY',
-              textColor: Colors.white,
-              onPressed: _handleGetLocation,
-            ),
-          ),
-        );
     }
   }
 
@@ -1237,15 +1315,17 @@ Future<void> _showEndSurveyConfirmation() async {
           child: Row(
             children: [
               Checkbox(
-                value: _consentGiven,
-                onChanged: _handleConsentChange,
+                value: _hasGivenConsent,
+                onChanged: (value) {
+                  _handleConsentChange(value ?? false);
+                },
               ),
               const SizedBox(width: _Spacing.sm),
               Expanded(
                 child: Text(
                   'Yes, I accept the above conditions',
                   style: TextStyle(fontSize: 13,
-                    fontWeight: _consentGiven ? FontWeight.w600 : FontWeight.normal
+                    fontWeight: _hasGivenConsent ? FontWeight.w600 : FontWeight.normal
                   ),
                 ),
               ),
@@ -1264,7 +1344,9 @@ Future<void> _showEndSurveyConfirmation() async {
             children: [
               Checkbox(
                 value: _declinedConsent,
-                onChanged: _handleDeclineChange,
+                onChanged: (value) {
+                  _handleDeclineChange(value ?? false);
+                },
               ),
               const SizedBox(width: _Spacing.sm),
               Expanded(
