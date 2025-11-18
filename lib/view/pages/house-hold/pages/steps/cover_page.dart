@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/controller/db/daos/cover_page_dao.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
+import 'package:human_rights_monitor/data/dummy_data/cover_dummy_data.dart';
 
-import '../../../../../controller/db/household_db_helper.dart';
-import 'package:human_rights_monitor/controller/models/household_models.dart' show CoverPageData;
+
+import 'package:human_rights_monitor/controller/models/household_models.dart' show CoverPageData, DropdownItem;
 
 /// A widget that represents the cover page for the household survey.
 /// This page allows users to select a society and farmer before proceeding with the survey.
@@ -13,6 +16,7 @@ class CoverPage extends StatefulWidget {
   final ValueChanged<CoverPageData> onDataChanged;
   final VoidCallback? onNext;
   final Future<bool> Function()? onNextPressed;
+  final CoverPageDao? coverPageDao;
 
   const CoverPage({
     super.key,
@@ -20,6 +24,7 @@ class CoverPage extends StatefulWidget {
     required this.onDataChanged,
     required this.onNext,
     this.onNextPressed,
+    this.coverPageDao,
   });
 
   @override
@@ -28,10 +33,12 @@ class CoverPage extends StatefulWidget {
 
 class CoverPageState extends State<CoverPage> {
   bool _isLoading = false;
+  late final CoverPageDao _coverPageDao;
 
   @override
   void initState() {
     super.initState();
+    _coverPageDao = widget.coverPageDao ?? CoverPageDao(dbHelper: HouseholdDBHelper.instance);
     _loadSavedData();
 
     // Notify parent that this page needs to handle next button
@@ -40,134 +47,130 @@ class CoverPageState extends State<CoverPage> {
     });
   }
 
-  /// Loads the most recent cover page data from the database
-  /// and updates the form fields if data exists
+  /// Loads initial dummy data for the cover page
   Future<void> _loadSavedData() async {
     if (_isLoading) return;
-
     setState(() => _isLoading = true);
-
+    
     try {
-      // final dbHelper = HouseholdDBHelper.instance;
-      // final savedData = await dbHelper.getLatestCoverPageData();
-
-      // if (savedData != null && mounted) {
-      //   widget.onDataChanged(
-      //     widget.data.copyWith(
-      //       selectedTownCode: savedData['selected_town']?.toString(),
-      //       selectedFarmerCode: savedData['selected_farmer']?.toString(),
-      //     ),
-      //   );
-      // }
-    } catch (e, stackTrace) {
-      if (mounted) {
-        debugPrint('Error loading saved data: $e\n$stackTrace');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error loading previous data. Starting fresh.'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
+      // Initialize with empty data first
+      final newData = widget.data.copyWith(
+        towns: CoverDummyData.dummyTowns,
+        farmers: const [],  // Clear any pre-loaded farmers
+        selectedTownCode: null,  // Explicitly set to null
+        selectedFarmerCode: null,  // Clear any farmer selection
+        hasUnsavedChanges: true,
+      );
+      
+      widget.onDataChanged(newData);
+      
+    } catch (e) {
+      debugPrint('❌ Error loading dummy data: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
-  }
-
+}
+  // Public method to save data that can be called from parent
+  Future<bool> saveData() => _saveData();
+  
   Future<bool> _saveData() async {
+    if (!mounted) return false;
+    
+    debugPrint('🔄 Starting to save cover page data...');
+    debugPrint('  - Selected Town Code: ${widget.data.selectedTownCode}');
+    debugPrint('  - Selected Farmer Code: ${widget.data.selectedFarmerCode}');
+    debugPrint('  - Has unsaved changes: ${widget.data.hasUnsavedChanges}');
+
     if (!widget.data.isComplete) {
+      debugPrint('❌ Validation failed: Both society and farmer must be selected');
+      if (!mounted) return false;
+      
+      final messenger = ScaffoldMessenger.of(context);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Please select both society and farmer'),
             behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
           ),
         );
       }
       return false;
     }
 
+    debugPrint('⏳ Saving data to database...');
+    setState(() => _isLoading = true);
+
     try {
-      setState(() => _isLoading = true);
-      final dbHelper = HouseholdDBHelper.instance;
-
-      // Get town and farmer names
-      final town = widget.data.selectedTownCode != null
-          ? widget.data.towns.firstWhere(
-              (town) => town.code == widget.data.selectedTownCode,
-              orElse: () => const DropdownItem(code: '', name: ''),
-            )
-          : const DropdownItem(code: '', name: '');
-
-      final farmer = widget.data.selectedFarmerCode != null
-          ? widget.data.farmers.firstWhere(
-              (farmer) => farmer.code == widget.data.selectedFarmerCode,
-              orElse: () => const DropdownItem(code: '', name: ''),
-            )
-          : const DropdownItem(code: '', name: '');
-
-      // Save to database
-      try {
-        final coverPageData = CoverPageData(
-          selectedTownCode: widget.data.selectedTownCode,
-          selectedFarmerCode: widget.data.selectedFarmerCode,
-          towns: [town],
-          farmers: [farmer],
-        );
-        
-        final id = await dbHelper.insertCoverPage(coverPageData);
-
-        if (id > 0) {
-          debugPrint('✅ Cover page data saved with ID: $id');
-
-          // Update the parent widget's data
-          widget.onDataChanged(widget.data);
-          return true;
-        } else {
-          debugPrint('❌ Failed to save cover page data');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Failed to save data. Please try again.'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          return false;
-        }
-      } catch (e) {
-        debugPrint('❌ Error saving cover page data: $e');
+      debugPrint('📝 Attempting to insert data into database...');
+      final id = await _coverPageDao.insert(widget.data);
+      debugPrint('✅ Cover page data saved successfully with ID: $id');
+      
+      // Verify the data was saved
+      final savedData = await _coverPageDao.getById(id);
+      if (savedData != null) {
+        debugPrint('🔍 Verified saved data:');
+        debugPrint('  - Selected Town Code: ${savedData.selectedTownCode}');
+        debugPrint('  - Selected Farmer Code: ${savedData.selectedFarmerCode}');
+      } else {
+        debugPrint('❌ Failed to verify saved data - record not found');
+      }
+      
+      if (!mounted) return false;
+      
+      // Mark as saved before showing any UI
+      widget.onDataChanged(widget.data.copyWith(
+        id: id,
+        hasUnsavedChanges: false,
+      ));
+      
+      debugPrint('📝 Updated local state with new ID: $id');
+      
+      // Show success message only if still mounted
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error saving data: $e'),
-              backgroundColor: Colors.red,
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Cover page saved successfully'),
               behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
             ),
           );
         }
-        return false;
       }
-      //   // Insert new record
-      //   await dbHelper.insertCoverPageData(coverData);
-      // }
-
+      
       return true;
     } catch (e, stackTrace) {
-      debugPrint('Error saving cover page data: $e\n$stackTrace');
+      debugPrint('❌ Error saving cover page data:');
+      debugPrint('  - Error: $e');
+      debugPrint('  - Stack trace: $stackTrace');
+      
+      if (!mounted) return false;
+      
+      // Only show error if still on this page
+      final messenger = ScaffoldMessenger.of(context);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error saving data. Please try again.'),
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to save cover page data: ${e.toString()}'),
             behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () {
+                if (mounted) {
+                  debugPrint('🔄 Retrying save operation...');
+                  _saveData();
+                }
+              },
+            ),
           ),
         );
       }
+      
       return false;
     } finally {
       if (mounted) {
@@ -218,8 +221,7 @@ class CoverPageState extends State<CoverPage> {
                           value: widget.data.selectedTownCode,
                           items: DropdownItem.toMapList(widget.data.towns),
                           onChanged: (value) {
-                            widget.onDataChanged(
-                                widget.data.copyWith(selectedTownCode: value));
+                            widget.onDataChanged(widget.data.selectTown(value));
                           },
                           hint: 'Select your society',
                           isLoading: widget.data.isLoadingTowns,

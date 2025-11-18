@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:human_rights_monitor/controller/models/adult_info_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/adult_info_model.dart';
 import 'package:image_picker/image_picker.dart';
 
 class _Spacing {
@@ -466,14 +466,16 @@ class __ProducerDetailsFormState extends State<_ProducerDetailsForm> {
 
   File? _idPhoto;
 
-  // Update the _getGhanaCardStatus method to:
-String? _getGhanaCardStatus() {
-  if (widget.details.ghanaCardId == null || widget.details.ghanaCardId!.isEmpty) {
-    return 'No';
-  } else {
-    return 'Yes';
+  // Return null if Ghana card status hasn't been set yet
+  String? _getGhanaCardStatus() {
+    if (widget.details.ghanaCardId == null && widget.details.otherIdType == null) {
+      return null;  // No selection made yet
+    } else if (widget.details.ghanaCardId != null && widget.details.ghanaCardId!.isNotEmpty) {
+      return 'Yes';
+    } else {
+      return 'No';
+    }
   }
-}
   Future<void> _selectDateOfBirth(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -753,77 +755,77 @@ String? _getGhanaCardStatus() {
   }
 
   Widget _buildDropdownField({
-    required String label,
-    required String? value,
-    required List<Map<String, String>> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: isDark ? Colors.white70 : Colors.black87,
-            fontWeight: FontWeight.w500,
-          ),
+  required String label,
+  required String? value,
+  required List<Map<String, String>> items,
+  required ValueChanged<String?> onChanged,
+}) {
+  final theme = Theme.of(context);
+  final isDark = theme.brightness == Brightness.dark;
+  
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: isDark ? Colors.white70 : Colors.black87,
+          fontWeight: FontWeight.w500,
         ),
-        const SizedBox(height: _Spacing.sm),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(
-              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-              width: 1,
-            ),
-            color: isDark ? Colors.grey.shade800 : Colors.white,
+      ),
+      const SizedBox(height: 8),
+      Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+            width: 1,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: _Spacing.md),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              hint: Text(
-                'Select an option',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                ),
-              ),
-              icon: Icon(Icons.arrow_drop_down, color: theme.primaryColor),
-              iconSize: 24,
-              elevation: 16,
+          color: isDark ? Colors.grey.shade800 : Colors.white,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            hint: Text(
+              'Select an option',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? Colors.white : Colors.black87,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
               ),
-              onChanged: (String? newValue) {
-                if (newValue != value) {
-                  onChanged(newValue);
-                  _updateParentDetails();
-                }
-              },
-              dropdownColor: isDark ? Colors.grey.shade900 : Colors.white,
-              items: items.map<DropdownMenuItem<String>>((Map<String, String> item) {
-                return DropdownMenuItem<String>(
-                  value: item['value'],
-                  child: Text(
-                    item['display'] ?? item['label'] ?? item['value'] ?? '',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              }).toList(),
             ),
+            icon: Icon(Icons.arrow_drop_down, color: theme.primaryColor),
+            iconSize: 24,
+            elevation: 16,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+            onChanged: (String? newValue) {
+              debugPrint('Dropdown changed. New value: $newValue, Old value: $value');
+              // Directly call onChanged to update parent state
+              onChanged(newValue);
+            },
+            dropdownColor: isDark ? Colors.grey.shade900 : Colors.white,
+            items: items.map<DropdownMenuItem<String>>((Map<String, String> item) {
+              final displayText = item['display'] ?? item['label'] ?? item['value'] ?? '';
+              final itemValue = item['value'] ?? '';
+              return DropdownMenuItem<String>(
+                value: itemValue,
+                child: Text(
+                  displayText,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
           ),
         ),
-      ],
-    );
-  }
-
+      ),
+    ],
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -1297,12 +1299,14 @@ String? _getGhanaCardStatus() {
                   {'value': 'other', 'label': 'Other (specify)'},
                 ],
                 onChanged: (value) {
-                  setState(() {
-                    widget.onDetailsUpdated(widget.details.copyWith(
-                      relationshipToRespondent: value,
-                      otherRelationship: value == 'other' ? '' : null,
-                    ));
-                  });
+                  if (value != null) {
+                    setState(() {
+                      widget.onDetailsUpdated(widget.details.copyWith(
+                        relationshipToRespondent: value,
+                        otherRelationship: value == 'other' ? '' : null,
+                      ));
+                    });
+                  }
                 },
               ),
               if (widget.details.relationshipToRespondent == 'other') ...[
@@ -1361,45 +1365,51 @@ String? _getGhanaCardStatus() {
         ),
 
         // Occupation
-        _buildQuestionCard(
-          child: Column(
-            children: [
-              _buildDropdownField(
-                label: 'Work/main occupation',
-                value: widget.details.occupation,
-                items: [
-                  {'value': 'Farmer (cocoa)', 'label': 'Farmer (cocoa)'},
-                  {'value': 'Farmer (coffee)', 'label': 'Farmer (coffee)'},
-                  {'value': 'Farmer (other)', 'label': 'Farmer (other)'},
-                  {'value': 'Merchant', 'label': 'Merchant'},
-                  {'value': 'Student', 'label': 'Student'},
-                  {
-                    'value': 'Other (to specify)',
-                    'label': 'Other (to specify)'
-                  },
-                  {'value': 'No activity', 'label': 'No activity'},
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    widget.onDetailsUpdated(widget.details.copyWith(
-                      occupation: value,
-                      otherOccupation:
-                          value == 'Other (to specify)' ? '' : null,
-                    ));
-                  });
-                },
-              ),
-              if (widget.details.occupation == 'Other (to specify)') ...[
-                const SizedBox(height: _Spacing.md),
-                _buildTextField(
-                  label: 'If other, please specify',
-                  controller: _otherOccupationController,
-                  hintText: 'Enter occupation',
-                ),
-              ],
-            ],
-          ),
+// Occupation
+_buildQuestionCard(
+  child: Column(
+    children: [
+      _buildDropdownField(
+        label: 'Work/main occupation',
+        value: widget.details.occupation,
+        items: [
+          {'value': 'Farmer (cocoa)', 'label': 'Farmer (cocoa)'},
+          {'value': 'Farmer (coffee)', 'label': 'Farmer (coffee)'},
+          {'value': 'Farmer (other)', 'label': 'Farmer (other)'},
+          {'value': 'Merchant', 'label': 'Merchant'},
+          {'value': 'Student', 'label': 'Student'},
+          {'value': 'Other (to specify)', 'label': 'Other (to specify)'},
+          {'value': 'No activity', 'label': 'No activity'},
+        ],
+        onChanged: (value) {
+          if (value != null) {
+            setState(() {
+              widget.onDetailsUpdated(widget.details.copyWith(
+                occupation: value,
+                otherOccupation: value == 'Other (to specify)' ? '' : null,
+              ));
+            });
+          }
+        },
+      ),
+      if (widget.details.occupation == 'Other (to specify)') ...[
+        const SizedBox(height: _Spacing.md),
+        _buildTextField(
+          label: 'If other, please specify',
+          controller: _otherOccupationController,
+          hintText: 'Enter occupation',
+          onChanged: (text) {
+            setState(() {
+              widget.onDetailsUpdated(widget.details.copyWith(
+                otherOccupation: text,
+              ));
+            });
+          },
         ),
+      ],
+    ],
+  ),
+),
 
         const SizedBox(height: _Spacing.md),
       ],

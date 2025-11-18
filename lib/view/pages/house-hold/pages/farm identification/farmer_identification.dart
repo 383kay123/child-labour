@@ -3,9 +3,13 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../../controller/models/farmeridentification_model.dart';
+// Alias FarmerChild to Child for backward compatibility
+typedef Child = FarmerChild;
+
+
 
 /// A utility class for consistent spacing throughout the UI
 class _Spacing {
@@ -222,8 +226,11 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
         return false;
       }
       
-      // If validation passes, update the data through the callback
-      widget.onDataChanged(widget.data);
+      // Get the latest form data
+      final updatedData = getData();
+      
+      // Update the data through the callback with the latest values
+      widget.onDataChanged(updatedData);
       return true;
     } catch (e) {
       developer.log('[$_tag] Error saving form: $e', name: _tag);
@@ -240,35 +247,41 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       // If no consent, skip ID validation entirely
       developer.log('[$_tag] No consent given, skipping ID validation', name: _tag);
     } else {
-      // Validate Ghana Card selection only if consent is given
-      if (widget.data.hasGhanaCard == 1 && widget.data.idPictureConsent == 1) {
+      // Check if user has specified Ghana Card status
+      if (widget.data.hasGhanaCard == null) {
+        _validationErrors['ghanaCard'] = 'Please specify if you have a Ghana Card';
+        developer.log('[$_tag] Validation failed: Ghana Card not specified', name: _tag);
+      } 
+      // If user has a Ghana Card and has given consent
+      else if (widget.data.hasGhanaCard == 1) {
         // Validate Ghana Card number if Ghana Card is selected and consent is given
         final ghanaCardError = _validateGhanaCardNumber(_ghanaCardNumberController.text);
         if (ghanaCardError != null) {
           _validationErrors['ghanaCardNumber'] = ghanaCardError;
           developer.log('[$_tag] Validation failed for Ghana Card number', name: _tag);
         }
-      } else if (widget.data.hasGhanaCard == 0) {
-        // Validate alternative ID if no Ghana Card
-        if (widget.data.selectedIdType == null) {
-          _validationErrors['idType'] = 'Please select an alternative ID type';
-          developer.log('[$_tag] Validation failed: No alternative ID type selected', name: _tag);
-        } else {
-          final idNumberError = _validateIdNumber(_idNumberController.text);
-          if (idNumberError != null) {
-            _validationErrors['idNumber'] = idNumberError;
-            developer.log('[$_tag] Validation failed: Invalid ID number', name: _tag);
-          }
-          
-          // Only require ID image if consent is given
-          if (widget.data.idPictureConsent == 1 && widget.data.idImagePath == null) {
-            _validationErrors['idImage'] = 'Please capture a picture of the ID';
-            developer.log('[$_tag] Validation failed: ID image not captured', name: _tag);
+      } 
+      // If user doesn't have a Ghana Card
+      else if (widget.data.hasGhanaCard == 0) {
+        // Only require alternative ID if consent is given
+        if (widget.data.idPictureConsent == 'Yes') {
+          if (widget.data.selectedIdType == null || widget.data.selectedIdType!.isEmpty) {
+            _validationErrors['idType'] = 'Please select an alternative ID type';
+            developer.log('[$_tag] Validation failed: No alternative ID type selected', name: _tag);
+          } else {
+            final idNumberError = _validateIdNumber(_idNumberController.text);
+            if (idNumberError != null) {
+              _validationErrors['idNumber'] = idNumberError;
+              developer.log('[$_tag] Validation failed: Invalid ID number', name: _tag);
+            }
+            
+            // Only require ID image if consent is given
+            if (widget.data.idImagePath == null) {
+              _validationErrors['idImage'] = 'Please capture a picture of the ID';
+              developer.log('[$_tag] Validation failed: ID image not captured', name: _tag);
+            }
           }
         }
-      } else {
-        _validationErrors['ghanaCard'] = 'Please specify if you have a Ghana Card';
-        developer.log('[$_tag] Validation failed: Ghana Card not specified', name: _tag);
       }
     }
 
@@ -524,9 +537,9 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       developer.log('[$_tag] Form validation passed', name: _tag);
       
       // Prepare data and call onComplete
-      widget.data.prepareSubmissionData();
-      widget.onComplete?.call(widget.data);
-
+      final submissionData = widget.data.toMap();
+    // Prepare data and call onComplete
+widget.onComplete?.call(widget.data);
       developer.log('[$_tag] Form submitted successfully', name: _tag);
       
       // Only proceed with navigation if we're still mounted
@@ -553,6 +566,33 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       }
       return false;
     }
+  }
+
+  /// REQUIRED: Returns full current data
+  FarmerIdentificationData getData() {
+    final childrenCount = int.tryParse(_childrenCountController.text) ?? 0;
+    final children = <Child>[];
+
+    for (int i = 0; i < childrenCount; i++) {
+      final firstName = _childFirstNameControllers[i]?.text.trim() ?? '';
+      final surname = _childSurnameControllers[i]?.text.trim() ?? '';
+      if (firstName.isNotEmpty || surname.isNotEmpty) {
+        children.add(Child(
+          childNumber: i + 1, // 1-based index for child numbers
+          firstName: firstName, 
+          surname: surname,
+        ));
+      }
+    }
+
+    return widget.data.copyWith(
+      ghanaCardNumber: _ghanaCardNumberController.text.isEmpty ? null : _ghanaCardNumberController.text.trim(),
+      idNumber: _idNumberController.text.isEmpty ? null : _idNumberController.text.trim(),
+      contactNumber: _contactNumberController.text.isEmpty ? null : _contactNumberController.text.trim(),
+      childrenCount: childrenCount,
+      children: children,
+      noConsentReason: _noConsentReasonController.text.isEmpty ? null : _noConsentReasonController.text.trim(),
+    );
   }
 
   // ==================== UI Builder Methods ====================

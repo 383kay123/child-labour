@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
 import 'package:human_rights_monitor/controller/db/daos/sensitization_questions_dao.dart';
-import 'package:human_rights_monitor/controller/models/sensitization_questions_model.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
+
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../theme/app_theme.dart';
@@ -22,12 +23,14 @@ class SensitizationQuestionsPage extends StatefulWidget {
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final bool validateOnly;
+  final int? coverPageId;
 
   const SensitizationQuestionsPage({
     Key? key,
     required this.onPrevious,
     required this.onNext,
     this.validateOnly = false,
+    this.coverPageId,
   }) : super(key: key);
 
   @override
@@ -58,69 +61,85 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
   
   // For logging
   static const String _logTag = 'SensitizationQuestionsPage';
+  
+  // State management
+  bool _isDisposed = false;
+  bool _isSaving = false;
 
  
-  /// Validates the form and returns true if all fields are valid
+  /// Validates the form and returns true if all required fields are filled
   /// [silent] - If true, won't show error messages (used for parent validation)
   bool validateForm({bool silent = false}) {
-    // First validate the form state
-    if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
-      if (!silent) {
-        _showErrorSnackBar('Please fill in all required fields');
-      }
-      return false;
-    }
-
     bool isValid = true;
     String? firstError;
+    
+    developer.log('🔄 Starting form validation...', name: _logTag);
     
     // Check each required field and track the first error
     if (hasSensitizedHousehold == null) {
       firstError ??= 'Please indicate if you have sensitized the household members';
+      developer.log('❌ Validation failed: hasSensitizedHousehold is null', name: _logTag);
       isValid = false;
     }
     
     if (hasSensitizedOnProtection == null) {
       firstError ??= 'Please indicate if you have sensitized on protection';
+      developer.log('❌ Validation failed: hasSensitizedOnProtection is null', name: _logTag);
       isValid = false;
     }
     
     if (hasSensitizedOnSafeLabour == null) {
       firstError ??= 'Please indicate if you have sensitized on safe labor';
+      developer.log('❌ Validation failed: hasSensitizedOnSafeLabour is null', name: _logTag);
       isValid = false;
     }
     
-    if (_femaleAdultsController.text.isEmpty) {
+    if (_femaleAdultsController.text.trim().isEmpty) {
       firstError ??= 'Please enter the number of female adults';
+      developer.log('❌ Validation failed: femaleAdultsCount is empty', name: _logTag);
       isValid = false;
     }
     
-    if (_maleAdultsController.text.isEmpty) {
+    if (_maleAdultsController.text.trim().isEmpty) {
       firstError ??= 'Please enter the number of male adults';
+      developer.log('❌ Validation failed: maleAdultsCount is empty', name: _logTag);
       isValid = false;
     }
     
     if (_consentForPicture == null) {
       firstError ??= 'Please indicate if consent for picture was given';
+      developer.log('❌ Validation failed: consentForPicture is null', name: _logTag);
       isValid = false;
-    } else if (_consentForPicture == false && _consentReasonController.text.isEmpty) {
+    } else if (_consentForPicture == false && _consentReasonController.text.trim().isEmpty) {
       firstError ??= 'Please provide a reason for not giving consent';
+      developer.log('❌ Validation failed: consentReason is empty when consentForPicture is false', name: _logTag);
       isValid = false;
     }
     
-    if (_sensitizationImage == null) {
-      firstError ??= 'Please take a sensitization picture';
-      isValid = false;
+    // Only require images if consent was given for pictures
+    if (_consentForPicture == true) {
+      if (_sensitizationImage == null) {
+        firstError ??= 'Please take a sensitization picture';
+        developer.log('❌ Validation failed: sensitizationImage is null', name: _logTag);
+        isValid = false;
+      }
+      
+      if (_householdWithUserImage == null) {
+        firstError ??= 'Please take a picture with the household';
+        developer.log('❌ Validation failed: householdWithUserImage is null', name: _logTag);
+        isValid = false;
+      }
     }
     
-    if (_householdWithUserImage == null) {
-      firstError ??= 'Please take a picture with the household';
-      isValid = false;
-    }
-    
-    if (_reactionController.text.isEmpty) {
+    if (_reactionController.text.trim().isEmpty) {
       firstError ??= 'Please provide your reaction/feedback';
+      developer.log('❌ Validation failed: parentsReaction is empty', name: _logTag);
       isValid = false;
+    }
+    
+    developer.log('✅ Form validation ${isValid ? 'passed' : 'failed'}', name: _logTag);
+    if (!isValid) {
+      developer.log('First validation error: $firstError', name: _logTag);
     }
     
     // Only show error message if not in silent mode and there's an error
@@ -132,52 +151,124 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
     return isValid;
   }
   
+  /// Shows a success message to the user
+  void _showSuccessSnackBar(String message) {
+    if (!mounted || _isDisposed) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   /// Saves the sensitization questions data to the database
-  /// [farmIdentificationId] - The ID of the farm identification record to associate with this data
-  Future<bool> saveData(int farmIdentificationId) async {
+  /// If [coverPageId] is provided, it will be used; otherwise, the widget's coverPageId will be used
+  Future<bool> saveData([int? coverPageId]) async {
+    if (_isDisposed || _isSaving) {
+      developer.log('⚠️ Save operation prevented - already saving or disposed', name: _logTag);
+      return false;
+    }
+    
+    _isSaving = true;
+    developer.log('🔄 Starting saveData method', name: _logTag);
+    
+    final effectiveCoverPageId = coverPageId ?? widget.coverPageId;
+    developer.log('Using cover page ID: $effectiveCoverPageId', name: _logTag);
+    
+    if (effectiveCoverPageId == null) {
+      final error = '❌ No cover page ID provided for saving sensitization questions';
+      developer.log(error, name: _logTag);
+      if (!widget.validateOnly) {
+        _showErrorSnackBar('Error: Missing farm identification ID');
+      }
+      _isSaving = false;
+      return false;
+    }
+
     try {
       // First validate the form
-      if (!validateForm(silent: true)) {
-        developer.log('Form validation failed, not saving data', name: _logTag);
+      if (!validateForm(silent: widget.validateOnly)) {
+        developer.log('❌ Form validation failed', name: _logTag);
+        _isSaving = false;
         return false;
       }
 
-      // Get the database helper instance
       final questionsDao = SensitizationQuestionsDao(dbHelper: LocalDBHelper.instance);
+      final now = DateTime.now();
       
-      // Create a SensitizationQuestionsData model with the current state
+      // Check if record exists
+      final existingRecord = await questionsDao.getByCoverPageId(effectiveCoverPageId);
+      
+      // Create the model
       final model = SensitizationQuestionsData(
+        id: existingRecord?.id,
+        coverPageId: effectiveCoverPageId,
         hasSensitizedHousehold: hasSensitizedHousehold,
         hasSensitizedOnProtection: hasSensitizedOnProtection,
         hasSensitizedOnSafeLabour: hasSensitizedOnSafeLabour,
-        femaleAdultsCount: _femaleAdultsController.text,
-        maleAdultsCount: _maleAdultsController.text,
+        femaleAdultsCount: _femaleAdultsController.text.trim(),
+        maleAdultsCount: _maleAdultsController.text.trim(),
         consentForPicture: _consentForPicture,
-        consentReason: _consentForPicture == false ? _consentReasonController.text : '',
+        consentReason: _consentForPicture == false ? _consentReasonController.text.trim() : '',
         sensitizationImagePath: _sensitizationImage?.path,
         householdWithUserImagePath: _householdWithUserImage?.path,
-        parentsReaction: _reactionController.text,
+        parentsReaction: _reactionController.text.trim(),
+        submittedAt: existingRecord?.submittedAt ?? now,
+        createdAt: existingRecord?.createdAt ?? now,
+        updatedAt: now,
+        isSynced: false,
+        syncStatus: 0,
       );
 
-      // Check if a record already exists for this farm identification
-      final existingRecord = await questionsDao.getByFarmIdentificationId(farmIdentificationId);
-      
-      // Save the data
+      // Save to database
       if (existingRecord == null) {
-        // Insert new record
-        await questionsDao.insert(model, farmIdentificationId);
+        final id = await questionsDao.insert(model, effectiveCoverPageId);
+        developer.log('✅ Inserted new record with ID: $id', name: _logTag);
       } else {
-        // Update existing record - use the ID from the existing record
-        // Note: This assumes the SensitizationQuestionsDao.update method takes a farmId parameter
-        await questionsDao.update(model, farmIdentificationId);
+        final rowsUpdated = await questionsDao.update(model, effectiveCoverPageId);
+        developer.log('✅ Updated $rowsUpdated record(s)', name: _logTag);
+      }
+
+      // Show success message
+      if (!widget.validateOnly) {
+        _showSuccessSnackBar('Sensitization questions saved successfully');
       }
       
-      developer.log('✅ Sensitization questions data saved successfully', name: _logTag);
       return true;
-    } catch (e) {
-      developer.log('❌ Error saving sensitization questions data: $e', name: _logTag);
+    } catch (e, stackTrace) {
+      developer.log('❌ Error saving sensitization questions: $e', 
+          name: _logTag, error: e, stackTrace: stackTrace);
+          
+      if (!widget.validateOnly) {
+        _showErrorSnackBar('Failed to save sensitization questions: ${e.toString()}');
+      }
       return false;
+    } finally {
+      _isSaving = false;
     }
+  }
+  
+  /// Returns the current form data as a map
+  Map<String, dynamic>? getData() {
+    if (!_formKey.currentState!.validate()) {
+      return null;
+    }
+
+    return {
+      'hasSensitizedHousehold': hasSensitizedHousehold,
+      'hasSensitizedOnProtection': hasSensitizedOnProtection,
+      'hasSensitizedOnSafeLabour': hasSensitizedOnSafeLabour,
+      'consentForPicture': _consentForPicture,
+      'femaleAdultsCount': int.tryParse(_femaleAdultsController.text) ?? 0,
+      'maleAdultsCount': int.tryParse(_maleAdultsController.text) ?? 0,
+      'consentReason': _consentReasonController.text,
+      'reaction': _reactionController.text,
+      'sensitizationImagePath': _sensitizationImage?.path,
+      'householdWithUserImagePath': _householdWithUserImage?.path,
+    };
   }
   
   /// Shows an error message to the user
@@ -254,20 +345,38 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
   }
 
   @override
-  void dispose() {
-    developer.log('Disposing resources', name: _logTag);
-
-    // Dispose all controllers to prevent memory leaks
-    try {
-      _femaleAdultsController.dispose();
-      _maleAdultsController.dispose();
-      _consentReasonController.dispose();
-      _reactionController.dispose();
-      developer.log('All controllers disposed successfully', name: _logTag);
-    } catch (e) {
-      developer.log('Error disposing controllers: $e', name: _logTag, error: e);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Check if we're being removed from the navigation stack
+    if (ModalRoute.of(context)?.isCurrent == false &&
+        ModalRoute.of(context)?.isActive == false) {
+      _saveBeforeDispose();
     }
+  }
 
+  Future<void> _saveBeforeDispose() async {
+    if (_isSaving || _isDisposed) return;
+    _isSaving = true;
+    
+    try {
+      developer.log('🔄 Attempting to save before dispose...', name: _logTag);
+      await saveData();
+      developer.log('✅ Successfully saved before dispose', name: _logTag);
+    } catch (e, stackTrace) {
+      developer.log('❌ Error saving before dispose: $e', 
+          name: _logTag, error: e, stackTrace: stackTrace);
+    } finally {
+      _isSaving = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _femaleAdultsController.dispose();
+    _maleAdultsController.dispose();
+    _consentReasonController.dispose();
+    _reactionController.dispose();
     super.dispose();
   }
 

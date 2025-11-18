@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:human_rights_monitor/controller/models/consent_model.dart';
+
 import 'package:human_rights_monitor/controller/models/household_models.dart';
-import 'package:human_rights_monitor/controller/models/farmeridentification_model.dart';
+
 
 class HouseholdSurveyState extends ChangeNotifier {
   // Form data
   CoverPageData _coverData = CoverPageData.empty();
   ConsentData? _consentData;
   FarmerIdentificationData _farmerData;
+  
+  // Form controllers
+  final TextEditingController ghanaCardNumberController = TextEditingController();
+  final TextEditingController idNumberController = TextEditingController();
+  final TextEditingController contactNumberController = TextEditingController();
+  final TextEditingController childrenCountController = TextEditingController();
+  final TextEditingController noConsentReasonController = TextEditingController();
   
   // Navigation state
   int _currentPageIndex = 0;
@@ -31,11 +38,11 @@ class HouseholdSurveyState extends ChangeNotifier {
   bool get isSensitizationChecked => _isSensitizationChecked;
 
   HouseholdSurveyState() : _farmerData = FarmerIdentificationData(
-    ghanaCardNumberController: TextEditingController(),
-    idNumberController: TextEditingController(),
-    contactNumberController: TextEditingController(),
-    childrenCountController: TextEditingController(),
-    noConsentReasonController: TextEditingController(),
+    hasGhanaCard: 0,
+    childrenCount: 0,
+    idPictureConsent: 0,
+    isSynced: 0,
+    syncStatus: 0,
   );
 
   // Setters with notifyListeners()
@@ -118,12 +125,20 @@ class HouseholdSurveyState extends ChangeNotifier {
     _coverData = CoverPageData.empty();
     _consentData = null;
     _farmerData = FarmerIdentificationData(
-      ghanaCardNumberController: TextEditingController(),
-      idNumberController: TextEditingController(),
-      contactNumberController: TextEditingController(),
-      childrenCountController: TextEditingController(),
-      noConsentReasonController: TextEditingController(),
+      hasGhanaCard: 0,
+      childrenCount: 0,
+      idPictureConsent: 0,
+      isSynced: 0,
+      syncStatus: 0,
     );
+    
+    // Clear all controllers
+    ghanaCardNumberController.clear();
+    idNumberController.clear();
+    contactNumberController.clear();
+    childrenCountController.clear();
+    noConsentReasonController.clear();
+    
     _currentPageIndex = 0;
     _currentChildNumber = 1;
     _totalChildren5To17 = 0;
@@ -136,12 +151,12 @@ class HouseholdSurveyState extends ChangeNotifier {
 
   @override
   void dispose() {
-    // Dispose controllers
-    _farmerData.ghanaCardNumberController.dispose();
-    _farmerData.idNumberController.dispose();
-    _farmerData.contactNumberController.dispose();
-    _farmerData.childrenCountController.dispose();
-    _farmerData.noConsentReasonController.dispose();
+    // Dispose all controllers
+    ghanaCardNumberController.dispose();
+    idNumberController.dispose();
+    contactNumberController.dispose();
+    childrenCountController.dispose();
+    noConsentReasonController.dispose();
     super.dispose();
   }
 }

@@ -244,10 +244,10 @@ class ChildDetailsPage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _ChildDetailsPageState createState() => _ChildDetailsPageState();
+  State<ChildDetailsPage> createState() => ChildDetailsPageState();
 }
 
-class _ChildDetailsPageState extends State<ChildDetailsPage> {
+class ChildDetailsPageState extends State<ChildDetailsPage> {
   final Set<String> _cocoaFarmTasksLast12Months = {};
   bool? _parentConsentPhoto;
   final TextEditingController _noConsentReasonController =
@@ -1147,6 +1147,15 @@ class _ChildDetailsPageState extends State<ChildDetailsPage> {
 
   bool validateForm() {
     return true; // Always return true to bypass validation
+  }
+
+  /// Saves the current form data
+  Future<void> saveData() async {
+    // This will trigger form validation
+    if (_formKey.currentState?.validate() ?? false) {
+      _formKey.currentState?.save();
+      // If you have any additional save logic, add it here
+    }
   }
 
   @override

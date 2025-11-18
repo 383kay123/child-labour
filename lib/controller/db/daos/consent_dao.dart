@@ -1,7 +1,8 @@
+import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
 import 'package:human_rights_monitor/controller/db/household_tables.dart';
-import 'package:human_rights_monitor/controller/models/consent_model.dart';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 

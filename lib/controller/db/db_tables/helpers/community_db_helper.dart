@@ -1,11 +1,13 @@
 import 'dart:developer';
+import 'package:human_rights_monitor/controller/db/db_tables/community_assessment_table.dart';
+import 'package:human_rights_monitor/controller/db/table_names.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 // Import table names
-import 'table_names.dart';
+
 // Import community-related table files
-import 'db_tables/community_assessment_table.dart';
+
 // Add other community-related table imports here
 
 class CommunityDBHelper {

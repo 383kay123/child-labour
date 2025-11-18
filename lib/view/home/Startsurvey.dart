@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/view/pages/community-assessment/assessment-form.dart';
+import 'package:human_rights_monitor/view/pages/community-assessment/history/community-assessment-history.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/house_hold.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/history/house_hold_history.dart';
 import 'package:human_rights_monitor/view/pages/Monitoring/monitoring_assessment_form.dart';
 import 'package:human_rights_monitor/view/pages/Monitoring/monitoring_assessment_history.dart';
+import 'package:human_rights_monitor/view/screen_wrapper/screen_wrapper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../pages/community-assessment/assessment-form.dart';
-import '../pages/community-assessment/history/community-assessment-history.dart';
-import '../pages/house-hold/history/house_hold_history.dart';
-import '../pages/house-hold/house_hold.dart' as household;
-
-class SurveyListPage extends StatefulWidget {
-  const SurveyListPage({super.key});
+class StartSurveyPage extends StatefulWidget {
+  const StartSurveyPage({super.key});
 
   @override
-  State<SurveyListPage> createState() => _SurveyListPageState();
+  State<StartSurveyPage> createState() => _StartSurveyPageState();
 }
 
-class _SurveyListPageState extends State<SurveyListPage> {
+class _StartSurveyPageState extends State<StartSurveyPage> {
   final LocalDBHelper _dbHelper = LocalDBHelper.instance;
   bool _isLoading = true;
 
@@ -78,8 +77,26 @@ class _SurveyListPageState extends State<SurveyListPage> {
         'emoji': '🏠',
         'color': Theme.of(context).primaryColor,
         'lightColor': Theme.of(context).primaryColor.withOpacity(0.2),
-        'page': const HouseHold(),
-        // 'historyPage': const HouseHoldHistory(),
+        'page': Builder(
+          builder: (buildContext) => WillPopScope(
+            onWillPop: () async {
+              // Prevent default back button behavior
+              return false;
+            },
+            child: HouseHold(
+              farmIdentificationId: DateTime.now().millisecondsSinceEpoch,
+              onComplete: () {
+                // Navigate to the ScreenWrapper which contains the home screen
+                Navigator.pushAndRemoveUntil(
+                  buildContext,
+                  MaterialPageRoute(builder: (context) => const ScreenWrapper()),
+                  (route) => false,
+                );
+              },
+            ),
+          ),
+        ),
+        'historyPage': const SurveyListPage(),
         'icon': Icons.home_rounded,
       },
       {

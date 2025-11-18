@@ -168,7 +168,7 @@ class Homepage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const SurveyListPage(),
+                      builder: (context) => const StartSurveyPage(),
                     ),
                   );
                 },

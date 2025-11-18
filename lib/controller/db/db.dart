@@ -9,14 +9,7 @@ import 'table_names.dart';
 import '../../view/models/monitoring_model.dart';
 
 // Import all table classes
-import 'db_tables/consent_table.dart';
-import 'db_tables/farmer_identification_table.dart';
-import 'db_tables/combined_farmer_identification_table.dart';
-import 'db_tables/children_household_table.dart';
-import 'db_tables/remediation_table.dart';
-import 'db_tables/sensitization_table.dart';
-import 'db_tables/sensitization_questions_table.dart';
-import 'db_tables/end_of_collection_table.dart';
+
 import 'db_tables/monitoring_table.dart';
 
 class LocalDBHelper {
@@ -42,32 +35,61 @@ class LocalDBHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
+    
+    debugPrint('🔄 Initializing database at: $path');
+    debugPrint('📊 Database version: 4');
 
     return await openDatabase(
       path,
-      version: 3, // Incremented to update schema and add missing columns
+      version: 4, // Incremented to add remediation table
       onCreate: _createAllTables,
       onUpgrade: _upgradeDatabase,
+      onOpen: (db) {
+        debugPrint('✅ Database opened successfully');
+      },
     );
   }
 
   Future<void> _createAllTables(Database db, int version) async {
+    debugPrint('🛠️ Creating all tables...');
+    
     // Create community assessment table
+    debugPrint('📋 Creating community assessment table...');
     await _createCommunityAssessmentTable(db);
 
     // Create monitoring table and indexes
+    debugPrint('📊 Creating monitoring table...');
     await MonitoringTable.createTable(db);
     await MonitoringTable.createIndexes(db);
 
-    // Create other tables
-    await ConsentTable.createTable(db);
-    await FarmerIdentificationTable.createTable(db);
-    await CombinedFarmerIdentificationTable.createTable(db);
-    await ChildrenHouseholdTable.createTable(db);
-    await RemediationTable.createTable(db);
-    await SensitizationTable.createTable(db);
-    await SensitizationQuestionsTable.createTable(db);
-    await EndOfCollectionTable.createTable(db);
+    // Create remediation table
+    debugPrint('🔧 Creating remediation table...');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.remediationTBL} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        farm_identification_id INTEGER,
+        has_school_fees INTEGER,
+        child_protection_education INTEGER DEFAULT 0,
+        school_kits_support INTEGER DEFAULT 0,
+        iga_support INTEGER DEFAULT 0,
+        other_support INTEGER DEFAULT 0,
+        other_support_details TEXT,
+        community_action TEXT,
+        other_community_action_details TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_synced INTEGER DEFAULT 0,
+        sync_status INTEGER DEFAULT 0
+      )
+    ''');
+
+    debugPrint('📈 Creating index on farm_identification_id...');
+    // Create index on farm_identification_id for better query performance
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_remediation_farm_id 
+      ON ${TableNames.remediationTBL}(farm_identification_id)
+      WHERE farm_identification_id IS NOT NULL
+    ''');
 
     // Create any necessary triggers or indexes
     await _createDatabaseTriggers(db);
@@ -75,6 +97,7 @@ class LocalDBHelper {
 
   Future<void> _upgradeDatabase(
       Database db, int oldVersion, int newVersion) async {
+    debugPrint('🔄 Upgrading database from version $oldVersion to $newVersion');
     // Let MonitoringTable handle its own upgrades
     await MonitoringTable.onUpgrade(db, oldVersion, newVersion);
 
@@ -95,9 +118,58 @@ class LocalDBHelper {
 
   // Get database instance
   Future<Database> get database async {
-    if (_database != null) return _database!;
+    if (_database != null) {
+      // Verify the remediation table exists
+      await _verifyRemediationTable();
+      return _database!;
+    }
     _database = await _initDB('child_labour.db');
+    
+    // Verify the remediation table exists after initialization
+    await _verifyRemediationTable();
+    
     return _database!;
+  }
+  
+  // Verify the remediation table exists, create it if it doesn't
+  Future<void> _verifyRemediationTable() async {
+    if (_database == null) return;
+    
+    try {
+      // Check if the table exists
+      final result = await _database!.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        [TableNames.remediationTBL]
+      );
+      
+      if (result.isEmpty) {
+        debugPrint('⚠️ Remediation table does not exist, creating it now...');
+        await _database!.execute('''
+          CREATE TABLE IF NOT EXISTS ${TableNames.remediationTBL} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            farm_identification_id INTEGER,
+            has_school_fees INTEGER,
+            child_protection_education INTEGER DEFAULT 0,
+            school_kits_support INTEGER DEFAULT 0,
+            iga_support INTEGER DEFAULT 0,
+            other_support INTEGER DEFAULT 0,
+            other_support_details TEXT,
+            community_action TEXT,
+            other_community_action_details TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            is_synced INTEGER DEFAULT 0,
+            sync_status INTEGER DEFAULT 0
+          )
+        ''');
+        debugPrint('✅ Remediation table created successfully');
+      } else {
+        debugPrint('✅ Remediation table already exists');
+      }
+    } catch (e) {
+      debugPrint('❌ Error verifying/creating remediation table: $e');
+      rethrow;
+    }
   }
 
   // Community Assessment CRUD operations

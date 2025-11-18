@@ -1,14 +1,19 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:human_rights_monitor/controller/models/adult_info_model.dart';
-import 'package:human_rights_monitor/controller/models/visit_information_model.dart';
-import 'package:human_rights_monitor/controller/models/identification_of_owner_model.dart';
-import 'adults_information_content.dart';
-import 'package:human_rights_monitor/controller/models/workers_in_farm_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/adult_info_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/visit_information_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/identification_of_owner_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/workers_in_farm_model.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
+import 'package:human_rights_monitor/controller/db/household_tables.dart';
+import 'package:human_rights_monitor/controller/db/table_names.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/pages/farm%20identification/adults_information_page.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/adults_information_content.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 
 import 'package:human_rights_monitor/view/theme/app_theme.dart';
-import '../farm identification/adults_information_page.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
 class _Spacing {
@@ -21,13 +26,12 @@ class _Spacing {
 }
 
 class CombinedFarmIdentificationPage extends StatefulWidget {
+  // Cover page ID is not required as it's handled by the CoverPage
   final int initialPageIndex;
   final ValueChanged<int> onPageChanged;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
   final VoidCallback? onSubmit;
-
-  // Add this to check if we can go to next sub-page
   final ValueChanged<bool>? onCanProceedChanged;
 
   const CombinedFarmIdentificationPage({
@@ -370,16 +374,20 @@ class _VisitInformationContentState extends State<_VisitInformationContent> {
     _initializeFromData();
   }
 
-  void _initializeFromData() {
-    _respondentNameCorrect = widget.data.respondentNameCorrect;
-    _respondentNationality = widget.data.respondentNationality;
-    _countryOfOrigin = widget.data.countryOfOrigin;
-    _isFarmOwner = widget.data.isFarmOwner;
-    _farmOwnershipType = widget.data.farmOwnershipType;
-    _respondentNameController.text = widget.data.correctedRespondentName;
-    _respondentOtherNamesController.text = widget.data.respondentOtherNames;
-    _otherCountryController.text = widget.data.otherCountry;
-  }
+ void _initializeFromData() {
+  _respondentNameCorrect = widget.data.respondentNameCorrect == true 
+      ? 'Yes' 
+      : (widget.data.respondentNameCorrect == false ? 'No' : null);
+  _respondentNationality = widget.data.respondentNationality;
+  _countryOfOrigin = widget.data.countryOfOrigin;
+  _isFarmOwner = widget.data.isFarmOwner == true 
+      ? 'Yes' 
+      : (widget.data.isFarmOwner == false ? 'No' : null);
+  _farmOwnershipType = widget.data.farmOwnershipType;
+  _respondentNameController.text = widget.data.correctedRespondentName ?? '';
+  _respondentOtherNamesController.text = widget.data.respondentOtherNames ?? '';
+  _otherCountryController.text = widget.data.otherCountry ?? '';
+}
 
   @override
   void dispose() {
@@ -411,17 +419,6 @@ class _VisitInformationContentState extends State<_VisitInformationContent> {
       ),
     );
   }
-
-  // Add this method to CombinedFarmIdentificationPageState class
-void animateToPage(int page, {Duration duration = const Duration(milliseconds: 300), Curve curve = Curves.easeInOut}) {
-  if (_pageController.hasClients) {
-    _pageController.animateToPage(
-      page,
-      duration: duration,
-      curve: curve,
-    );
-  }
-}
 
   Widget _buildRadioOption({
     required String value,
@@ -719,20 +716,22 @@ void animateToPage(int page, {Duration duration = const Duration(milliseconds: 3
     );
   }
 
-  void _updateData() {
-    widget.onDataChanged(
-      VisitInformationData(
-        respondentNameCorrect: _respondentNameCorrect,
-        respondentNationality: _respondentNationality,
-        countryOfOrigin: _countryOfOrigin,
-        isFarmOwner: _isFarmOwner,
-        farmOwnershipType: _farmOwnershipType,
-        correctedRespondentName: _respondentNameController.text,
-        respondentOtherNames: _respondentOtherNamesController.text,
-        otherCountry: _otherCountryController.text,
-      ),
-    );
-  }
+ void _updateData() {
+  widget.onDataChanged(
+    VisitInformationData(
+      respondentNameCorrect: _respondentNameCorrect == 'Yes' ? true : 
+                          _respondentNameCorrect == 'No' ? false : null,
+      respondentNationality: _respondentNationality,
+      countryOfOrigin: _countryOfOrigin,
+      isFarmOwner: _isFarmOwner == 'Yes' ? true : 
+                  _isFarmOwner == 'No' ? false : null,
+      farmOwnershipType: _farmOwnershipType,
+      correctedRespondentName: _respondentNameController.text,
+      respondentOtherNames: _respondentOtherNamesController.text,
+      otherCountry: _otherCountryController.text,
+    ),
+  );
+}
 }
 
 class _WorkersInFarmContent extends StatefulWidget {
@@ -1532,6 +1531,121 @@ class _WorkersInFarmContentState extends State<_WorkersInFarmContent> {
   }
 }
 
+// Missing AdultsInformationContent widget
+// class AdultsInformationContent extends StatefulWidget {
+//   final AdultsInformationData data;
+//   final ValueChanged<AdultsInformationData> onDataChanged;
+//   final List<String> validationErrors;
+//   final GlobalKey<FormState>? formKey;
+
+//   const AdultsInformationContent({
+//     Key? key,
+//     required this.data,
+//     required this.onDataChanged,
+//     this.validationErrors = const [],
+//     this.formKey,
+//   }) : super(key: key);
+
+//   @override
+//   State<AdultsInformationContent> createState() => _AdultsInformationContentState();
+// }
+
+// class _AdultsInformationContentState extends State<AdultsInformationContent> {
+//   @override
+//   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+//     final isDark = theme.brightness == Brightness.dark;
+
+//     return SingleChildScrollView(
+//       padding: const EdgeInsets.all(_Spacing.lg),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Text(
+//             'Adults Information',
+//             style: theme.textTheme.headlineSmall?.copyWith(
+//               color: isDark ? Colors.white : Colors.black87,
+//               fontWeight: FontWeight.w600,
+//             ),
+//           ),
+//           const SizedBox(height: _Spacing.lg),
+//           Text(
+//             'This section collects information about adults in the household.',
+//             style: theme.textTheme.bodyLarge?.copyWith(
+//               color: isDark ? Colors.white70 : Colors.black54,
+//             ),
+//           ),
+//           const SizedBox(height: _Spacing.xl),
+          
+//           // Number of adults input
+//           Card(
+//             elevation: 0,
+//             margin: const EdgeInsets.only(bottom: _Spacing.lg),
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(12.0),
+//               side: BorderSide(
+//                 color: isDark ? AppTheme.darkCard : Colors.grey.shade200,
+//                 width: 1,
+//               ),
+//             ),
+//             color: isDark ? AppTheme.darkCard : Colors.white,
+//             child: Padding(
+//               padding: const EdgeInsets.all(_Spacing.lg),
+//               child: Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   Text(
+//                     'Number of adults in the household',
+//                     style: theme.textTheme.titleMedium?.copyWith(
+//                       fontWeight: FontWeight.w600,
+//                       color: isDark ? Colors.white : Colors.black87,
+//                     ),
+//                   ),
+//                   const SizedBox(height: _Spacing.md),
+//                   TextFormField(
+//                     decoration: InputDecoration(
+//                       labelText: 'Enter number of adults',
+//                       border: OutlineInputBorder(
+//                         borderRadius: BorderRadius.circular(8.0),
+//                       ),
+//                       filled: true,
+//                       fillColor: isDark ? AppTheme.darkCard : Colors.grey[50],
+//                     ),
+//                     style: theme.textTheme.bodyLarge?.copyWith(
+//                       color: isDark ? Colors.white : Colors.black87,
+//                     ),
+//                     keyboardType: TextInputType.number,
+//                     initialValue: widget.data.numberOfAdults?.toString(),
+//                     onChanged: (value) {
+//                       final numAdults = int.tryParse(value);
+//                       widget.onDataChanged(
+//                         widget.data.copyWith(numberOfAdults: numAdults)
+//                       );
+//                     },
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+
+//           // Show validation errors if any
+//           if (widget.validationErrors.isNotEmpty) ...[
+//             const SizedBox(height: _Spacing.md),
+//             ...widget.validationErrors.map((error) => Padding(
+//               padding: const EdgeInsets.only(bottom: 8.0),
+//               child: Text(
+//                 error,
+//                 style: const TextStyle(color: Colors.red, fontSize: 14),
+//               ),
+//             )),
+//           ],
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+// MAIN STATE CLASS - ONLY ONE DEFINITION
 class CombinedFarmIdentificationPageState
     extends State<CombinedFarmIdentificationPage> {
   late PageController _pageController;
@@ -1539,16 +1653,17 @@ class CombinedFarmIdentificationPageState
   // Form keys for each subpage
   final GlobalKey<FormState> visitInfoFormKey = GlobalKey<FormState>();
   final GlobalKey<FormState> adultsFormKey = GlobalKey<FormState>();
+  
   // Public getter for the page controller
   PageController get pageController => _pageController;
   late int _currentPageIndex;
   final int _totalPages = 4;
 
   // Individual models for each page
-  VisitInformationData _visitInfoData = VisitInformationData.empty();
-  IdentificationOfOwnerData _ownerData = IdentificationOfOwnerData.empty();
-  WorkersInFarmData _workersData = WorkersInFarmData.empty();
-  AdultsInformationData _adultsData = AdultsInformationData.empty();
+  VisitInformationData _visitInfoData = VisitInformationData();
+  IdentificationOfOwnerData _ownerData = IdentificationOfOwnerData();
+  WorkersInFarmData _workersData = WorkersInFarmData();
+  AdultsInformationData _adultsData = AdultsInformationData();
   
   // Public getters for the private fields
   VisitInformationData get visitInfoData => _visitInfoData;
@@ -1556,6 +1671,16 @@ class CombinedFarmIdentificationPageState
   WorkersInFarmData get workersData => _workersData;
   AdultsInformationData get adultsData => _adultsData;
   int get currentPageIndex => _currentPageIndex;
+  
+  /// Returns a map containing all the form data from all pages
+  Map<String, dynamic> getCombinedData() {
+    return {
+      'visit_information': _visitInfoData.toMap(),
+      'owner_information': _ownerData.toMap(),
+      'workers_in_farm': _workersData.toMap(),
+      'adults_information': _adultsData.toMap(),
+    };
+  }
 
   // Validation state
   final Map<int, List<String>> _validationErrors = {};
@@ -1589,7 +1714,143 @@ class CombinedFarmIdentificationPageState
     widget.onCanProceedChanged?.call(_isCurrentPageComplete);
   }
 
-  void _handlePageChanged(int index) {
+  Future<void> _saveCurrentPageData() async {
+    try {
+      final db = await HouseholdDBHelper.instance.database;
+      
+      // Verify there's a cover page in the database
+      final coverPages = await db.query(
+        TableNames.coverPageTBL,
+        orderBy: 'id DESC',
+        limit: 1,
+      );
+      
+      if (coverPages.isEmpty) {
+        debugPrint('⚠️ No cover page found. Attempting to create one...');
+        // Try to create a default cover page if none exists
+        final coverPageId = await db.insert(TableNames.coverPageTBL, {
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+          'is_synced': 0,
+          'sync_status': 0,
+        });
+        debugPrint('✅ Created default cover page with ID: $coverPageId');
+      }
+      
+      // Get the latest cover page ID
+      final latestCoverPage = await db.query(
+        TableNames.coverPageTBL,
+        orderBy: 'id DESC',
+        limit: 1,
+      );
+      
+      if (latestCoverPage.isEmpty) {
+        throw Exception('Failed to create or find a cover page');
+      }
+      
+      final coverPageId = latestCoverPage.first['id'] as int;
+      debugPrint('ℹ️ Using cover page ID: $coverPageId');
+      
+      final now = DateTime.now().toIso8601String();
+      
+      // Ensure all data is up to date before saving
+      if (_currentPageIndex == 0) {
+        // Create a new instance with properly formatted time
+        _visitInfoData = VisitInformationData(
+       
+          location: _visitInfoData.location,
+          gpsCoordinates: _visitInfoData.gpsCoordinates,
+          respondentNameCorrect: _visitInfoData.respondentNameCorrect is bool 
+              ? _visitInfoData.respondentNameCorrect 
+              : _visitInfoData.respondentNameCorrect == 'Yes',
+          correctedRespondentName: _visitInfoData.correctedRespondentName?.trim(),
+          respondentOtherNames: _visitInfoData.respondentOtherNames?.trim(),
+          respondentNationality: _visitInfoData.respondentNationality?.trim(),
+          countryOfOrigin: _visitInfoData.countryOfOrigin?.trim(),
+          otherCountry: _visitInfoData.otherCountry?.trim(),
+          isFarmOwner: _visitInfoData.isFarmOwner,
+          farmOwnershipType: _visitInfoData.farmOwnershipType,
+        );
+      }
+      
+      // Convert all data to maps with proper error handling
+      Map<String, dynamic> visitInfoMap;
+      try {
+        // First convert to map
+        visitInfoMap = _visitInfoData.toMap();
+        
+       
+      } catch (e) {
+        debugPrint('⚠️ Error preparing visit info: $e');
+        visitInfoMap = {};
+      }
+      
+      // Create a map with all current data
+      final data = <String, dynamic>{
+        'id': coverPageId,
+        'cover_page_id': coverPageId,
+        'visit_information': jsonEncode(visitInfoMap),
+        'created_at': now,
+        'updated_at': now,
+        'is_synced': 0,
+        'sync_status': 0,
+      };
+      
+      // Safely add other data sections
+      try {
+        data['owner_information'] = jsonEncode(_ownerData.toMap());
+      } catch (e) {
+        debugPrint('⚠️ Error serializing owner information: $e');
+        data['owner_information'] = '{}';
+      }
+      
+      try {
+        data['workers_in_farm'] = jsonEncode(_workersData.toMap());
+      } catch (e) {
+        debugPrint('⚠️ Error serializing workers information: $e');
+        data['workers_in_farm'] = '{}';
+      }
+      
+      try {
+        data['adults_information'] = jsonEncode(_adultsData.toMap());
+      } catch (e) {
+        debugPrint('⚠️ Error serializing adults information: $e');
+        data['adults_information'] = '{}';
+      }
+      
+      debugPrint('ℹ️ Saving data for page $_currentPageIndex with coverPageId: $coverPageId');
+      
+      // First try to update existing record
+      final updated = await db.update(
+        TableNames.combinedFarmIdentificationTBL,
+        data,
+        where: 'id = ?',
+        whereArgs: [coverPageId],
+      );
+      
+      // If no rows were updated, insert a new record
+      if (updated == 0) {
+        await db.insert(
+          TableNames.combinedFarmIdentificationTBL,
+          data,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        debugPrint('✅ Inserted new combined farm data');
+      } else {
+        debugPrint('✅ Updated existing combined farm data');
+      }
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in _saveCurrentPageData: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  Future<void> _handlePageChanged(int index) async {
+    // Save current page data before navigation
+    await _saveCurrentPageData();
+    
     // Validate current page before allowing navigation
     if (!_isCurrentPageComplete) {
       final errors = getCurrentPageErrors();
@@ -1619,25 +1880,46 @@ class CombinedFarmIdentificationPageState
     _notifyCanProceed();
   }
 
-  void _goToNextPage() {
+  void _goToNextPage() async {
     // Validate current page first
     if (!validateCurrentPage()) {
       return;
     }
     
-    // If we get here, validation passed - proceed to next page
+    // Save current page data before navigating
+    await _saveCurrentPageData();
+    
+    // If we have more sub-pages, go to the next one
     if (_currentPageIndex < _totalPages - 1) {
-      _pageController.nextPage(
+      final nextPageIndex = _currentPageIndex + 1;
+      
+      // Update the current page index
+      setState(() {
+        _currentPageIndex = nextPageIndex;
+        // Clear validation errors for the new page
+        _validationErrors[nextPageIndex] = [];
+      });
+      
+      // Animate to the next page
+      await _pageController.animateToPage(
+        nextPageIndex,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-    } else if (widget.onNext != null) {
+      
+      // Notify parent widget about the page change
+      widget.onPageChanged(nextPageIndex);
+    } 
+    // Only call onNext if we're on the last sub-page and there's a next page to go to
+    else if (widget.onNext != null && _currentPageIndex >= _totalPages - 1) {
+      // This is the last page, call the onNext callback
       widget.onNext!();
     }
+    
     _notifyCanProceed();
   }
 
-  void _goToPreviousPage() {
+  void _goToPreviousPage() async {
     // Clear validation errors when going back
     setState(() {
       _validationErrors[_currentPageIndex] = [];
@@ -1645,65 +1927,76 @@ class CombinedFarmIdentificationPageState
     
     if (_currentPageIndex > 0) {
       final previousPageIndex = _currentPageIndex - 1;
-      _pageController.animateToPage(
+      
+      // Save current page data before navigating
+      await _saveCurrentPageData();
+      
+      // Update the current page index
+      setState(() {
+        _currentPageIndex = previousPageIndex;
+        // Clear validation errors for the previous page
+        _validationErrors[previousPageIndex] = [];
+      });
+      
+      // Animate to the previous page
+      await _pageController.animateToPage(
         previousPageIndex,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+      
+      // Notify parent widget about the page change
+      widget.onPageChanged(previousPageIndex);
     } else {
       // This is the first sub-page, notify parent to go to previous main page
       widget.onPrevious?.call();
     }
+    
+    _notifyCanProceed();
   }
 
-  /// Saves the form data
+  /// Saves the form data to the local database
+  /// [validateAllPages] If true, validates all pages. If false, only validates the current page.
   /// Returns true if save was successful, false otherwise
-  Future<bool> saveData() async {
+  Future<bool> saveData({bool validateAllPages = false}) async {
     try {
-      // Validate all pages before saving
-      for (int i = 0; i < _totalPages; i++) {
-        if (!_validatePage(i)) {
-          // If any page is invalid, show error and return false
-          final errors = _validationErrors[i] ?? [];
+      debugPrint('\n=== ATTEMPTING TO SAVE FORM DATA ===');
+      
+      // First, save the current page data without validation
+      await _saveCurrentPageData();
+      
+      if (validateAllPages) {
+        // Validate all pages if explicitly requested
+        for (int i = 0; i < _totalPages; i++) {
+          final errors = _validatePage(i) ? [] : (_validationErrors[i] ?? []);
           if (errors.isNotEmpty) {
-            _showValidationError(errors.first);
+            debugPrint('❌ Validation errors found on page $i: $errors');
+            _showValidationError('Please complete all required fields');
+            return false;
           }
+        }
+      } else {
+        // Only validate the current page
+        final errors = _validatePage(_currentPageIndex) ? [] : (_validationErrors[_currentPageIndex] ?? []);
+        if (errors.isNotEmpty) {
+          debugPrint('❌ Validation errors on current page: $errors');
+          _showValidationError('Please complete all required fields on this page');
           return false;
         }
       }
-
-      // All validations passed, proceed with save
-      // Here you would typically save the data to your database or state management
-      // Log detailed debug information about the data being saved
-      debugPrint('\n=== SAVING FORM DATA ===');
       
-      // Visit Info
-      debugPrint('\n--- VISIT INFORMATION ---');
-      debugPrint('Respondent Name Correct: ${_visitInfoData.respondentNameCorrect ?? 'Not specified'}');
-      debugPrint('Corrected Name: ${_visitInfoData.correctedRespondentName.isNotEmpty ? _visitInfoData.correctedRespondentName : 'Not specified'}');
-      debugPrint('Nationality: ${_visitInfoData.respondentNationality ?? 'Not specified'}');
-      debugPrint('Country of Origin: ${_visitInfoData.countryOfOrigin ?? 'Not specified'}');
-      debugPrint('Other Country: ${_visitInfoData.otherCountry.isNotEmpty ? _visitInfoData.otherCountry : 'Not specified'}');
-      debugPrint('Is Farm Owner: ${_visitInfoData.isFarmOwner ?? 'Not specified'}');
-      debugPrint('Farm Ownership Type: ${_visitInfoData.farmOwnershipType ?? 'Not specified'}');
+      debugPrint('✅ All validations passed, saving data...');
       
-      // Owner Data
-      debugPrint('\n--- OWNER IDENTIFICATION ---');
-      debugPrint('Full JSON: ${_ownerData.toJson()}');
+      // Save all data again to ensure everything is up to date
+      await _saveCurrentPageData();
       
-      // Workers Data
-      debugPrint('\n--- WORKERS IN FARM ---');
-      debugPrint('Full JSON: ${_workersData.toJson()}');
-      
-      // Adults Data
-      debugPrint('\n--- ADULTS INFORMATION ---');
-      debugPrint('Full JSON: ${_adultsData.toJson()}');
-      
-      debugPrint('\n=== END OF SAVED DATA ===\n');
-
+      debugPrint('✅ All form data saved successfully');
       return true;
-    } catch (e) {
-      debugPrint('Error saving form data: $e');
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error saving form data: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _showValidationError('Error saving data. Please try again.');
       return false;
     }
   }
@@ -1775,45 +2068,95 @@ class CombinedFarmIdentificationPageState
     }
   }
 
-  /// Validation for Visit Information Page - All fields are optional
+  /// Validation for Visit Information Page - All fields are required
   List<String> _validateVisitInformation() {
     final errors = <String>[];
     final data = _visitInfoData;
     
-    // Debug: Log current visit info data
-    final debugInfo = '''
-=== Visit Information Validation ===
-Respondent Name Correct: ${data.respondentNameCorrect ?? 'Not specified'}
-Corrected Name: ${data.correctedRespondentName.isNotEmpty ? data.correctedRespondentName : 'Not specified'}
-Nationality: ${data.respondentNationality ?? 'Not specified'}
-Country of Origin: ${data.countryOfOrigin ?? 'Not specified'}
-Other Country: ${data.otherCountry.isNotEmpty ? data.otherCountry : 'Not specified'}
-Is Farm Owner: ${data.isFarmOwner ?? 'Not specified'}
-Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
-===================================
-''';
+    // Debug: Print all data being validated
+    debugPrint('=== VALIDATION DEBUG ===');
+    debugPrint('respondentNameCorrect: ${data.respondentNameCorrect}');
+    debugPrint('isFarmOwner: ${data.isFarmOwner}');
+    debugPrint('farmOwnershipType: ${data.farmOwnershipType}');
+    debugPrint('respondentNationality: ${data.respondentNationality}');
+    debugPrint('countryOfOrigin: ${data.countryOfOrigin}');
+    debugPrint('otherCountry: ${data.otherCountry}');
+    debugPrint('correctedRespondentName: ${data.correctedRespondentName}');
+    debugPrint('respondentOtherNames: ${data.respondentOtherNames}');
     
-    // Print to console
-    debugPrint(debugInfo);
+    // Validate respondent name correctness - handle both boolean and string comparisons
+    final isNameCorrect = data.respondentNameCorrect is bool 
+        ? data.respondentNameCorrect as bool
+        : data.respondentNameCorrect == 'Yes';
+        
+    if (data.respondentNameCorrect == null) {
+      errors.add('Please specify if the respondent name is correct');
+    } else if (!isNameCorrect && (data.correctedRespondentName?.trim().isEmpty ?? true)) {
+      errors.add('Please provide the correct respondent name');
+    }
     
-    // All fields are now optional, so no validation errors will be added
-    // The form will save whatever data is available
+    // Validate nationality
+    if (data.respondentNationality == null || data.respondentNationality!.trim().isEmpty) {
+      errors.add('Please specify the respondent\'s nationality');
+    } 
+    // If nationality is not Ghanaian, require country of origin
+    else if (data.respondentNationality == 'Non-Ghanaian') {
+      if (data.countryOfOrigin == null || data.countryOfOrigin!.isEmpty) {
+        errors.add('Please specify the country of origin');
+      } else if (data.countryOfOrigin == 'Other' && (data.otherCountry?.isEmpty ?? true)) {
+        errors.add('Please specify the other country');
+      }
+    }
+    
+    // Validate farm ownership - handle both boolean and string values
+    final isFarmOwner = data.isFarmOwner is bool 
+        ? (data.isFarmOwner as bool) ? 'Yes' : 'No'
+        : data.isFarmOwner;
+        
+    if (isFarmOwner == null) {
+      errors.add('Please specify if the respondent is the farm owner');
+    } 
+    // If not the owner, require ownership type
+    else if (isFarmOwner == 'No' && (data.farmOwnershipType == null || data.farmOwnershipType!.isEmpty)) {
+      errors.add('Please specify the farm ownership type');
+    }
     
     return errors;
   }
 
-  /// Validation for Owner Identification Page - FIXED
+  /// Validation for Owner Identification Page - All fields are required
   List<String> _validateOwnerIdentification() {
     final errors = <String>[];
     final data = _ownerData;
 
-    // All fields are optional, no validation needed
-    
-    // Only validate years if provided
-    if (data.yearsWithOwner.isNotEmpty) {
+    // Validate owner's name
+    if (data.ownerName.isEmpty) {
+      errors.add('Please enter the farm owner\'s name');
+    }
+
+    // Validate owner's first name
+    if (data.ownerFirstName.isEmpty) {
+      errors.add('Please enter the farm owner\'s first name');
+    }
+
+    // Validate nationality
+    if (data.nationality == null) {
+      errors.add('Please specify the farm owner\'s nationality');
+    } else if (data.nationality == 'Non-Ghanaian') {
+      if (data.specificNationality == null) {
+        errors.add('Please specify the country of origin');
+      } else if (data.specificNationality == 'other' && data.otherNationality.isEmpty) {
+        errors.add('Please specify the other country');
+      }
+    }
+
+    // Validate years with owner
+    if (data.yearsWithOwner.isEmpty) {
+      errors.add('Please specify how many years the respondent has been working for the owner');
+    } else {
       final years = int.tryParse(data.yearsWithOwner);
       if (years == null || years < 0) {
-        errors.add('Please enter a valid number of years or leave the field empty');
+        errors.add('Please enter a valid number of years');
       }
     }
 
@@ -1903,25 +2246,31 @@ Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
     return errors;
   }
 
-  /// Validation for Adults Information Page - FIXED
+  /// Validation for Adults Information Page - All fields are required
   List<String> _validateAdultsInformation() {
     final errors = <String>[];
     final data = _adultsData;
 
-    // Validate number of adults
+    // Validate number of adults (0 is a valid input)
     if (data.numberOfAdults == null) {
       errors.add('Please specify the number of adults in the household');
       return errors;
     }
 
-    if (data.numberOfAdults! < 1) {
-      errors.add('There must be at least 1 adult in the household');
+    final numAdults = data.numberOfAdults!;
+    if (numAdults < 0) {
+      errors.add('Number of adults cannot be negative');
+      return errors;
+    }
+
+    // If no adults, no need to validate members
+    if (numAdults == 0) {
       return errors;
     }
 
     // Validate that we have the correct number of members
-    if (data.members.length != data.numberOfAdults) {
-      errors.add('Please provide information for all ${data.numberOfAdults} household members');
+    if (data.members.length != numAdults) {
+      errors.add('Please provide information for all $numAdults household members');
       return errors;
     }
 
@@ -1929,15 +2278,29 @@ Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
     for (int i = 0; i < data.members.length; i++) {
       final member = data.members[i];
       final memberNumber = i + 1;
+      final memberName = member.name.trim().isNotEmpty ? member.name : 'Member $memberNumber';
+      final memberErrors = <String>[];
 
       // Validate member name
       if (member.name.trim().isEmpty) {
-        errors.add('Please enter the full name for household member $memberNumber');
+        memberErrors.add('Full name is required');
+      } else if (member.name.trim().split(' ').length < 2) {
+        memberErrors.add('Please enter both first and last name');
       }
 
-      // Validate basic member details
-      final producerErrors = _validateProducerDetails(member.producerDetails, memberNumber, member.name);
-      errors.addAll(producerErrors);
+      // Validate producer details
+      final producerErrors = _validateProducerDetails(
+        member.producerDetails, 
+        memberNumber, 
+        memberName,
+      );
+      memberErrors.addAll(producerErrors);
+
+      // Add member-specific errors with member context
+      if (memberErrors.isNotEmpty) {
+        errors.add('Household Member $memberNumber ($memberName):');
+        errors.addAll(memberErrors.map((e) => '  • $e'));
+      }
     }
 
     return errors;
@@ -1949,35 +2312,64 @@ Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
 
     // Validate gender
     if (details.gender == null) {
-      errors.add('Please specify gender for $memberName (Household Member $memberNumber)');
+      errors.add('Gender is required');
     }
 
     // Validate nationality
     if (details.nationality == null) {
-      errors.add('Please specify nationality for $memberName (Household Member $memberNumber)');
+      errors.add('Nationality is required');
     } else if (details.nationality == 'non_ghanaian') {
       if (details.selectedCountry == null) {
-        errors.add('Please specify country of origin for $memberName (Household Member $memberNumber)');
-      } else if (details.selectedCountry == 'Other' && (details.selectedCountry?.isEmpty ?? true)) {
-        errors.add('Please specify the other country for $memberName (Household Member $memberNumber)');
+        errors.add('Country of origin is required for non-Ghanaians');
+      } else if (details.selectedCountry == 'Other' && 
+                (details.otherCountry == null || details.otherCountry!.isEmpty)) {
+        errors.add('Please specify the other country');
       }
+    }
+
+    // Always validate year of birth
+    if (details.yearOfBirth == null) {
+      errors.add('Year of birth is required');
     } else {
       final currentYear = DateTime.now().year;
       if (details.yearOfBirth! < 1900 || details.yearOfBirth! > currentYear) {
-        errors.add('Please enter a valid year of birth for $memberName (Household Member $memberNumber)');
+        errors.add('Please enter a valid year of birth (1900-$currentYear)');
       }
+    }
+
+    // Validate relationship to respondent
+    if (details.relationshipToRespondent == null) {
+      errors.add('Relationship to respondent is required');
+    } else if (details.relationshipToRespondent == 'other' && 
+              (details.otherRelationship == null || details.otherRelationship!.isEmpty)) {
+      errors.add('Please specify the relationship');
+    }
+
+    // Validate birth certificate
+    if (details.hasBirthCertificate == null) {
+      errors.add('Birth certificate information is required');
+    }
+
+    // Validate occupation
+    if (details.occupation == null) {
+      errors.add('Occupation is required');
+    } else if (details.occupation == 'other' && 
+              (details.otherOccupation == null || details.otherOccupation!.isEmpty)) {
+      errors.add('Please specify the other occupation');
     }
 
     return errors;
   }
 
-  void _showValidationError(String errorMessage) {
+  /// Shows a validation error message to the user
+  void _showValidationError(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(errorMessage),
+        content: Text(message),
         backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -2022,7 +2414,7 @@ Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
   Future<void> _submitForm() async {
     try {
       // Save all current data without triggering navigation
-      await saveCurrentPageData();
+      await saveData();
       
       // Show success message
       if (mounted) {
@@ -2069,22 +2461,23 @@ Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Step ${_currentPageIndex + 1} of $_totalPages',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.textSecondary,
+                IconButton(
+                  onPressed: _goToPreviousPage,
+                  icon: const Icon(Icons.arrow_back),
+                ),
+                Expanded(
+                  child: Text(
+                    _getSubPageTitle(_currentPageIndex),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
                   ),
                 ),
-                Text(
-                  _getSubPageTitle(_currentPageIndex),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppTheme.darkTextPrimary
-                        : AppTheme.textPrimary,
-                  ),
+                IconButton(
+                  onPressed: _goToNextPage,
+                  icon: const Icon(Icons.arrow_forward),
                 ),
               ],
             ),
@@ -2092,8 +2485,8 @@ Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
           Expanded(
             child: PageView(
               controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
               onPageChanged: _handlePageChanged,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 // Page 1: Visit Information
                 _VisitInformationContent(
@@ -2103,22 +2496,22 @@ Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
                   onDataChanged: _updateVisitInfoData,
                   workersData: _workersData,
                   adultsData: _adultsData,
-                  validationErrors: _validationErrors[0] ?? [],
+                  validationErrors: _currentPageIndex == 0 ? _validationErrors[0] ?? [] : const [],
                   formKey: visitInfoFormKey,
                 ),
 
-                // Page 2: Identification of Owner
+                // Page 2: Owner Identification
                 _IdentificationOfOwnerContent(
                   data: _ownerData,
                   onDataChanged: _updateOwnerData,
-                  validationErrors: _validationErrors[1] ?? [],
+                  validationErrors: _currentPageIndex == 1 ? _validationErrors[1] ?? [] : const [],
                 ),
 
                 // Page 3: Workers in Farm
                 _WorkersInFarmContent(
                   data: _workersData,
                   onDataChanged: _updateWorkersData,
-                  validationErrors: _validationErrors[2] ?? [],
+                  validationErrors: _currentPageIndex == 2 ? _validationErrors[2] ?? [] : const [],
                 ),
 
                 // Page 4: Adults Information
@@ -2204,7 +2597,7 @@ Farm Ownership Type: ${data.farmOwnershipType ?? 'Not specified'}
           const SnackBar(
             content: Text('Page data saved successfully!'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );

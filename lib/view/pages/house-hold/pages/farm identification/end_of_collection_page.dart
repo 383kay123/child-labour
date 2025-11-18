@@ -91,6 +91,23 @@ class EndOfCollectionPageState extends State<EndOfCollectionPage> {
 
     return isComplete;
   }
+  
+  /// Returns the form data as a map that can be used for saving to the database
+  Map<String, dynamic> getData() {
+    final now = DateTime.now();
+    final time = _endTime ?? TimeOfDay.now();
+    final endTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    
+    return {
+      'respondentImagePath': _respondentImage?.path,
+      'producerSignaturePath': _producerSignatureImage?.path,
+      'gpsCoordinates': _gpsCoordinates,
+      'endTime': endTime.toIso8601String(),
+      'remarks': _remarksController.text,
+      'createdAt': now.toIso8601String(),
+      'updatedAt': now.toIso8601String(),
+    };
+  }
 
   /// Fetches the current device location using GPS
   /// Updates the _gpsCoordinates state if successful
@@ -219,15 +236,17 @@ class EndOfCollectionPageState extends State<EndOfCollectionPage> {
         //   developer.log('Updated survey status to submitted', name: _logTag);
         // }
 
-        // Navigate to completion page
+          // Navigate to completion page
         if (mounted) {
           developer.log('Navigating to SurveyCompletionPage', name: _logTag);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SurveyCompletionPage(),
-            ),
-          );
+          if (mounted) {
+            // Navigate to the start survey page, clearing all previous routes
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/household',  // This should be your start survey route
+              (route) => false, // Remove all previous routes from the stack
+            );
+          }
         }
       } catch (e) {
         developer.log('Error updating survey status: $e',

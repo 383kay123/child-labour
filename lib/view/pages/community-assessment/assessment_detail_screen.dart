@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:human_rights_monitor/controller/db/community_db_helper.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/community_db_helper.dart';
+
 import 'package:human_rights_monitor/controller/models/community-assessment-model.dart';
 import 'package:intl/intl.dart';
 import 'package:human_rights_monitor/view/theme/app_theme.dart';

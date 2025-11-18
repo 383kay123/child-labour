@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
-import 'package:human_rights_monitor/controller/models/consent_model.dart';
-import 'package:human_rights_monitor/controller/models/farmeridentification_model.dart';
-import 'package:human_rights_monitor/controller/models/sensitization_model.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
+
+
 
 class HouseholdSurveyController extends GetxController {
   // Page Controller
@@ -24,13 +23,7 @@ class HouseholdSurveyController extends GetxController {
     otherCommunityController: TextEditingController(),
     refusalReasonController: TextEditingController(),
   ).obs;
-  final farmerData = FarmerIdentificationData(
-    ghanaCardNumberController: TextEditingController(),
-    idNumberController: TextEditingController(),
-    contactNumberController: TextEditingController(),
-    childrenCountController: TextEditingController(),
-    noConsentReasonController: TextEditingController(),
-  ).obs;
+  final farmerData = FarmerIdentificationData().obs;
   final sensitizationData = SensitizationData().obs;
   
   // Form state
@@ -131,7 +124,9 @@ class HouseholdSurveyController extends GetxController {
     
     // Update farmer data
     farmerData.update((val) {
-      val?.childrenCountController.text = count.toString();
+      if (val != null) {
+        farmerData.value = val.copyWith(childrenCount: count);
+      }
     });
   }
 
@@ -164,67 +159,11 @@ class HouseholdSurveyController extends GetxController {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}';
   }
 
-  // Get current location
+  // Location handling is now managed by house_hold.dart
+  // This method is kept for backward compatibility but will be removed in future versions
+  @Deprecated('Use the location handling from house_hold.dart instead')
   Future<void> getCurrentLocation() async {
-    try {
-      consentData.update((val) => val?.updateSurveyState(isGettingLocation: true));
-      
-      // Check permissions
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-       consentData.update((val) {
-  val = val?.copyWith(
-    locationStatus: 'Location services are disabled',
-    isGettingLocation: false,
-  );
-});
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-         consentData.update((val) {
-  val = val?.copyWith(
-    locationStatus: 'Location permissions denied',
-    isGettingLocation: false,
-  );
-});
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-       consentData.update((val) {
-  val = val?.copyWith(
-    locationStatus: 'Location permissions permanently denied',
-    isGettingLocation: false,
-  );
-});
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
-      );
-      
-      consentData.update((val) {
-  val = val?.copyWith(
-    currentPosition: position,
-    locationStatus: 'Location captured (${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)})',
-    isGettingLocation: false,
-  );
-});
-    } catch (e) {
-      consentData.update((val) {
-  val = val?.copyWith(
-    locationStatus: 'Error: ${e.toString()}',
-    isGettingLocation: false,
-  );
-});
-    }
+    debugPrint('getCurrentLocation() is deprecated. Use the implementation from house_hold.dart');
   }
   
   // Data handling
@@ -261,8 +200,40 @@ class HouseholdSurveyController extends GetxController {
         return;
       }
       
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      // Get the database helper instance
+      final dbHelper = HouseholdDBHelper.instance;
+      
+      // Save cover page data
+      debugPrint('🔄 Saving cover page data...');
+      final coverPageId = await dbHelper.insertCoverPage(coverData.value);
+      debugPrint('✅ Cover page saved with ID: $coverPageId');
+      
+      // Save consent data with the cover page ID
+      debugPrint('🔄 Saving consent data...');
+      final consent = consentData.value.copyWith(
+        id: null, // Ensure we're inserting a new record
+        coverPageId: coverPageId,
+      );
+      final consentId = await dbHelper.insertConsent(consent);
+      debugPrint('✅ Consent saved with ID: $consentId (linked to cover page ID: $coverPageId)');
+      
+      // Save farmer identification data if available
+      if (farmerData.value.ghanaCardNumber?.isNotEmpty == true) {
+        final farmerId = await dbHelper.insertFarmerIdentification(farmerData.value);
+        debugPrint('✅ Farmer identification saved with ID: $farmerId');
+      }
+      
+      // Save children household data if available
+      for (var child in childrenDetails) {
+        final childId = await dbHelper.insertChildrenHousehold(ChildrenHouseholdModel.fromMap(child));
+        debugPrint('✅ Child data saved with ID: $childId');
+      }
+      
+      // Save sensitization data if available
+      if (sensitizationData.value.isAcknowledged) {
+        final sensitizationId = await dbHelper.insertSensitization(sensitizationData.value);
+        debugPrint('✅ Sensitization data saved with ID: $sensitizationId');
+      }
       
       // On success
       Get.snackbar(
@@ -275,10 +246,13 @@ class HouseholdSurveyController extends GetxController {
       // Reset form after successful submission
       resetFormData();
       
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error submitting survey: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
       Get.snackbar(
         'Error', 
-        'Failed to submit survey: $e',
+        'Failed to submit survey: ${e.toString()}',
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -312,13 +286,7 @@ class HouseholdSurveyController extends GetxController {
       otherCommunityController: TextEditingController(),
       refusalReasonController: TextEditingController(),
     );
-    farmerData.value = FarmerIdentificationData(
-      ghanaCardNumberController: TextEditingController(),
-      idNumberController: TextEditingController(),
-      contactNumberController: TextEditingController(),
-      childrenCountController: TextEditingController(),
-      noConsentReasonController: TextEditingController(),
-    );
+    farmerData.value = FarmerIdentificationData();
     sensitizationData.value = SensitizationData(isAcknowledged: false);
     currentPageIndex.value = 0;
     combinedPageSubIndex.value = 0;
@@ -340,12 +308,7 @@ class HouseholdSurveyController extends GetxController {
     otherCommunityController.dispose();
     refusalReasonController.dispose();
     
-    // Dispose farmer data controllers
-    farmerData.value.ghanaCardNumberController.dispose();
-    farmerData.value.idNumberController.dispose();
-    farmerData.value.contactNumberController.dispose();
-    farmerData.value.childrenCountController.dispose();
-    farmerData.value.noConsentReasonController.dispose();
+    // No need to dispose controllers as they are now managed by their respective widgets
     
     super.onClose();
   }

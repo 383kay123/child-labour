@@ -4,11 +4,11 @@ import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:human_rights_monitor/controller/db/table_names.dart';
 
-import 'package:human_rights_monitor/controller/models/visit_information_model.dart';
-import 'package:human_rights_monitor/controller/models/identification_of_owner_model.dart';
-import 'package:human_rights_monitor/controller/models/adult_info_model.dart';
-import 'package:human_rights_monitor/controller/models/workers_in_farm_model.dart';
-import 'package:human_rights_monitor/controller/models/combined_farmer_identification_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/visit_information_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/identification_of_owner_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/adult_info_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/workers_in_farm_model.dart';
+
 import 'package:geolocator/geolocator.dart';
 
 class CoverPageTable {
@@ -16,37 +16,57 @@ class CoverPageTable {
 
   // Column names as static constants
   static const String id = 'id';
-  static const String selected_town = 'selected_town';
-  static const String selected_town_name = 'selected_town_name';
-  static const String selected_farmer = 'selected_farmer';
-  static const String selected_farmer_name = 'selected_farmer_name';
-  static const String status = 'status';
-  static const String sync_status = 'sync_status';
+  static const String selectedTownCode = 'selectedTownCode';
+  static const String selectedFarmerCode = 'selectedFarmerCode';
+  static const String towns = 'towns';
+  static const String farmers = 'farmers';
+  static const String townError = 'townError';
+  static const String farmerError = 'farmerError';
+  static const String isLoadingTowns = 'isLoadingTowns';
+  static const String isLoadingFarmers = 'isLoadingFarmers';
+  static const String hasUnsavedChanges = 'hasUnsavedChanges';
+  static const String member = 'member';
   static const String created_at = 'created_at';
   static const String updated_at = 'updated_at';
   static const String is_synced = 'is_synced';
 
   /// Creates the cover page table
-  static Future<void> createTable(Database db) async {
+  static Future<void> createTable(DatabaseExecutor db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $selected_town INTEGER,
-        $selected_town_name TEXT,
-        $selected_farmer TEXT,
-        $selected_farmer_name TEXT,
-        $status INTEGER DEFAULT 0,
-        $sync_status INTEGER DEFAULT 0,
-        $is_synced INTEGER DEFAULT 0,
+        $selectedTownCode TEXT,
+        $selectedFarmerCode TEXT,
+        $towns TEXT, -- JSON-encoded list of towns
+        $farmers TEXT, -- JSON-encoded list of farmers
+        $townError TEXT,
+        $farmerError TEXT,
+        $isLoadingTowns INTEGER DEFAULT 0,
+        $isLoadingFarmers INTEGER DEFAULT 0,
+        $hasUnsavedChanges INTEGER DEFAULT 0,
+        $member TEXT, -- JSON-encoded member data
         $created_at TEXT,
-        $updated_at TEXT
+        $updated_at TEXT,
+        $is_synced INTEGER DEFAULT 0
       )
     ''');
 
     // Create indexes for better performance
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_${tableName}_sync 
-      ON $tableName($sync_status, $is_synced)
+      ON $tableName($is_synced)
+    ''');
+    
+    // Create index for selectedFarmerCode
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_${tableName}_farmer 
+      ON $tableName($selectedFarmerCode)
+    ''');
+    
+    // Create index for selectedTownCode
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_${tableName}_town 
+      ON $tableName($selectedTownCode)
     ''');
   }
 
@@ -60,8 +80,7 @@ class CoverPageTable {
           UPDATE $tableName 
           SET 
               $updated_at = datetime('now'),
-              $is_synced = 0,
-              $sync_status = 0
+              $is_synced = 0
           WHERE $id = NEW.$id;
       END;
     ''');
@@ -71,40 +90,61 @@ class CoverPageTable {
   static Future<void> onUpgrade(
       Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
+      await db.execute('DROP TABLE IF EXISTS $tableName');
       await createTable(db);
       await createTriggers(db);
     }
   }
 
   /// Prepares cover page data for insertion
-  static Map<String, dynamic> prepareCoverPageData({
-    required String selectedTown,
-    required String selectedTownName,
-    required String selectedFarmer,
-    required String selectedFarmerName,
-    int status = 0,
-    int syncStatus = 0,
-  }) {
+  static Map<String, dynamic> prepareCoverPageData(CoverPageData data) {
     final now = DateTime.now().toIso8601String();
     return {
-      CoverPageTable.selected_town: selectedTown,
-      CoverPageTable.selected_town_name: selectedTownName,
-      CoverPageTable.selected_farmer: selectedFarmer,
-      CoverPageTable.selected_farmer_name: selectedFarmerName,
-      CoverPageTable.status: status,
-      CoverPageTable.sync_status: syncStatus,
-      CoverPageTable.created_at: now,
-      CoverPageTable.updated_at: now,
-      CoverPageTable.is_synced: 0,
+      selectedTownCode: data.selectedTownCode,
+      selectedFarmerCode: data.selectedFarmerCode,
+      towns: jsonEncode(data.towns.map((e) => e.toMap()).toList()),
+      farmers: jsonEncode(data.farmers.map((e) => e.toMap()).toList()),
+      townError: data.townError,
+      farmerError: data.farmerError,
+      isLoadingTowns: data.isLoadingTowns ? 1 : 0,
+      isLoadingFarmers: data.isLoadingFarmers ? 1 : 0,
+      hasUnsavedChanges: data.hasUnsavedChanges ? 1 : 0,
+      member: data.member != null ? jsonEncode(data.member) : null,
+      created_at: now,
+      updated_at: now,
+      is_synced: 0,
     };
+  }
+  
+  /// Creates a CoverPageData from a database row
+  static CoverPageData fromMap(Map<String, dynamic> map) {
+    return CoverPageData(
+      id: map[id],
+      selectedTownCode: map[selectedTownCode],
+      selectedFarmerCode: map[selectedFarmerCode],
+      towns: map[towns] != null 
+          ? (jsonDecode(map[towns]) as List)
+              .map((e) => DropdownItem.fromMap(Map<String, dynamic>.from(e)))
+              .toList()
+          : [],
+      farmers: map[farmers] != null
+          ? (jsonDecode(map[farmers]) as List)
+              .map((e) => DropdownItem.fromMap(Map<String, dynamic>.from(e)))
+              .toList()
+          : [],
+      townError: map[townError],
+      farmerError: map[farmerError],
+      isLoadingTowns: map[isLoadingTowns] == 1,
+      isLoadingFarmers: map[isLoadingFarmers] == 1,
+      hasUnsavedChanges: map[hasUnsavedChanges] == 1,
+      member: map[member] != null ? Map<String, dynamic>.from(jsonDecode(map[member])) : null,
+    );
   }
 
   /// Validates cover page data before saving
   static bool validateCoverPageData(Map<String, dynamic> data) {
-    return data[selected_town] != null &&
-        data[selected_town_name] != null &&
-        data[selected_farmer] != null &&
-        data[selected_farmer_name] != null;
+    return data[selectedTownCode] != null &&
+        data[selectedFarmerCode] != null;
   }
 }
 
@@ -666,7 +706,7 @@ class RemediationTable {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $farmIdentificationId INTEGER NOT NULL,
+        $farmIdentificationId INTEGER,
         $hasSchoolFees INTEGER,
         $childProtectionEducation INTEGER DEFAULT 0,
         $schoolKitsSupport INTEGER DEFAULT 0,
@@ -678,12 +718,18 @@ class RemediationTable {
         $createdAt TEXT NOT NULL,
         $updatedAt TEXT NOT NULL,
         $isSynced INTEGER DEFAULT 0,
-        $syncStatus INTEGER DEFAULT 0,
-        FOREIGN KEY ($farmIdentificationId) REFERENCES ${TableNames.combinedFarmIdentificationTBL}(id) ON DELETE CASCADE
+        $syncStatus INTEGER DEFAULT 0
       )
     ''');
 
     await _createTriggers(db);
+    
+    // Create index on farm_identification_id for better query performance
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_${tableName}_farm_id 
+      ON $tableName($farmIdentificationId)
+      WHERE $farmIdentificationId IS NOT NULL
+    ''');
   }
 
   /// Creates database triggers for the table
@@ -819,18 +865,15 @@ class SensitizationTable {
   // Primary key
   static const String id = 'id';
 
-  // Foreign keys
-  static const String farmIdentificationId = 'farm_identification_id';
-
   // Fields
+  static const String farmIdentificationId = 'farm_identification_id';
   static const String isAcknowledged = 'is_acknowledged';
   static const String acknowledgedAt = 'acknowledged_at';
-
-  // Timestamps and sync
   static const String createdAt = 'created_at';
   static const String updatedAt = 'updated_at';
   static const String isSynced = 'is_synced';
   static const String syncStatus = 'sync_status';
+  static const String coverPageId = 'cover_page_id';
 
   /// Creates the sensitization table
   static Future<void> createTable(Database db) async {
@@ -838,13 +881,15 @@ class SensitizationTable {
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
         $farmIdentificationId INTEGER NOT NULL,
+        $coverPageId INTEGER NOT NULL,
         $isAcknowledged INTEGER DEFAULT 0,
         $acknowledgedAt TEXT,
-        $createdAt TEXT NOT NULL,
-        $updatedAt TEXT NOT NULL,
+        $createdAt TEXT,
+        $updatedAt TEXT,
         $isSynced INTEGER DEFAULT 0,
         $syncStatus INTEGER DEFAULT 0,
-        FOREIGN KEY ($farmIdentificationId) REFERENCES ${TableNames.combinedFarmIdentificationTBL}(id) ON DELETE CASCADE
+        FOREIGN KEY ($farmIdentificationId) REFERENCES ${TableNames.farmerIdentificationTBL}(${FarmerIdentificationTable.id}) ON DELETE CASCADE,
+        FOREIGN KEY ($coverPageId) REFERENCES ${TableNames.coverPageTBL}(id) ON DELETE CASCADE
       )
     ''');
 
@@ -871,6 +916,8 @@ class SensitizationTable {
     await db.execute('''
       CREATE TRIGGER IF NOT EXISTS set_${tableName}_timestamps
       AFTER INSERT ON $tableName
+      FOR EACH ROW
+      WHEN NEW.$createdAt IS NULL OR NEW.$updatedAt IS NULL
       BEGIN
         UPDATE $tableName 
         SET $createdAt = datetime('now'),
@@ -891,8 +938,8 @@ class SensitizationTable {
         farmIdentificationId: 'INTEGER NOT NULL',
         isAcknowledged: 'INTEGER DEFAULT 0',
         acknowledgedAt: 'TEXT',
-        createdAt: 'TEXT NOT NULL',
-        updatedAt: 'TEXT NOT NULL',
+        createdAt: 'TEXT',
+        updatedAt: 'TEXT',
         isSynced: 'INTEGER DEFAULT 0',
         syncStatus: 'INTEGER DEFAULT 0',
       };
@@ -1159,6 +1206,7 @@ class EndOfCollectionTable {
   static const String id = 'id';
 
   // Foreign keys
+  static const String coverPageId = 'cover_page_id';
   static const String farmIdentificationId = 'farm_identification_id';
 
   // Image paths
@@ -1512,10 +1560,11 @@ class CombinedFarmerIdentificationTable {
 }
 
 class ConsentTable {
-  static const String tableName = TableNames.consentTBL;
+  static const String tableName = TableNames.consentTBL; // Using the constant from TableNames
 
   // Column names as static constants
   static const String id = 'id';
+  static const String coverPageId = 'cover_page_id';
 
   // Consent Information
   static const String consentGiven = 'consent_given';
@@ -1548,69 +1597,178 @@ class ConsentTable {
 
   /// Creates the consent table
   static Future<void> createTable(Database db) async {
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS $tableName (
-        $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        
-        -- Consent Information
-        $consentGiven INTEGER NOT NULL DEFAULT 0,
-        $declinedConsent INTEGER NOT NULL DEFAULT 0,
-        $refusalReason TEXT,
-        $consentTimestamp TEXT,
-        
-        -- Community and Farmer Information
-        $communityType TEXT,
-        $residesInCommunityConsent TEXT,
-        $otherCommunityName TEXT,
-        $farmerAvailable TEXT,
-        $farmerStatus TEXT,
-        $availablePerson TEXT,
-        $otherSpecification TEXT,
-        
-        -- Location and Timing
-        $interviewStartTime TEXT,
-        $timeStatus TEXT,
-        $currentPositionLat REAL,
-        $currentPositionLng REAL,
-        $locationStatus TEXT,
-        $isGettingLocation INTEGER NOT NULL DEFAULT 0,
-        
-        -- Metadata
-        $createdAt TEXT NOT NULL,
-        $updatedAt TEXT NOT NULL,
-        $isSynced INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
+    try {
+      // Log the start of table creation
+      debugPrint('🔄 Ensuring table $tableName exists...');
+      
+      // First, check if the table already exists
+      final existingTables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        [tableName]
+      );
+      
+      if (existingTables.isNotEmpty) {
+        debugPrint('  • Table $tableName already exists, dropping it first...');
+        await db.execute('DROP TABLE IF EXISTS $tableName');
+      }
+      
+      // Create the table with the new schema
+      debugPrint('  • Creating table $tableName with latest schema...');
+      await db.execute('''
+        CREATE TABLE $tableName (
+          $id INTEGER PRIMARY KEY AUTOINCREMENT,
+          $coverPageId INTEGER NOT NULL,
+          $consentGiven INTEGER NOT NULL DEFAULT 0,
+          $declinedConsent INTEGER NOT NULL DEFAULT 0,
+          $refusalReason TEXT,
+          $consentTimestamp TEXT,
+          $communityType TEXT,
+          $residesInCommunityConsent TEXT,
+          $otherCommunityName TEXT,
+          $farmerAvailable TEXT,
+          $farmerStatus TEXT,
+          $availablePerson TEXT,
+          $otherSpecification TEXT,
+          $interviewStartTime TEXT,
+          $timeStatus TEXT,
+          $currentPositionLat REAL,
+          $currentPositionLng REAL,
+          $locationStatus TEXT,
+          $isGettingLocation INTEGER NOT NULL DEFAULT 0,
+          $createdAt TEXT NOT NULL,
+          $updatedAt TEXT NOT NULL,
+          $isSynced INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY ($coverPageId) REFERENCES ${TableNames.coverPageTBL}($id) ON DELETE CASCADE
+        )
+      ''');
 
-    // Create indexes for better performance
-    await db.execute('''
-      CREATE INDEX IF NOT EXISTS idx_${tableName}_sync 
-      ON $tableName($isSynced)
-    ''');
+      // Verify the table was created
+      final createdTables = await db.rawQuery(
+        'SELECT name, sql FROM sqlite_master WHERE type="table" AND name=?', 
+        [tableName]
+      );
+      
+      if (createdTables.isEmpty) {
+        throw Exception('Failed to create table $tableName');
+      }
+      
+      debugPrint('✅ Successfully created table $tableName');
+      
+      // Create indexes for better performance
+      debugPrint('  • Creating indexes...');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_${tableName}_sync 
+        ON $tableName($isSynced)
+      ''');
+      
+      debugPrint('✅ Successfully created indexes for table: $tableName');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error creating table $tableName: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      // Try to get more detailed error information
+      try {
+        final tables = await db.rawQuery('SELECT name FROM sqlite_master WHERE type="table"');
+        debugPrint('📋 Existing tables:');
+        for (var table in tables) {
+          debugPrint('  - ${table['name']}');
+        }
+      } catch (e) {
+        debugPrint('❌ Error listing tables: $e');
+      }
+      
+      rethrow;
+    }
   }
 
   /// Creates the necessary triggers for the table
   static Future<void> createTriggers(Database db) async {
-    // Create trigger to update timestamps and sync status
-    await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS update_${tableName}_trigger
-      AFTER UPDATE ON $tableName
-      BEGIN
-          UPDATE $tableName 
-          SET 
-              $updatedAt = datetime('now'),
-              $isSynced = 0
-          WHERE $id = NEW.$id;
-      END;
-    ''');
+    try {
+      debugPrint('🔄 Creating triggers for table: $tableName');
+      
+      // Drop existing trigger if it exists
+      await db.execute('DROP TRIGGER IF EXISTS update_${tableName}_trigger');
+      
+      // Create trigger to update timestamps and sync status
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS update_${tableName}_trigger
+        AFTER UPDATE ON $tableName
+        BEGIN
+            UPDATE $tableName 
+            SET 
+                $updatedAt = datetime('now'),
+                $isSynced = 0
+            WHERE $id = NEW.$id;
+        END;
+      ''');
+      
+      debugPrint('✅ Successfully created triggers for table: $tableName');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error creating triggers for table $tableName: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   /// Handles database upgrades for this table
   static Future<void> onUpgrade(
       Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await createTable(db);
-      await createTriggers(db);
+    debugPrint('🔄 Upgrading $tableName from version $oldVersion to $newVersion');
+    
+    try {
+      if (oldVersion < 2) {
+        debugPrint('  • Migrating to version 2...');
+        
+        // First, check if the table exists
+        final tableExists = await db.rawQuery(
+          'SELECT name FROM sqlite_master WHERE type="table" AND name="$tableName"'
+        );
+        
+        if (tableExists.isNotEmpty) {
+          debugPrint('  • Table exists, dropping and recreating...');
+          await db.execute('DROP TABLE IF EXISTS $tableName');
+        }
+        
+        // Create the table with the latest schema
+        await createTable(db);
+        await createTriggers(db);
+        
+        debugPrint('✅ Successfully upgraded $tableName to version 2');
+      }
+      
+      // Add more version migrations here as needed
+      // if (oldVersion < 3) { ... }
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error upgrading $tableName: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+  
+  /// Logs the current table structure for debugging
+  static Future<void> _logTableStructure(Database db) async {
+    try {
+      final result = await db.rawQuery('PRAGMA table_info($tableName)');
+      debugPrint('\n📋 Table Structure for $tableName:');
+      debugPrint('┌────────────────┬───────────┬───────────┬───────────┬───────────┬───────────┐');
+      debugPrint('│ Column Name    │ Type      │ Not Null  │ Default   │ Primary   │ Autoinc   │');
+      debugPrint('├────────────────┼───────────┼───────────┼───────────┼───────────┼───────────┤');
+      
+      for (var column in result) {
+        final name = (column['name'] as String).padRight(14);
+        final type = (column['type'] as String).padRight(9);
+        final notNull = (column['notnull'] as int) == 1 ? 'YES' : 'NO';
+        final dflt = (column['dflt_value'] ?? 'NULL').toString().padRight(9);
+        final pk = (column['pk'] as int) == 1 ? 'YES' : 'NO';
+        final autoinc = (column['auto_increment'] as int?) == 1 ? 'YES' : 'NO';
+        
+        debugPrint('│ $name │ $type │ $notNull     │ $dflt │ $pk         │ $autoinc     │');
+      }
+      
+      debugPrint('└────────────────┴───────────┴───────────┴───────────┴───────────┴───────────┘\n');
+    } catch (e) {
+      debugPrint('❌ Error getting table info for $tableName: $e');
     }
   }
 

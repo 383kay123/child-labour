@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 import 'package:human_rights_monitor/controller/db/daos/sensitization_dao.dart';
-import 'package:human_rights_monitor/controller/models/sensitization_model.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
+
 
 /// A reusable widget that displays a section title with consistent styling.
 class SectionTitle extends StatelessWidget {
@@ -68,9 +70,27 @@ class SensitizationPage extends StatefulWidget {
 
   @override
   _SensitizationPageState createState() => _SensitizationPageState();
+  
+  // Helper method to get the state from a GlobalKey
+  static SensitizationPageState? of(GlobalKey<State<SensitizationPage>> key) {
+    final state = key.currentState;
+    if (state is _SensitizationPageState) {
+      return state;
+    }
+    return null;
+  }
+
+  // Public static method to access the state type
+  static Type get stateType => _SensitizationPageState;
 }
 
-class _SensitizationPageState extends State<SensitizationPage> {
+// Public interface for the SensitizationPage state
+abstract class SensitizationPageState extends State<SensitizationPage> {
+  bool validate();
+  Future<bool> saveData(int farmIdentificationId);
+}
+
+class _SensitizationPageState extends SensitizationPageState {
   late bool _isAcknowledged;
   bool _isCheckboxValid = true;
   
@@ -86,22 +106,113 @@ class _SensitizationPageState extends State<SensitizationPage> {
   /// [farmIdentificationId] - The ID of the farm identification record to associate with this data
   Future<bool> saveData(int farmIdentificationId) async {
     try {
-      if (!_isAcknowledged) {
-        debugPrint('Sensitization not acknowledged, skipping save');
-        return false;
-      }
+      debugPrint('💾 Starting to save sensitization data...');
+      debugPrint('📝 Acknowledgment status: $_isAcknowledged');
+      
+      // Always save the current state, even if not acknowledged
+      // This ensures we can track the user's response
 
       // Get the database helper instance
       final db = LocalDBHelper.instance;
       final sensitizationDao = SensitizationDao(dbHelper: db);
       
-      // Use the acknowledge method which handles both insert and update
-      await sensitizationDao.acknowledge(farmIdentificationId);
+      // First check if we already have a record for this farm
+      final existingData = await sensitizationDao.getByFarmIdentificationId(farmIdentificationId);
       
-      debugPrint('✅ Sensitization data saved successfully');
-      return true;
-    } catch (e) {
+      // Create or update the SensitizationData
+      final now = DateTime.now();
+      final sensitizationData = existingData?.copyWith(
+        isAcknowledged: _isAcknowledged,
+        acknowledgedAt: _isAcknowledged ? now : existingData.acknowledgedAt,
+        updatedAt: now,
+        isSynced: false,
+      ) ?? SensitizationData(
+        isAcknowledged: _isAcknowledged,
+        acknowledgedAt: _isAcknowledged ? now : null,
+        updatedAt: now,
+        isSynced: false,
+      );
+      
+      debugPrint('📋 Sensitization data to save: $sensitizationData');
+      
+      try {
+        // Save the data
+        if (existingData == null) {
+          await sensitizationDao.insert(
+            sensitizationData, 
+            0, // coverPageId - passing 0 as a placeholder, you may want to pass the actual cover page ID
+            farmIdentificationId: farmIdentificationId,
+          );
+        } else {
+          await sensitizationDao.update(sensitizationData, existingData.id!);
+        }
+        
+        debugPrint('✅ Sensitization data saved successfully');
+        
+        // Update the parent widget's state
+        widget.onSensitizationChanged(sensitizationData);
+        return true;
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error saving sensitization data: $e');
+        debugPrint('📌 Stack trace: $stackTrace');
+        
+        // Try to get more information about the database state
+        try {
+          final dbInstance = await db.database;
+          final tables = await dbInstance.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+          debugPrint('Available tables: ${tables.map((t) => t['name']).toList()}');
+          
+          // Check if sensitization table exists
+          final sensitizationTable = tables.firstWhere(
+            (t) => t['name'] == 'sensitization',
+            orElse: () => {},
+          );
+          
+          if (sensitizationTable.isEmpty) {
+            debugPrint('❌ Sensitization table does not exist in the database');
+            // Try to create the table directly
+            try {
+              final householdDbHelper = HouseholdDBHelper.instance;
+              await householdDbHelper.diagnoseAndFixSensitizationTable();
+              debugPrint('🔄 Created sensitization table, retrying save...');
+              
+              // Try one more time after fixing the table
+              if (existingData == null) {
+                await sensitizationDao.insert(
+                  sensitizationData, 
+                  0, // coverPageId - passing 0 as a placeholder
+                  farmIdentificationId: farmIdentificationId,
+                );
+              } else {
+                await sensitizationDao.update(sensitizationData, existingData.id!);
+              }
+              widget.onSensitizationChanged(sensitizationData);
+              debugPrint('✅ Sensitization data saved successfully after table creation');
+              return true;
+            } catch (e) {
+              debugPrint('❌ Failed to save after table creation: $e');
+              return false;
+            }
+          }
+        } catch (e) {
+          debugPrint('❌ Could not check database tables: $e');
+        }
+        
+        return false;
+      }
+    } catch (e, stackTrace) {
       debugPrint('❌ Error saving sensitization data: $e');
+      debugPrint('📌 Stack trace: $stackTrace');
+      
+      // Try to get more information about the error
+      try {
+        final db = await LocalDBHelper.instance.database;
+        final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+        debugPrint('Available tables: ${tables.map((t) => t['name']).toList()}');
+      } catch (e) {
+        debugPrint('Could not list tables: $e');
+      }
+      
       return false;
     }
   }
@@ -109,21 +220,64 @@ class _SensitizationPageState extends State<SensitizationPage> {
   @override
   void initState() {
     super.initState();
-    _isAcknowledged = widget.sensitizationData.isAcknowledged;
+    _loadSensitizationData();
+  }
+
+  /// Loads the sensitization data from the database
+  Future<void> _loadSensitizationData() async {
+    try {
+      final db = LocalDBHelper.instance;
+      final sensitizationDao = SensitizationDao(dbHelper: db);
+      
+      // Get the farm identification ID from the parent widget
+      final farmId = widget.sensitizationData.id;
+      if (farmId != null) {
+        final existingData = await sensitizationDao.getByFarmIdentificationId(farmId);
+        if (existingData != null && mounted) {
+          setState(() {
+            _isAcknowledged = existingData.isAcknowledged;
+          });
+          // Update the parent widget with the loaded data
+          widget.onSensitizationChanged(existingData);
+        }
+      } else {
+        // If no farm ID, use the data passed in
+        setState(() {
+          _isAcknowledged = widget.sensitizationData.isAcknowledged;
+        });
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error loading sensitization data: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      // Fall back to the data passed in
+      if (mounted) {
+        setState(() {
+          _isAcknowledged = widget.sensitizationData.isAcknowledged;
+        });
+      }
+    }
   }
 
   void _onCheckboxChanged(bool value) {
-    setState(() {
-      _isAcknowledged = value;
-      _isCheckboxValid = true; // Clear error when user interacts
-      // Update the parent immediately when checkbox state changes
-      widget.onSensitizationChanged(
-  widget.sensitizationData.copyWith(
-    isAcknowledged: value,
-    acknowledgedAt: value ? DateTime.now() : null,
-  ),
-);
-    });
+    if (mounted) {
+      setState(() {
+        _isAcknowledged = value;
+        _isCheckboxValid = true; // Clear error when user interacts
+        
+        // Create updated data with current timestamp
+        final updatedData = widget.sensitizationData.copyWith(
+          isAcknowledged: value,
+          acknowledgedAt: value ? DateTime.now() : null,
+          updatedAt: DateTime.now(),
+        );
+        
+        // Update the parent immediately when checkbox state changes
+        widget.onSensitizationChanged(updatedData);
+        
+        debugPrint('🔘 Checkbox changed: $value');
+      });
+    }
   }
 
   @override

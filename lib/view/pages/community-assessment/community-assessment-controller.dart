@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:human_rights_monitor/controller/api/api.dart';
-import 'package:human_rights_monitor/controller/db/community_db_helper.dart';
+
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/community_db_helper.dart';
 import 'package:human_rights_monitor/controller/models/community-assessment-model.dart';
 import 'package:intl/intl.dart';
 

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/monitoring_db_helper.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../controller/db/monitoring_db_helper.dart';
+
 import '../../../../controller/models/monitoring_model.dart';
 import '../../../../utils/monitoring_dummy_data.dart';
 import '../../../../controller/models/monitoring_model.dart' as controller_models;

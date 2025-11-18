@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
-import 'package:human_rights_monitor/controller/models/adult_info_model.dart';
-import 'package:human_rights_monitor/controller/models/combined_farmer_identification_model.dart';
-import 'package:human_rights_monitor/controller/models/identification_of_owner_model.dart';
-import 'package:human_rights_monitor/controller/models/visit_information_model.dart';
-import 'package:human_rights_monitor/controller/models/workers_in_farm_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/adult_info_model.dart';
+
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/identification_of_owner_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/visit_information_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/workers_in_farm_model.dart';
 import 'package:human_rights_monitor/controller/db/table_names.dart';
 import 'package:human_rights_monitor/controller/db/household_tables.dart' as table;
 

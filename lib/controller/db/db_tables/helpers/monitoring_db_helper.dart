@@ -1,10 +1,11 @@
 import 'dart:convert';
+import 'package:human_rights_monitor/controller/db/db_tables/monitoring_table.dart';
+import 'package:human_rights_monitor/controller/models/monitoring_model.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:intl/intl.dart';
 
-import 'db_tables/monitoring_table.dart';
-import '../models/monitoring_model.dart';
+
 
 class MonitoringDBHelper {
   static const _dbName = 'monitoring.db';

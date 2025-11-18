@@ -133,6 +133,7 @@ class ProducerDetailsModel {
   final String? hasBirthCertificate;
   final String? occupation;
   final String? otherOccupation;
+  final String? otherCountry;
 
   const ProducerDetailsModel({
     this.gender,
@@ -150,6 +151,7 @@ class ProducerDetailsModel {
     this.hasBirthCertificate,
     this.occupation,
     this.otherOccupation,
+    this.otherCountry,
   });
 
   ProducerDetailsModel copyWith({
@@ -168,6 +170,7 @@ class ProducerDetailsModel {
     String? hasBirthCertificate,
     String? occupation,
     String? otherOccupation,
+    String? otherCountry,
   }) {
     return ProducerDetailsModel(
       gender: gender ?? this.gender,
@@ -186,6 +189,7 @@ class ProducerDetailsModel {
       hasBirthCertificate: hasBirthCertificate ?? this.hasBirthCertificate,
       occupation: occupation ?? this.occupation,
       otherOccupation: otherOccupation ?? this.otherOccupation,
+      otherCountry: otherCountry ?? this.otherCountry,
     );
   }
 
@@ -207,6 +211,7 @@ class ProducerDetailsModel {
       'hasBirthCertificate': hasBirthCertificate,
       'occupation': occupation,
       'otherOccupation': otherOccupation,
+      'otherCountry': otherCountry,
     };
   }
 
@@ -228,6 +233,7 @@ class ProducerDetailsModel {
       hasBirthCertificate: json['hasBirthCertificate'],
       occupation: json['occupation'],
       otherOccupation: json['otherOccupation'],
+      otherCountry: json['otherCountry'],
     );
   }
   
@@ -289,6 +295,6 @@ class ProducerDetailsModel {
 
   @override
   String toString() {
-    return 'ProducerDetailsModel(gender: $gender, nationality: $nationality, yearOfBirth: $yearOfBirth, selectedCountry: $selectedCountry, ghanaCardId: $ghanaCardId, otherIdType: $otherIdType, otherIdNumber: $otherIdNumber, consentToTakePhoto: $consentToTakePhoto, noConsentReason: $noConsentReason, idPhotoPath: $idPhotoPath, relationshipToRespondent: $relationshipToRespondent, otherRelationship: $otherRelationship, hasBirthCertificate: $hasBirthCertificate, occupation: $occupation, otherOccupation: $otherOccupation)';
+    return 'ProducerDetailsModel(gender: $gender, nationality: $nationality, yearOfBirth: $yearOfBirth, selectedCountry: $selectedCountry, ghanaCardId: $ghanaCardId, otherIdType: $otherIdType, otherIdNumber: $otherIdNumber, consentToTakePhoto: $consentToTakePhoto, noConsentReason: $noConsentReason, idPhotoPath: $idPhotoPath, relationshipToRespondent: $relationshipToRespondent, otherRelationship: $otherRelationship, hasBirthCertificate: $hasBirthCertificate, occupation: $occupation, otherOccupation: $otherOccupation, otherCountry: $otherCountry)';
   }
 }

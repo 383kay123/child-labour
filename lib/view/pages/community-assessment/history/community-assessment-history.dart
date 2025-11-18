@@ -3,10 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/community_db_helper.dart';
 import 'package:intl/intl.dart';
 import '../../../../controller/db/db_tables/community_assessment_table.dart';
 import '../../../../controller/api/api.dart';
-import '../../../../controller/db/community_db_helper.dart';
+
 import '../../../../controller/models/community-assessment-model.dart';
 import '../../../theme/app_theme.dart';
 import '../assessment_detail_screen.dart';

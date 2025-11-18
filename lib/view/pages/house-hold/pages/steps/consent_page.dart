@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:developer' as devtools;
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
-import 'package:human_rights_monitor/controller/models/consent_model.dart';
 import 'package:human_rights_monitor/controller/db/table_names.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
+
 import '../../../../theme/app_theme.dart';
 import '../../form_fields.dart';
 
@@ -74,6 +75,7 @@ class ConsentPage extends StatefulWidget {
   final VoidCallback? onPrevious;
   final VoidCallback? onSurveyEnd;
   final GlobalKey<ConsentPageState>? pageKey;
+  final int? coverPageId;
 
   const ConsentPage({
     Key? key,
@@ -85,6 +87,7 @@ class ConsentPage extends StatefulWidget {
     this.onPrevious,
     this.onSurveyEnd,
     this.pageKey,
+    this.coverPageId,
   }) : super(key: key);
 
   @override
@@ -98,8 +101,11 @@ class ConsentPageState extends State<ConsentPage> {
   // State for resident status
   bool? _residesInCommunity;
   String? _nonResidentCommunity;
-  bool _hasGivenConsent = true;
+  bool _hasGivenConsent = false;
   bool _declinedConsent = false;
+  
+  // Track if we're currently getting location
+  bool _isGettingLocation = false;
 
   // Controllers
   late final TextEditingController _refusalReasonController;
@@ -114,15 +120,12 @@ class ConsentPageState extends State<ConsentPage> {
   // Validation state tracking
   bool _isValidating = false;
 
-  
-  
-
   @override
   void initState() {
     super.initState();
 
-    // Initialize consent states from widget.data with default values if null
-    _hasGivenConsent = widget.data.consentGiven ?? true;
+    // Initialize consent states - default to false for new surveys
+    _hasGivenConsent = widget.data.consentGiven ?? false;
     _declinedConsent = widget.data.declinedConsent ?? false;
 
     // Initialize controllers with current values
@@ -137,36 +140,37 @@ class ConsentPageState extends State<ConsentPage> {
     );
 
     // Add listeners
-    _refusalReasonController.addListener(_handleRefusalReasonChanged);
+    _refusalReasonController.addListener(() {
+      // Update the data when refusal reason changes
+      if (mounted) {
+        widget.onDataChanged(widget.data.copyWith(
+          refusalReason: _refusalReasonController.text.isNotEmpty ? _refusalReasonController.text : null,
+        ));
+      }
+    });
+    
     _otherCommunityController.addListener(_handleOtherCommunityChanged);
     _otherSpecController.addListener(_handleOtherSpecChangedListener);
 
     _debugPrintInitialState();
 
-    // Automatically record interview time and GPS location on page load
+    // Initialize interview time and GPS location
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (widget.data.interviewStartTime == null) {
-        _handleRecordTime();
+        // Initialize interview time
+        widget.onRecordTime();
       }
       if (widget.data.currentPosition == null) {
-        _handleGetLocation();
+        // Initialize location
+        widget.onGetLocation();
       }
     });
   }
 
   void _debugPrintInitialState() {
     if (kDebugMode) {
-      print('=== Consent Form Initial State ===');
-      print('Consent Given: ${widget.data.consentGiven}');
-      print('Refusal Reason: ${widget.data.refusalReason}');
-      print('Community Type: ${widget.data.communityType}');
-      print('Other Community: ${widget.data.otherCommunityName}');
-      print('Other Specification: ${widget.data.otherSpecification}');
-      print('Resides in Community: ${widget.data.residesInCommunityConsent}');
-      print('Interview Start Time: ${widget.data.interviewStartTime}');
-      print('GPS Location: ${widget.data.currentPosition}');
-      print('==============================');
+      devtools.log('Consent Form Initialized', name: 'consent');
     }
   }
 
@@ -189,19 +193,15 @@ class ConsentPageState extends State<ConsentPage> {
     
     // Update local state from widget data
     if (widget.data.consentGiven != oldWidget.data.consentGiven) {
-      _hasGivenConsent = widget.data.consentGiven ?? true;
+      _hasGivenConsent = widget.data.consentGiven ?? false;
     }
     if (widget.data.declinedConsent != oldWidget.data.declinedConsent) {
       _declinedConsent = widget.data.declinedConsent ?? false;
     }
-    
-    devtools.log('ConsentPage updated', name: 'state');
   }
 
   @override
   void dispose() {
-    // CRITICAL: Remove listeners BEFORE disposing controllers
-    _refusalReasonController.removeListener(_handleRefusalReasonChanged);
     _otherCommunityController.removeListener(_handleOtherCommunityChanged);
     _otherSpecController.removeListener(_handleOtherSpecChangedListener);
     
@@ -215,17 +215,23 @@ class ConsentPageState extends State<ConsentPage> {
     _otherCommunityFocusNode.dispose();
     _otherSpecFocusNode.dispose();
     
-    devtools.log('ConsentPage disposed', name: 'state');
     super.dispose();
   }
 
   /// Saves the current consent data to the local database
   Future<bool> saveData() async {
+    if (!mounted) return false;
+    
     try {
-      if (!mounted) return false;
-      
+      // Ensure coverPageId is set
+      if (widget.coverPageId == null) {
+        debugPrint('Error: coverPageId is null when saving consent data');
+        return false;
+      }
+
       // Create a copy of the current data with updated values from the form
       final updatedData = widget.data.copyWith(
+        coverPageId: widget.coverPageId, // Include coverPageId in the update
         communityType: widget.data.communityType,
         residesInCommunityConsent: _residesInCommunity == true ? 'Yes' : 'No',
         farmerAvailable: widget.data.farmerAvailable,
@@ -237,27 +243,29 @@ class ConsentPageState extends State<ConsentPage> {
         declinedConsent: _declinedConsent,
         refusalReason: _refusalReasonController.text.trim(),
         consentTimestamp: DateTime.now(),
+        interviewStartTime: widget.data.interviewStartTime ?? DateTime.now(),
+        timeStatus: widget.data.timeStatus ?? 'Started at ${TimeOfDay.now().format(context)}',
+        currentPosition: widget.data.currentPosition,
+        locationStatus: widget.data.locationStatus,
       );
+      
+      debugPrint('Saving consent data with coverPageId: ${widget.coverPageId}');
 
-      // Get the database instance
-      final db = await LocalDBHelper.instance.database;
-        
+      // Use HouseholdDBHelper which has the table existence checks
+      final dbHelper = HouseholdDBHelper.instance;
+      
       try {
-        // Save the data
+        // Save the data using HouseholdDBHelper
         int? id;
         if (updatedData.id == null) {
           // Insert new record
-          id = await db.insert(TableNames.consentTBL, updatedData.toMap());
-          debugPrint('✅ Consent data inserted successfully with ID: $id');
+          id = await dbHelper.insertConsent(updatedData);
+          devtools.log('Consent data saved with ID: $id', name: 'database');
         } else {
           // Update existing record
-          id = await db.update(
-            TableNames.consentTBL,
-            updatedData.toMap(),
-            where: 'id = ?',
-            whereArgs: [updatedData.id],
-          );
-          debugPrint('✅ Consent data updated successfully for ID: ${updatedData.id}');
+          await dbHelper.updateConsent(updatedData);
+          id = updatedData.id;
+          devtools.log('Consent data updated for ID: ${updatedData.id}', name: 'database');
         }
         
         // Verify the data was saved
@@ -273,7 +281,7 @@ class ConsentPageState extends State<ConsentPage> {
           }
           return true;
         } else {
-          debugPrint('❌ Failed to save consent data: No valid ID returned');
+          devtools.log('Failed to save consent data: No valid ID returned', name: 'database', error: true);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -286,12 +294,11 @@ class ConsentPageState extends State<ConsentPage> {
           return false;
         }
       } catch (e) {
-        debugPrint('❌ Database error: $e');
+        devtools.log('Database error in save operation: $e', name: 'database', error: true);
         rethrow;
       }
     } catch (e, stackTrace) {
-      debugPrint('❌ Error in saveData: $e');
-      debugPrint('Stack trace: $stackTrace');
+      devtools.log('Error in saveData: $e', name: 'database', error: true, stackTrace: stackTrace);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -344,13 +351,6 @@ class ConsentPageState extends State<ConsentPage> {
     );
   }
 
-  // void _handleRefusalReasonChanged() {
-  //   if (!mounted) return;
-  //   final value = _refusalReasonController.text;
-  //   widget.onDataChanged(widget.data.copyWith(refusalReason: value));
-  //   validateForm();
-  // }
-
   void _handleOtherCommunityChanged() {
     if (!mounted) return;
     final value = _otherCommunityController.text;
@@ -381,27 +381,10 @@ class ConsentPageState extends State<ConsentPage> {
 
   /// Enhanced debug logging for user inputs
   void _logUserInput(String question, dynamic value, {String? fieldType, List<String>? options}) {
-    devtools.log('USER INPUT CAPTURED - $question: $value', name: 'user_input');
-
-    final logData = {
-      'timestamp': DateTime.now().toIso8601String(),
-      'action': 'user_input',
-      'question': question,
-      'value': value.toString(),
-      'field_type': fieldType ?? 'unspecified',
-      'available_options': options?.join(', ') ?? 'N/A',
-    };
-
-    devtools.log(jsonEncode(logData), name: 'user_input');
-    devtools.log('🎯 USER SELECTION: $question → $value', name: 'user_input');
-  }
-
-  /// Log validation events
-  void _logValidation(String field, String status, {String? message}) {
-    devtools.log(
-      'VALIDATION: $field - $status${message != null ? ' - $message' : ''}',
-      name: 'validation',
-    );
+    // Only log in debug mode
+    if (kDebugMode) {
+      devtools.log('Input: $question = $value', name: 'user_input');
+    }
   }
 
   /// Form validation disabled
@@ -455,222 +438,156 @@ class ConsentPageState extends State<ConsentPage> {
       ),
     );
   }
-void _handleConsentChange(bool value) {
-  if (!mounted) return;
 
-  // Use a local variable to track the new state
-  final newConsentGiven = value;
-  final newDeclinedConsent = !value;
+  void _handleConsentChange(bool value) {
+    if (!mounted) return;
 
-  try {
-    _logUserInput('Do you consent to participate?', 
-        newConsentGiven ? 'Yes' : 'No', 
-        options: ['Yes', 'No']);
-
-    // First update the local state
-    setState(() {
-      _hasGivenConsent = newConsentGiven;
-      _declinedConsent = newDeclinedConsent;
-      if (_hasGivenConsent) {
-        _refusalReasonController.clear();
-        _fieldErrors.remove('refusalReason');
-      }
-    });
-
-    // Create the updated data
-    final updatedData = widget.data.copyWith(
-      consentGiven: newConsentGiven,
-      declinedConsent: newDeclinedConsent,
-      refusalReason: newConsentGiven ? null : _refusalReasonController.text,
-    );
-
-    // Notify parent
-    try {
-      // First, print a clear message that we're about to save
-      debugPrint('\n🚀 CONSENT DATA BEING SAVED 🚀');
-      debugPrint('--------------------------------');
-      
-      // Save the data
-      widget.onDataChanged(updatedData);
-      
-      // Log the saved data in a very visible way
-      final timestamp = DateTime.now().toIso8601String();
-      final consentStatus = newConsentGiven ? '✅ CONSENT GIVEN' : '❌ CONSENT DECLINED';
-      
-      debugPrint('🔄 $consentStatus');
-      debugPrint('📅 Timestamp: $timestamp');
-      debugPrint('✔️ Consent Given: $newConsentGiven');
-      debugPrint('✖️ Declined Consent: $newDeclinedConsent');
-      
-      if (!newConsentGiven) {
-        debugPrint('📝 Refusal Reason: "${_refusalReasonController.text}"');
-      }
-      
-      debugPrint('--------------------------------');
-      debugPrint('Data saved successfully! 🎉\n');
-      
-      // Also log to devtools for more detailed inspection
-      devtools.log(
-        'Consent data saved',
-        name: 'ConsentPage',
-        time: DateTime.now(),
-        error: {
-          'consentGiven': newConsentGiven,
-          'declinedConsent': newDeclinedConsent,
-          'refusalReason': newConsentGiven ? 'N/A' : _refusalReasonController.text,
-          'timestamp': timestamp,
-        },
-      );
-    } catch (e, stackTrace) {
-      if (!mounted) return;
-      devtools.log('Error in onDataChanged: $e', 
-          name: 'error', error: e, stackTrace: stackTrace);
-      _showErrorSnackBar('Failed to save consent. Please try again.');
-      
-      // Revert the UI state
+    // If unchecking, just update the state
+    if (!value) {
       setState(() {
-        _hasGivenConsent = !newConsentGiven;
-        _declinedConsent = !newDeclinedConsent;
+        _hasGivenConsent = false;
       });
       return;
     }
 
-    // Validate the form
-    if (mounted) {
-      validateForm();
-    }
-  } catch (e, stackTrace) {
-    if (!mounted) return;
-    devtools.log('Unexpected error in _handleConsentChange: $e', 
-        name: 'error', error: e, stackTrace: stackTrace);
-    _showErrorSnackBar(_ErrorMessages.unexpectedError);
-    
-    // Revert the UI state
+    // If checking, ensure declined is false
     setState(() {
-      _hasGivenConsent = !newConsentGiven;
-      _declinedConsent = !newDeclinedConsent;
+      _hasGivenConsent = true;
+      _declinedConsent = false;
     });
-  }
-}
 
-void _handleDeclineChange(bool value) {
-  if (!mounted) return;
-  
-  if (value == true) {
-    // If declining, uncheck consent given if it was checked
-    if (_hasGivenConsent) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _hasGivenConsent = false;
-          });
-        }
-      });
-    }
-    
-    // Update the declined consent state
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+    try {
+      _logUserInput('Do you consent to participate?', 
+          true ? 'Yes' : 'No', 
+          options: ['Yes', 'No']);
+
+      // Create the updated data
+      final updatedData = widget.data.copyWith(
+        consentGiven: true,
+        declinedConsent: false,
+        refusalReason: null,
+      );
+
+      // Notify parent
+      try {
+        // First, print a clear message that we're about to save
+        debugPrint('\n🚀 CONSENT DATA BEING SAVED 🚀');
+        debugPrint('--------------------------------');
+        
+        // Save the data
+        widget.onDataChanged(updatedData);
+        
+        // Log the saved data in a very visible way
+        final timestamp = DateTime.now().toIso8601String();
+        final consentStatus = '✅ CONSENT GIVEN';
+        
+        debugPrint('🔄 $consentStatus');
+        debugPrint('📅 Timestamp: $timestamp');
+        debugPrint('✔️ Consent Given: true');
+        debugPrint('✖️ Declined Consent: false');
+        
+        debugPrint('--------------------------------');
+        debugPrint('Data saved successfully! 🎉\n');
+        
+        // Also log to devtools for more detailed inspection
+        devtools.log(
+          'Consent data saved',
+          name: 'ConsentPage',
+          time: DateTime.now(),
+          error: {
+            'consentGiven': true,
+            'declinedConsent': false,
+            'refusalReason': 'N/A',
+            'timestamp': timestamp,
+          },
+        );
+      } catch (e, stackTrace) {
+        if (!mounted) return;
+        devtools.log('Error in onDataChanged: $e', 
+            name: 'error', error: e, stackTrace: stackTrace);
+        _showErrorSnackBar('Failed to save consent. Please try again.');
+        
+        // Revert the UI state
         setState(() {
-          _declinedConsent = true;
-        });
-      }
-    });
-    
-    // Focus on the reason field
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        FocusScope.of(context).requestFocus(_reasonFocusNode);
-      }
-    });
-  } else {
-    // If unchecking the decline option
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {
+          _hasGivenConsent = false;
           _declinedConsent = false;
-          _refusalReasonController.clear();
-          _fieldErrors.remove('refusalReason');
         });
-        // Update parent widget
-        widget.onDataChanged(widget.data.copyWith(
-          declinedConsent: false,
-          refusalReason: null,
-        ));
+        return;
+      }
+
+      // Validate the form
+      if (mounted) {
         validateForm();
       }
-    });
+    } catch (e, stackTrace) {
+      if (!mounted) return;
+      devtools.log('Unexpected error in _handleConsentChange: $e', 
+          name: 'error', error: e, stackTrace: stackTrace);
+      _showErrorSnackBar(_ErrorMessages.unexpectedError);
+      
+      // Revert the UI state
+      setState(() {
+        _hasGivenConsent = false;
+        _declinedConsent = false;
+      });
+    }
   }
-}
 
-// Update the refusal reason field to show end survey confirmation when submitted
-void _handleRefusalReasonChanged() {
-  final reason = _refusalReasonController.text.trim();
-  if (reason.isNotEmpty) {
-    // Clear any existing error
-    setState(() {
-      _fieldErrors.remove('refusalReason');
-    });
+  Future<void> _showEndSurveyConfirmation() async {
+    if (!mounted) return;
     
-    // Update parent with the reason
-    widget.onDataChanged(widget.data.copyWith(
-      declinedConsent: true,
-      refusalReason: reason,
-    ));
-    
-    // Show the end survey confirmation
-    _showEndSurveyConfirmation();
-  } else {
-    // Show error if reason is empty
-    setState(() {
-      _fieldErrors['refusalReason'] = 'Please provide a reason for declining';
-    });
-  }
-}
-
-Future<void> _showEndSurveyConfirmation() async {
-  if (!mounted) return;
-  
-  // Show the confirmation dialog
-  final bool? confirm = await showDialog<bool>(
-    context: context,
-    builder: (BuildContext context) => AlertDialog(
-      title: const Text('End Survey'),
-      content: const Text('Are you sure you want to decline and end the survey?'),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text(
-            'Decline & End',
-            style: TextStyle(color: Colors.red),
+    // Show the confirmation dialog
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('End Survey'),
+        content: const Text('Are you sure you want to decline and end the survey?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
-        ),
-      ],
-    ),
-  );
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('End Survey'),
+          ),
+        ],
+      ),
+    );
 
-  if (confirm == true && mounted) {
-    // Update the parent widget
-    widget.onDataChanged(widget.data.copyWith(
-      declinedConsent: true,
-      refusalReason: _refusalReasonController.text,
-      consentGiven: false,
-    ));
-    
-    // Call the survey end callback
-    widget.onSurveyEnd?.call();
-  } else if (mounted) {
-    // If user cancels, uncheck the decline option
-    setState(() {
-      _declinedConsent = false;
-      _refusalReasonController.clear();
-    });
+    if (confirm == true && mounted) {
+      // If user confirms, call the survey end callback
+      widget.onSurveyEnd?.call();
+    } else if (mounted) {
+      // If user cancels, uncheck the decline option
+      setState(() {
+        _declinedConsent = false;
+        _refusalReasonController.clear();
+      });
+    }
   }
-}
+
+  void _handleDeclineChange(bool? value) {
+    if (value == null) return;
+    if (!mounted) return;
+    
+    setState(() {
+      _declinedConsent = value;
+      if (value) {
+        _hasGivenConsent = false;
+      }
+    });
+    
+    if (value) {
+      // Show the end survey confirmation if declining
+      _showEndSurveyConfirmation();
+    } else {
+      // Clear refusal reason when unchecking decline
+      setState(() {
+        _fieldErrors.remove('refusalReason');
+      });
+    }
+  }
 
   void _handleCommunityTypeChanged(String? value) {
     if (!mounted) return;
@@ -815,13 +732,65 @@ Future<void> _showEndSurveyConfirmation() async {
     return !nonConsentStatuses.contains(widget.data.farmerStatus);
   }
 
-  void _handleRecordTime() {
+  Future<void> _handleRecordTime() async {
     if (!mounted) return;
     
-    _logUserInput('Record interview start time', DateTime.now().toIso8601String(), fieldType: 'timestamp');
-    widget.onRecordTime();
-    if (mounted) {
-      _fieldErrors.remove('interviewStartTime');
+    try {
+      final now = DateTime.now();
+      _logUserInput('Record interview start time', now.toIso8601String(), fieldType: 'timestamp');
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _fieldErrors.remove('interviewStartTime');
+      });
+      
+      // Create a new ConsentData with the updated time
+      final updatedData = widget.data.copyWith(
+        interviewStartTime: now,
+        timeStatus: 'Recorded at ${now.hour}:${now.minute.toString().padLeft(2, '0')}',
+      );
+      
+      // Update the data through the parent
+      widget.onDataChanged(updatedData);
+      
+      // Call the parent's callback
+      widget.onRecordTime();
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Interview start time recorded'),
+            backgroundColor: Colors.green[700],
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      devtools.log('Error recording time: $e', 
+          name: _DebugTags.error, 
+          error: e, 
+          stackTrace: stackTrace);
+      
+      if (mounted) {
+        setState(() {
+          _fieldErrors['interviewStartTime'] = 'Failed to record time';
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to record time. Please try again.'),
+            backgroundColor: Colors.red[700],
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
       validateForm();
     }
   }
@@ -855,7 +824,6 @@ Future<void> _showEndSurveyConfirmation() async {
       const SizedBox(height: _Spacing.md),
        
       _buildQuestionCard(
-      
         errorKey: 'otherCommunity',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -864,7 +832,7 @@ Future<void> _showEndSurveyConfirmation() async {
                     color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
                     fontWeight: FontWeight.w500,
                   ),),
-                  SizedBox(height: 16,),
+                  const SizedBox(height: 16,),
          TextFormField(
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
@@ -886,237 +854,202 @@ Future<void> _showEndSurveyConfirmation() async {
   Future<void> _handleGetLocation() async {
     if (!mounted) return;
     
-    try {
-      devtools.log('Initiating location capture', name: _DebugTags.location);
-      
-      // Store context in a local variable to use in callbacks
-      final currentContext = context;
-      if (!currentContext.mounted) return;
-      
-      // Show loading SnackBar
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  strokeWidth: 2,
-                ),
-              ),
-              SizedBox(width: 16),
-              Text('Getting your location...'),
-            ],
-          ),
-          duration: Duration(seconds: 30),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.blue,
-        ),
-      );
+    setState(() {
+      _isGettingLocation = true;
+      _fieldErrors.remove('gpsLocation'); // Clear any previous errors
+    });
+    
+    final currentContext = context;
+    if (!currentContext.mounted) {
+      _isGettingLocation = false;
+      return;
+    }
 
-      try {
-        // Call the parent's location handler
-        await widget.onGetLocation();
-        
-        if (!mounted) return;
-        
-        // Dismiss the loading SnackBar
-        ScaffoldMessenger.of(currentContext).removeCurrentSnackBar();
-        
-        // Update form validation state
-        if (widget.data.currentPosition != null) {
-          setState(() {
-            _fieldErrors.remove('gpsLocation');
-          });
-          
-          // Show success message
-          if (mounted) {
-            ScaffoldMessenger.of(currentContext).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white, size: 20),
-                    SizedBox(width: 8),
-                    Text('Location captured successfully'),
-                  ],
-                ),
-                backgroundColor: Colors.green[700],
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-                margin: const EdgeInsets.all(16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            );
-          }
-        }
-        
-        if (mounted) {
-          validateForm();
-        }
-      } catch (e, stackTrace) {
-        devtools.log('Error getting location: $e', 
-                     name: _DebugTags.error, 
-                     error: e, 
-                     stackTrace: stackTrace);
-        
-        if (!mounted) return;
-        
-        // Dismiss the loading SnackBar
-        ScaffoldMessenger.of(currentContext).removeCurrentSnackBar();
-        
-        // Show error message
-        final errorMessage = e is PermissionDeniedException
-            ? 'Location permission denied. Please enable location permissions in settings.'
-            : e is LocationServiceDisabledException
-                ? 'Location services are disabled. Please enable them to continue.'
-                : 'Failed to get location: ${e.toString()}';
-        
+    try {
+      // Call the parent's location handler
+      await widget.onGetLocation();
+      
+      if (!mounted) return;
+      
+      // Update form validation state
+      if (widget.data.currentPosition != null) {
         setState(() {
-          _fieldErrors['gpsLocation'] = errorMessage;
+          _fieldErrors.remove('gpsLocation');
         });
         
-        if (mounted) {
-          ScaffoldMessenger.of(currentContext).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(errorMessage)),
-                ],
-              ),
-              backgroundColor: Colors.red[700],
-              duration: const Duration(seconds: 5),
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              action: SnackBarAction(
-                label: 'SETTINGS',
-                textColor: Colors.white,
-                onPressed: () => Geolocator.openAppSettings(),
-              ),
-            ),
-          );
-      }
-    } catch (e, stackTrace) {
-      devtools.log('Unexpected error in _handleGetLocation: $e', 
-                  name: _DebugTags.error, 
-                  error: e, 
-                  stackTrace: stackTrace);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        // Show success message
+        ScaffoldMessenger.of(currentContext).showSnackBar(
           SnackBar(
-            content: const Text('An unexpected error occurred while getting location'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Location captured successfully'),
+              ],
+            ),
+            backgroundColor: Colors.green[700],
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
-    }
-  } on LocationServiceDisabledException catch (e) {
-      devtools.log('Location services disabled: $e', name: _DebugTags.error);
       
+      if (mounted) {
+        validateForm();
+      }
+    } on PermissionDeniedException catch (e) {
       if (!mounted) return;
       
-      // Store context in a local variable to use in callbacks
-      final currentContext = context;
+      final errorMessage = 'Location permission denied. Please enable location permissions in settings.';
       
-      // Update form validation state first
       setState(() {
-        _fieldErrors['gpsLocation'] = 'Location services are disabled';
-        validateForm();
+        _fieldErrors['gpsLocation'] = errorMessage;
       });
       
-      // Then show the snackbar
-      if (currentContext.mounted) {
-        ScaffoldMessenger.of(currentContext)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.location_off, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Location services are disabled. Please enable them in settings.',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.orange[700],
-              duration: const Duration(seconds: 5),
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              action: SnackBarAction(
-                label: 'SETTINGS',
-                textColor: Colors.white,
-                onPressed: () => Geolocator.openLocationSettings(),
-              ),
+      ScaffoldMessenger.of(currentContext)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(errorMessage)),
+              ],
             ),
-          );
-      }
-    } catch (e, stackTrace) {
-      devtools.log('Location error: $e', name: _DebugTags.error, error: e, stackTrace: stackTrace);
-      
+            backgroundColor: Colors.red[700],
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            action: SnackBarAction(
+              label: 'SETTINGS',
+              textColor: Colors.white,
+              onPressed: () => Geolocator.openAppSettings(),
+            ),
+          ),
+        );
+    } on LocationServiceDisabledException catch (e) {
       if (!mounted) return;
       
-      final errorMessage = e is TimeoutException
-          ? 'Location request timed out. Please try again.'
-          : 'Error getting location: ${e.toString().replaceAll('Exception: ', '')}';
+      final errorMessage = 'Location services are disabled. Please enable them to continue.';
       
-      // Store context in a local variable to use in callbacks
-      final currentContext = context;
-      
-      // Update form validation state first
       setState(() {
         _fieldErrors['gpsLocation'] = errorMessage;
         validateForm();
       });
       
-      // Then show the snackbar
-      if (currentContext.mounted) {
-        ScaffoldMessenger.of(currentContext)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      errorMessage,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.red[700],
-              duration: const Duration(seconds: 5),
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              action: SnackBarAction(
-                label: 'RETRY',
-                textColor: Colors.white,
-                onPressed: _handleGetLocation,
-              ),
+      ScaffoldMessenger.of(currentContext)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.location_off, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(errorMessage)),
+              ],
             ),
-          );
+            backgroundColor: Colors.orange[700],
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            action: SnackBarAction(
+              label: 'SETTINGS',
+              textColor: Colors.white,
+              onPressed: () => Geolocator.openLocationSettings(),
+            ),
+          ),
+        );
+    } on TimeoutException {
+      if (!mounted) return;
+      
+      final errorMessage = 'Location request timed out. Please try again.';
+      
+      setState(() {
+        _fieldErrors['gpsLocation'] = errorMessage;
+        validateForm();
+      });
+      
+      ScaffoldMessenger.of(currentContext)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.timer_off, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(errorMessage)),
+              ],
+            ),
+            backgroundColor: Colors.orange[700],
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            action: SnackBarAction(
+              label: 'RETRY',
+              textColor: Colors.white,
+              onPressed: _handleGetLocation,
+            ),
+          ),
+        );
+    } catch (e, stackTrace) {
+      devtools.log('Error getting location: $e', 
+                  name: _DebugTags.error, 
+                  error: e, 
+                  stackTrace: stackTrace);
+      
+      if (!mounted) return;
+      
+      final errorMessage = 'Failed to get location: ${e.toString().replaceAll('Exception: ', '')}';
+      
+      setState(() {
+        _fieldErrors['gpsLocation'] = errorMessage;
+        validateForm();
+      });
+      
+      ScaffoldMessenger.of(currentContext)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(errorMessage)),
+              ],
+            ),
+            backgroundColor: Colors.red[700],
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            action: SnackBarAction(
+              label: 'RETRY',
+              textColor: Colors.white,
+              onPressed: _handleGetLocation,
+            ),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGettingLocation = false;
+        });
       }
     }
   }
@@ -1446,214 +1379,229 @@ Future<void> _showEndSurveyConfirmation() async {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
+    
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
+      // appBar: AppBar(
+      //   title: const Text('Consent Form'),
+      //   elevation: 0,
+      // ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Interview Time and Location Section
+              _buildQuestionCard(
+                errorKey: 'interviewStartTime',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Interview Time and Location Section
-                    _buildQuestionCard(
-                      errorKey: 'interviewStartTime',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Interview Information',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: _Spacing.md),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Start Time:',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                    Text(
-                                      widget.data.interviewStartTime != null
-                                          ? '${widget.data.interviewStartTime!.hour.toString().padLeft(2, '0')}:${widget.data.interviewStartTime!.minute.toString().padLeft(2, '0')}'
-                                          : 'Not recorded',
-                                      style: theme.textTheme.bodyLarge,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: _handleRecordTime,
-                                icon: const Icon(Icons.access_time),
-                                label: const Text('Record Time'),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: _Spacing.md),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'GPS Location:',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                    Text(
-                                      widget.data.currentPosition != null
-                                          ? 'Captured'
-                                          : 'Not captured',
-                                      style: theme.textTheme.bodyLarge,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: _handleGetLocation,
-                                icon: const Icon(Icons.location_on),
-                                label: const Text('Get Location'),
-                              ),
-                            ],
-                          ),
-                        ],
+                    Text(
+                      'Interview Information',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-
-                    const SizedBox(height: _Spacing.lg),
-
-                    // Community Type
-                    _buildQuestionCard(
-                      errorKey: 'communityType',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Select the type of community',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark ? Colors.white70 : Colors.black87,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: _Spacing.md),
-                          Column(
+                    const SizedBox(height: _Spacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildRadioOption(
-                                value: 'rural',
-                                groupValue: widget.data.communityType,
-                                label: 'Rural',
-                                onChanged: _handleCommunityTypeChanged,
+                              Text(
+                                'Start Time:',
+                                style: theme.textTheme.bodySmall,
                               ),
-                              _buildRadioOption(
-                                value: 'urban',
-                                groupValue: widget.data.communityType,
-                                label: 'Urban',
-                                onChanged: _handleCommunityTypeChanged,
-                              ),
-                              _buildRadioOption(
-                                value: 'semi_urban',
-                                groupValue: widget.data.communityType,
-                                label: 'Semi-Urban',
-                                onChanged: _handleCommunityTypeChanged,
+                              Text(
+                                widget.data.interviewStartTime != null
+                                    ? '${widget.data.interviewStartTime!.hour.toString().padLeft(2, '0')}:${widget.data.interviewStartTime!.minute.toString().padLeft(2, '0')}'
+                                    : 'Not recorded',
+                                style: theme.textTheme.bodyLarge,
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _handleRecordTime,
+                          icon: const Icon(Icons.access_time),
+                          label: const Text('Record Time'),
+                        ),
+                      ],
                     ),
-
-                    // Residence Confirmation
-                    _buildQuestionCard(
-                      errorKey: 'residesInCommunity',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Does the farmer reside in the community stated on the cover?',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark ? Colors.white70 : Colors.black87,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: _Spacing.md),
-                          Column(
+                    const SizedBox(height: _Spacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildRadioOption(
-                                value: 'Yes',
-                                groupValue: widget.data.residesInCommunityConsent,
-                                label: 'Yes',
-                                onChanged: _handleResidesInCommunityChanged,
+                              Text(
+                                'GPS Location:',
+                                style: theme.textTheme.bodySmall,
                               ),
-                              _buildRadioOption(
-                                value: 'No',
-                                groupValue: widget.data.residesInCommunityConsent,
-                                label: 'No',
-                                onChanged: _handleResidesInCommunityChanged,
+                              Text(
+                                widget.data.currentPosition != null
+                                    ? 'Captured'
+                                    : 'Not captured',
+                                style: theme.textTheme.bodyLarge,
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _handleGetLocation,
+                          icon: const Icon(Icons.location_on),
+                          label: const Text('Get Location'),
+                        ),
+                      ],
                     ),
-
-                    // Show community name field if resident is not in this community
-                    ..._buildNonResidentFields(),
-
-                    // Farmer Availability
-                    _buildQuestionCard(
-                      errorKey: 'farmerAvailable',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Is the farmer available?',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: isDark ? Colors.white70 : Colors.black87,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: _Spacing.md),
-                          Column(
-                            children: [
-                              _buildRadioOption(
-                                value: 'Yes',
-                                groupValue: widget.data.farmerAvailable,
-                                label: 'Yes',
-                                onChanged: _handleFarmerAvailableChanged,
-                              ),
-                              _buildRadioOption(
-                                value: 'No',
-                                groupValue: widget.data.farmerAvailable,
-                                label: 'No',
-                                onChanged: _handleFarmerAvailableChanged,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Farmer Not Available Fields
-                    ..._buildFarmerNotAvailableFields(),
-
-                    // Consent Section
-                    _buildConsentSection(),
-
-                    const SizedBox(height: 120), // Extra space for bottom button
                   ],
                 ),
               ),
-            ),
+
+              const SizedBox(height: _Spacing.lg),
+
+              // Community Type
+              _buildQuestionCard(
+                errorKey: 'communityType',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select the type of community',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: _Spacing.md),
+                    Column(
+                      children: [
+                        _buildRadioOption(
+                          value: 'rural',
+                          groupValue: widget.data.communityType,
+                          label: 'Rural',
+                          onChanged: _handleCommunityTypeChanged,
+                        ),
+                        _buildRadioOption(
+                          value: 'urban',
+                          groupValue: widget.data.communityType,
+                          label: 'Urban',
+                          onChanged: _handleCommunityTypeChanged,
+                        ),
+                        _buildRadioOption(
+                          value: 'semi_urban',
+                          groupValue: widget.data.communityType,
+                          label: 'Semi-Urban',
+                          onChanged: _handleCommunityTypeChanged,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Residence Confirmation
+              _buildQuestionCard(
+                errorKey: 'residesInCommunity',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Does the farmer reside in the community stated on the cover?',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: _Spacing.md),
+                    Column(
+                      children: [
+                        _buildRadioOption(
+                          value: 'Yes',
+                          groupValue: widget.data.residesInCommunityConsent,
+                          label: 'Yes',
+                          onChanged: _handleResidesInCommunityChanged,
+                        ),
+                        _buildRadioOption(
+                          value: 'No',
+                          groupValue: widget.data.residesInCommunityConsent,
+                          label: 'No',
+                          onChanged: _handleResidesInCommunityChanged,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Show community name field if resident is not in this community
+              ..._buildNonResidentFields(),
+
+              // Farmer Availability
+              _buildQuestionCard(
+                errorKey: 'farmerAvailable',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Is the farmer available?',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: _Spacing.md),
+                    Column(
+                      children: [
+                        _buildRadioOption(
+                          value: 'Yes',
+                          groupValue: widget.data.farmerAvailable,
+                          label: 'Yes',
+                          onChanged: _handleFarmerAvailableChanged,
+                        ),
+                        _buildRadioOption(
+                          value: 'No',
+                          groupValue: widget.data.farmerAvailable,
+                          label: 'No',
+                          onChanged: _handleFarmerAvailableChanged,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Farmer Not Available Fields
+              ..._buildFarmerNotAvailableFields(),
+
+              // Consent Section
+              _buildConsentSection(),
+
+              // const SizedBox(height: 24),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //   children: [
+              //     if (widget.onPrevious != null)
+              //       ElevatedButton(
+              //         onPressed: widget.onPrevious,
+              //         child: const Text('Back'),
+              //       )
+              //     else
+              //       const SizedBox(),
+              //     ElevatedButton(
+              //       onPressed: _handleNext,
+              //       child: const Text('Next'),
+              //     ),
+              //   ],
+              // ),
+              const SizedBox(height: 24), // Extra space for bottom button
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

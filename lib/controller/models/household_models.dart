@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/adult_info_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/identification_of_owner_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/visit_information_model.dart';
+import 'package:human_rights_monitor/controller/models/combinefarmer.dart/workers_in_farm_model.dart';
 import 'package:meta/meta.dart' show required;
 
 import '../../data/dummy_data/cover_dummy_data.dart';
@@ -20,8 +24,7 @@ class CoverPageData {
         selectedTownCode: null,
         selectedFarmerCode: null,
         towns: CoverDummyData.dummyTowns, // Use dummy towns data
-        farmers: CoverDummyData.getDummyFarmers(
-            'T001'), // Use dummy farmers data for first town
+        farmers: const [], // Start with empty farmers list
         townError: null,
         farmerError: null,
         isLoadingTowns: false,
@@ -32,18 +35,42 @@ class CoverPageData {
       
   /// Creates a CoverPageData from a database map
   factory CoverPageData.fromMap(Map<String, dynamic> map) {
+    List<DropdownItem> parseTowns(String? jsonString) {
+      if (jsonString == null || jsonString.isEmpty) return [];
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        return jsonList.map((item) => DropdownItem.fromMap(Map<String, dynamic>.from(item))).toList();
+      } catch (e) {
+        debugPrint('Error parsing towns: $e');
+        return [];
+      }
+    }
+
+    List<DropdownItem> parseFarmers(String? jsonString) {
+      if (jsonString == null || jsonString.isEmpty) return [];
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        return jsonList.map((item) => DropdownItem.fromMap(Map<String, dynamic>.from(item))).toList();
+      } catch (e) {
+        debugPrint('Error parsing farmers: $e');
+        return [];
+      }
+    }
+
     return CoverPageData(
-      id: map['id'],
-      selectedTownCode: map['selectedTownCode'],
-      selectedFarmerCode: map['selectedFarmerCode'],
-      towns: (map['towns'] as List<dynamic>?)?.map((item) => DropdownItem.fromMap(Map<String, dynamic>.from(item))).toList() ?? [],
-      farmers: (map['farmers'] as List<dynamic>?)?.map((item) => DropdownItem.fromMap(Map<String, dynamic>.from(item))).toList() ?? [],
-      townError: map['townError'],
-      farmerError: map['farmerError'],
-      isLoadingTowns: map['isLoadingTowns'] == 1,
-      isLoadingFarmers: map['isLoadingFarmers'] == 1,
-      hasUnsavedChanges: map['hasUnsavedChanges'] == 1,
-      member: map['member'] != null ? Map<String, dynamic>.from(map['member']) : null,
+      id: map['id'] is int ? map['id'] : int.tryParse(map['id']?.toString() ?? '0'),
+      selectedTownCode: map['selectedTownCode']?.toString(),
+      selectedFarmerCode: map['selectedFarmerCode']?.toString(),
+      towns: map['towns'] is String ? parseTowns(map['towns']) : 
+             (map['towns'] is List ? (map['towns'] as List).map((item) => DropdownItem.fromMap(Map<String, dynamic>.from(item))).toList() : []),
+      farmers: map['farmers'] is String ? parseFarmers(map['farmers']) : 
+              (map['farmers'] is List ? (map['farmers'] as List).map((item) => DropdownItem.fromMap(Map<String, dynamic>.from(item))).toList() : []),
+      townError: map['townError']?.toString(),
+      farmerError: map['farmerError']?.toString(),
+      isLoadingTowns: map['isLoadingTowns'] == 1 || map['isLoadingTowns'] == true,
+      isLoadingFarmers: map['isLoadingFarmers'] == 1 || map['isLoadingFarmers'] == true,
+      hasUnsavedChanges: map['hasUnsavedChanges'] == 1 || map['hasUnsavedChanges'] == true,
+      member: map['member'] != null ? (map['member'] is Map ? Map<String, dynamic>.from(map['member']) : null) : null,
     );
   }
 
@@ -73,8 +100,17 @@ class CoverPageData {
   String? get farmerError => _farmerError;
   bool get isLoadingTowns => _isLoadingTowns;
   bool get isLoadingFarmers => _isLoadingFarmers;
-  bool get isComplete =>
-      _selectedTownCode != null && _selectedFarmerCode != null;
+  bool get isComplete {
+    final complete = _selectedTownCode != null && _selectedFarmerCode != null;
+    if (!complete) {
+      debugPrint('❌ Validation failed:');
+      debugPrint('  - selectedTownCode: $_selectedTownCode');
+      debugPrint('  - selectedFarmerCode: $_selectedFarmerCode');
+    } else {
+      debugPrint('✅ All required fields are complete');
+    }
+    return complete;
+  }
 
   /// Converts the object to a map for database storage
   Map<String, dynamic> toMap() {
@@ -82,8 +118,8 @@ class CoverPageData {
       'id': id,
       'selectedTownCode': selectedTownCode,
       'selectedFarmerCode': selectedFarmerCode,
-      'towns': towns.map((item) => item.toMap()).toList(),
-      'farmers': farmers.map((item) => item.toMap()).toList(),
+      'towns': jsonEncode(towns.map((item) => item.toMap()).toList()),
+      'farmers': jsonEncode(farmers.map((item) => item.toMap()).toList()),
       'townError': townError,
       'farmerError': farmerError,
       'isLoadingTowns': isLoadingTowns ? 1 : 0,
@@ -117,6 +153,7 @@ class CoverPageData {
 
   /// Update town selection
   CoverPageData selectTown(String? townCode) {
+    debugPrint('🔵 selectTown called with: $townCode');
     return copyWith(
       selectedTownCode: townCode,
       hasUnsavedChanges: true,
@@ -125,6 +162,7 @@ class CoverPageData {
 
   /// Update farmer selection
   CoverPageData selectFarmer(String? farmerCode) {
+    debugPrint('🟢 selectFarmer called with: $farmerCode');
     return copyWith(
       selectedFarmerCode: farmerCode,
       hasUnsavedChanges: true,
@@ -201,9 +239,11 @@ class CoverPageData {
   }
 }
 
+
 /// Model for Consent Page data
 class ConsentData {
   final int? id;
+  final int? coverPageId;
   String? communityType;
   final String? residesInCommunityConsent;
   final String? farmerAvailable;
@@ -228,6 +268,7 @@ class ConsentData {
 
   ConsentData({
     this.id,
+    this.coverPageId,
     this.communityType,
     this.residesInCommunityConsent,
     this.farmerAvailable,
@@ -252,6 +293,7 @@ class ConsentData {
   // Create a copyWith method to update fields
   ConsentData copyWith({
     int? id,
+    int? coverPageId, // Update copyWith method to handle coverPageId updates
     String? communityType,
     String? residesInCommunityConsent,
     String? farmerAvailable,
@@ -274,6 +316,7 @@ class ConsentData {
   }) {
     return ConsentData(
       id: id ?? this.id,
+      coverPageId: coverPageId,
       communityType: communityType ?? this.communityType,
       residesInCommunityConsent: residesInCommunityConsent ?? this.residesInCommunityConsent,
       farmerAvailable: farmerAvailable ?? this.farmerAvailable,
@@ -298,91 +341,113 @@ class ConsentData {
 
   /// Convert to Map for storage
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'id': id,
-      'communityType': communityType,
-      'residesInCommunityConsent': residesInCommunityConsent,
-      'farmerAvailable': farmerAvailable,
-      'farmerStatus': farmerStatus,
-      'availablePerson': availablePerson,
-      'otherSpecification': otherSpecification,
-      'otherCommunityName': otherCommunityName,
-      'refusalReason': refusalReason,
-      'consentGiven': consentGiven == true ? 1 : 0,
-      'declinedConsent': declinedConsent == true ? 1 : 0,
-      'consentTimestamp': consentTimestamp?.toIso8601String(),
-      'interviewStartTime': interviewStartTime?.toIso8601String(),
-      'timeStatus': timeStatus,
-      'currentPosition': currentPosition != null
-          ? jsonEncode({
-              'latitude': currentPosition!.latitude,
-              'longitude': currentPosition!.longitude,
-              'timestamp': currentPosition!.timestamp?.toIso8601String(),
-            })
-          : null,
-      'locationStatus': locationStatus,
-      'isGettingLocation': isGettingLocation == true ? 1 : 0,
+      'cover_page_id': coverPageId, // Foreign key to cover page
+      'consent_given': consentGiven == true ? 1 : 0,
+      'declined_consent': declinedConsent == true ? 1 : 0,
+      'refusal_reason': refusalReason,
+      'consent_timestamp': consentTimestamp?.toIso8601String(),
+      'community_type': communityType,
+      'resides_in_community_consent': residesInCommunityConsent,
+      'other_community_name': otherCommunityName,
+      'farmer_available': farmerAvailable,
+      'farmer_status': farmerStatus,
+      'available_person': availablePerson,
+      'other_specification': otherSpecification,
+      'interview_start_time': interviewStartTime?.toIso8601String(),
+      'time_status': timeStatus,
+      'current_position_lat': currentPosition?.latitude,
+      'current_position_lng': currentPosition?.longitude,
+      'location_status': locationStatus,
+      'is_getting_location': isGettingLocation == true ? 1 : 0,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+      'is_synced': 0,
     };
+    
+    // Remove null values to prevent SQL errors
+    map.removeWhere((key, value) => value == null);
+    return map;
   }
 
   /// Create from Map from storage
   factory ConsentData.fromMap(Map<String, dynamic> map) {
-    // Parse position if it exists
-    Position? position;
-    if (map['currentPosition'] != null) {
-      try {
-        final positionData = jsonDecode(map['currentPosition']);
-        position = Position(
-          latitude: positionData['latitude'] ?? 0.0,
-          longitude: positionData['longitude'] ?? 0.0,
-          timestamp: positionData['timestamp'] != null 
-              ? DateTime.parse(positionData['timestamp']) 
-              : DateTime.now(),
-          accuracy: 0.0,
-          altitude: 0.0,
-          heading: 0.0,
-          speed: 0.0,
-          speedAccuracy: 0.0,
-          altitudeAccuracy: 0.0,
-          headingAccuracy: 0.0,
-        );
-      } catch (e) {
-        debugPrint('Error parsing position data: $e');
+    try {
+      debugPrint('🔍 Parsing ConsentData from map: $map');
+      
+      // Parse cover page ID if it exists
+      final int? coverPageId = map['cover_page_id'] is int 
+          ? map['cover_page_id'] 
+          : int.tryParse(map['cover_page_id']?.toString() ?? '');
+      
+      // Parse position if latitude and longitude exist
+      Position? position;
+      final lat = map['current_position_lat'];
+      final lng = map['current_position_lng'];
+      
+      if (lat != null && lng != null) {
+        try {
+          position = Position(
+            latitude: lat is double ? lat : double.tryParse(lat.toString()) ?? 0.0,
+            longitude: lng is double ? lng : double.tryParse(lng.toString()) ?? 0.0,
+            timestamp: map['interview_start_time'] != null 
+                ? DateTime.tryParse(map['interview_start_time'].toString()) ?? DateTime.now()
+                : DateTime.now(),
+            accuracy: 0.0,
+            altitude: 0.0,
+            heading: 0.0,
+            speed: 0.0,
+            speedAccuracy: 0.0,
+            altitudeAccuracy: 0.0,
+            headingAccuracy: 0.0,
+          );
+        } catch (e) {
+          debugPrint('❌ Error parsing position data: $e');
+        }
       }
-    }
 
-    return ConsentData(
-      id: map['id'] as int?,
-      communityType: map['communityType']?.toString(),
-      residesInCommunityConsent: map['residesInCommunityConsent']?.toString(),
-      farmerAvailable: map['farmerAvailable']?.toString(),
-      farmerStatus: map['farmerStatus']?.toString(),
-      availablePerson: map['availablePerson']?.toString(),
-      otherSpecification: map['otherSpecification']?.toString(),
-      otherCommunityName: map['otherCommunityName']?.toString(),
-      consentGiven: map['consentGiven'] == 1,
-      declinedConsent: map['declinedConsent'] == 1,
-      refusalReason: map['refusalReason']?.toString(),
-      consentTimestamp: map['consentTimestamp'] != null 
-          ? DateTime.tryParse(map['consentTimestamp'] as String)
-          : null,
-      otherSpecController: TextEditingController(
-        text: map['otherSpecification']?.toString() ?? '',
-      ),
-      otherCommunityController: TextEditingController(
-        text: map['otherCommunityName']?.toString() ?? '',
-      ),
-      refusalReasonController: TextEditingController(
-        text: map['refusalReason']?.toString() ?? '',
-      ),
-      interviewStartTime: map['interviewStartTime'] != null
-          ? DateTime.tryParse(map['interviewStartTime'] as String)
-          : null,
-      timeStatus: map['timeStatus']?.toString() ?? 'Not recorded',
-      currentPosition: position,
-      locationStatus: map['locationStatus']?.toString() ?? 'Not recorded',
-      isGettingLocation: map['isGettingLocation'] == 1,
-    );
+      final consent = ConsentData(
+        id: map['id'] is int ? map['id'] : int.tryParse(map['id']?.toString() ?? ''),
+        coverPageId: coverPageId,
+        communityType: map['community_type']?.toString(),
+        residesInCommunityConsent: map['resides_in_community_consent']?.toString(),
+        farmerAvailable: map['farmer_available']?.toString(),
+        farmerStatus: map['farmer_status']?.toString(),
+        availablePerson: map['available_person']?.toString(),
+        otherSpecification: map['other_specification']?.toString(),
+        otherCommunityName: map['other_community_name']?.toString(),
+        consentGiven: map['consent_given'] == 1 || map['consent_given'] == true,
+        declinedConsent: map['declined_consent'] == 1 || map['declined_consent'] == true,
+        refusalReason: map['refusal_reason']?.toString(),
+        consentTimestamp: map['consent_timestamp'] != null 
+            ? DateTime.tryParse(map['consent_timestamp'].toString())
+            : null,
+        otherSpecController: TextEditingController(
+          text: map['other_specification']?.toString() ?? '',
+        ),
+        otherCommunityController: TextEditingController(
+          text: map['other_community_name']?.toString() ?? '',
+        ),
+        refusalReasonController: TextEditingController(
+          text: map['refusal_reason']?.toString() ?? '',
+        ),
+        interviewStartTime: map['interview_start_time'] != null
+            ? DateTime.tryParse(map['interview_start_time'].toString())
+            : null,
+        timeStatus: map['time_status']?.toString() ?? 'Not recorded',
+        currentPosition: position,
+        locationStatus: map['location_status']?.toString() ?? 'Not recorded',
+        isGettingLocation: map['is_getting_location'] == 1 || map['is_getting_location'] == true,
+      );
+      
+      debugPrint('✅ Successfully parsed ConsentData: ${consent.toMap()}');
+      return consent;
+      
+    } catch (e) {
+      debugPrint('❌ Error in ConsentData.fromMap: $e');
+      rethrow;
+    }
   }
 
   /// Create empty instance
@@ -576,7 +641,7 @@ class ConsentData {
   }
 }
 
-/// Model for Farmer Child data
+/// Model for storing detailed information about a child in the household
 class FarmerChild {
   final int childNumber;
   final String firstName;
@@ -635,16 +700,14 @@ class FarmerChild {
     return 'FarmerChild(childNumber: $childNumber, firstName: $firstName, surname: $surname)';
   }
 }
-
-/// Main model for Farmer Identification Page data
 class FarmerIdentificationData {
   final int? id;
   final int? coverPageId;
-  final int hasGhanaCard; // 0 or 1
+  final int? hasGhanaCard; // null (not answered), 0 (No), or 1 (Yes)
   final String? ghanaCardNumber;
   final String? selectedIdType;
   final String? idNumber;
-  final int idPictureConsent; // 0 or 1
+  final int? idPictureConsent; // null (not answered), 0 (No), or 1 (Yes)
   final String? noConsentReason;
   final String? idImagePath;
   final String? contactNumber;
@@ -654,22 +717,22 @@ class FarmerIdentificationData {
   final int isSynced;
   final int syncStatus;
   final List<FarmerChild> children;
-
-  // Controllers for form fields
+  
+  // Controllers
   final TextEditingController ghanaCardNumberController;
   final TextEditingController idNumberController;
   final TextEditingController contactNumberController;
-  final TextEditingController childrenCountController;
   final TextEditingController noConsentReasonController;
+  final TextEditingController childrenCountController;
 
   FarmerIdentificationData({
     this.id,
     this.coverPageId,
-    this.hasGhanaCard = 0,
+    this.hasGhanaCard,
     this.ghanaCardNumber,
     this.selectedIdType,
     this.idNumber,
-    this.idPictureConsent = 0,
+    this.idPictureConsent,
     this.noConsentReason,
     this.idImagePath,
     this.contactNumber,
@@ -682,37 +745,17 @@ class FarmerIdentificationData {
     TextEditingController? ghanaCardNumberController,
     TextEditingController? idNumberController,
     TextEditingController? contactNumberController,
-    TextEditingController? childrenCountController,
     TextEditingController? noConsentReasonController,
+    TextEditingController? childrenCountController,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
         children = children ?? [],
-        ghanaCardNumberController = ghanaCardNumberController ?? TextEditingController(),
-        idNumberController = idNumberController ?? TextEditingController(),
-        contactNumberController = contactNumberController ?? TextEditingController(),
-        childrenCountController = childrenCountController ?? TextEditingController(),
-        noConsentReasonController = noConsentReasonController ?? TextEditingController() {
-    _initializeControllers();
-  }
+        ghanaCardNumberController = ghanaCardNumberController ?? TextEditingController(text: ghanaCardNumber ?? ''),
+        idNumberController = idNumberController ?? TextEditingController(text: idNumber ?? ''),
+        contactNumberController = contactNumberController ?? TextEditingController(text: contactNumber ?? ''),
+        noConsentReasonController = noConsentReasonController ?? TextEditingController(text: noConsentReason ?? ''),
+        childrenCountController = childrenCountController ?? TextEditingController(text: childrenCount.toString());
 
-  void _initializeControllers() {
-    // Only initialize if controller is empty to preserve user input
-    if (ghanaCardNumberController.text.isEmpty && ghanaCardNumber != null) {
-      ghanaCardNumberController.text = ghanaCardNumber!;
-    }
-    if (idNumberController.text.isEmpty && idNumber != null) {
-      idNumberController.text = idNumber!;
-    }
-    if (contactNumberController.text.isEmpty && contactNumber != null) {
-      contactNumberController.text = contactNumber!;
-    }
-    if (childrenCountController.text.isEmpty && childrenCount > 0) {
-      childrenCountController.text = childrenCount.toString();
-    }
-    if (noConsentReasonController.text.isEmpty && noConsentReason != null) {
-      noConsentReasonController.text = noConsentReason!;
-    }
-  }
 
   /// Convert to Map for storage/API
   Map<String, dynamic> toMap() {
@@ -720,13 +763,13 @@ class FarmerIdentificationData {
       'id': id,
       'cover_page_id': coverPageId,
       'has_ghana_card': hasGhanaCard,
-      'ghana_card_number': ghanaCardNumberController.text.isNotEmpty ? ghanaCardNumberController.text : ghanaCardNumber,
+      'ghana_card_number': ghanaCardNumber,
       'selected_id_type': selectedIdType,
-      'id_number': idNumberController.text.isNotEmpty ? idNumberController.text : idNumber,
+      'id_number': idNumber,
       'id_picture_consent': idPictureConsent,
-      'no_consent_reason': noConsentReasonController.text.isNotEmpty ? noConsentReasonController.text : noConsentReason,
+      'no_consent_reason': noConsentReason,
       'id_image_path': idImagePath,
-      'contact_number': contactNumberController.text.isNotEmpty ? contactNumberController.text : contactNumber,
+      'contact_number': contactNumber,
       'children_count': childrenCount,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -740,19 +783,25 @@ class FarmerIdentificationData {
     return FarmerIdentificationData(
       id: map['id'] as int?,
       coverPageId: map['cover_page_id'] as int?,
-      hasGhanaCard: map['has_ghana_card'] as int? ?? 0,
+      hasGhanaCard: map['has_ghana_card'] as int?,
       ghanaCardNumber: map['ghana_card_number']?.toString(),
       selectedIdType: map['selected_id_type']?.toString(),
       idNumber: map['id_number']?.toString(),
-      idPictureConsent: map['id_picture_consent'] as int? ?? 0,
+      idPictureConsent: map['id_picture_consent'] as int?,
       noConsentReason: map['no_consent_reason']?.toString(),
       idImagePath: map['id_image_path']?.toString(),
       contactNumber: map['contact_number']?.toString(),
       childrenCount: map['children_count'] as int? ?? 0,
+      childrenCountController: TextEditingController(text: (map['children_count'] ?? '0').toString()),
       createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : null,
       updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
       isSynced: map['is_synced'] as int? ?? 0,
       syncStatus: map['sync_status'] as int? ?? 0,
+      // Controllers will be initialized with the values from the map
+      ghanaCardNumberController: TextEditingController(text: map['ghana_card_number']?.toString() ?? ''),
+      idNumberController: TextEditingController(text: map['id_number']?.toString() ?? ''),
+      contactNumberController: TextEditingController(text: map['contact_number']?.toString() ?? ''),
+      noConsentReasonController: TextEditingController(text: map['no_consent_reason']?.toString() ?? ''),
     );
   }
 
@@ -761,14 +810,14 @@ class FarmerIdentificationData {
     return FarmerIdentificationData();
   }
 
-  /// Update methods that return new instances
-  FarmerIdentificationData updateGhanaCard(int value) {
+  /// Update Ghana Card selection and clear related fields when needed
+  FarmerIdentificationData updateGhanaCard(int? value) {
     return copyWith(
       hasGhanaCard: value,
-      selectedIdType: value == 1 ? null : selectedIdType,
-      idPictureConsent: 0,
-      idImagePath: null,
-      preserveControllers: true,
+      ghanaCardNumber: value == 1 ? ghanaCardNumber : null,
+      selectedIdType: value == 1 ? selectedIdType : null,
+      idNumber: value == 1 ? idNumber : null,
+      idImagePath: value == 1 ? idImagePath : null,
     );
   }
 
@@ -782,7 +831,7 @@ class FarmerIdentificationData {
   }
 
   FarmerIdentificationData updatePictureConsent(String? value) {
-    final consentValue = value == 'Yes' ? 1 : 0;
+    final consentValue = value == null ? null : (value == 'Yes' ? 1 : 0);
     return copyWith(
       idPictureConsent: consentValue,
       idImagePath: consentValue == 0 ? null : idImagePath,
@@ -791,43 +840,33 @@ class FarmerIdentificationData {
   }
 
   FarmerIdentificationData updateGhanaCardNumber(String value) {
-    ghanaCardNumberController.text = value;
     return copyWith(
       ghanaCardNumber: value,
-      preserveControllers: true,
     );
   }
 
   FarmerIdentificationData updateIdNumber(String value) {
-    idNumberController.text = value;
     return copyWith(
       idNumber: value,
-      preserveControllers: true,
     );
   }
 
   FarmerIdentificationData updateNoConsentReason(String value) {
-    noConsentReasonController.text = value;
     return copyWith(
       noConsentReason: value,
-      preserveControllers: true,
     );
   }
 
   FarmerIdentificationData updateContactNumber(String value) {
-    contactNumberController.text = value;
     return copyWith(
       contactNumber: value,
-      preserveControllers: true,
     );
   }
 
   FarmerIdentificationData updateChildrenCount(String value) {
     final count = int.tryParse(value) ?? 0;
-    childrenCountController.text = value;
     return copyWith(
       childrenCount: count,
-      preserveControllers: true,
     );
   }
 
@@ -861,7 +900,7 @@ class FarmerIdentificationData {
       return null;
     }
     
-    final cardNumber = ghanaCardNumberController.text.trim();
+    final cardNumber = ghanaCardNumber?.trim() ?? '';
     
     if (cardNumber.isEmpty) {
       return 'Ghana Card number is required';
@@ -878,7 +917,7 @@ class FarmerIdentificationData {
   String? validateIdNumber() {
     if (hasGhanaCard == 1 || selectedIdType == null) return null;
     
-    final idNumber = idNumberController.text.trim();
+    final idNumber = this.idNumber?.trim() ?? '';
     if (idNumber.isEmpty) {
       return 'ID number is required';
     }
@@ -909,7 +948,7 @@ class FarmerIdentificationData {
   }
 
   String? validateContactNumber() {
-    final contactNumber = contactNumberController.text.trim();
+    final contactNumber = this.contactNumber?.trim() ?? '';
     if (contactNumber.isEmpty) {
       return 'Contact number is required';
     }
@@ -925,8 +964,7 @@ class FarmerIdentificationData {
   }
 
   String? validateChildrenCount() {
-    final childrenCountText = childrenCountController.text.trim();
-    final count = int.tryParse(childrenCountText) ?? 0;
+    final count = childrenCount;
     
     if (count < 0) {
       return 'Number of children cannot be negative';
@@ -942,7 +980,7 @@ class FarmerIdentificationData {
   String? validateNoConsentReason() {
     if (idPictureConsent != 0) return null;
     
-    final reason = noConsentReasonController.text.trim();
+    final reason = noConsentReason?.trim() ?? '';
     if (reason.isEmpty) {
       return 'Please provide a reason for not providing ID picture';
     }
@@ -1043,45 +1081,31 @@ class FarmerIdentificationData {
     String? idImagePath,
     String? contactNumber,
     int? childrenCount,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? isSynced,
+    int? syncStatus,
     List<FarmerChild>? children,
     bool preserveControllers = false,
   }) {
-    if (preserveControllers) {
-      return FarmerIdentificationData(
-        id: id ?? this.id,
-        coverPageId: coverPageId ?? this.coverPageId,
-        hasGhanaCard: hasGhanaCard ?? this.hasGhanaCard,
-        ghanaCardNumber: ghanaCardNumber ?? this.ghanaCardNumber,
-        selectedIdType: selectedIdType ?? this.selectedIdType,
-        idNumber: idNumber ?? this.idNumber,
-        idPictureConsent: idPictureConsent ?? this.idPictureConsent,
-        noConsentReason: noConsentReason ?? this.noConsentReason,
-        idImagePath: idImagePath ?? this.idImagePath,
-        contactNumber: contactNumber ?? this.contactNumber,
-        childrenCount: childrenCount ?? this.childrenCount,
-        children: children ?? List.from(this.children),
-        ghanaCardNumberController: this.ghanaCardNumberController,
-        idNumberController: this.idNumberController,
-        contactNumberController: this.contactNumberController,
-        childrenCountController: this.childrenCountController,
-        noConsentReasonController: this.noConsentReasonController,
-      );
-    } else {
-      return FarmerIdentificationData(
-        id: id ?? this.id,
-        coverPageId: coverPageId ?? this.coverPageId,
-        hasGhanaCard: hasGhanaCard ?? this.hasGhanaCard,
-        ghanaCardNumber: ghanaCardNumber ?? this.ghanaCardNumber,
-        selectedIdType: selectedIdType ?? this.selectedIdType,
-        idNumber: idNumber ?? this.idNumber,
-        idPictureConsent: idPictureConsent ?? this.idPictureConsent,
-        noConsentReason: noConsentReason ?? this.noConsentReason,
-        idImagePath: idImagePath ?? this.idImagePath,
-        contactNumber: contactNumber ?? this.contactNumber,
-        childrenCount: childrenCount ?? this.childrenCount,
-        children: children ?? List.from(this.children),
-      );
-    }
+    return FarmerIdentificationData(
+      id: id ?? this.id,
+      coverPageId: coverPageId ?? this.coverPageId,
+      hasGhanaCard: hasGhanaCard ?? this.hasGhanaCard,
+      ghanaCardNumber: ghanaCardNumber ?? this.ghanaCardNumber,
+      selectedIdType: selectedIdType ?? this.selectedIdType,
+      idNumber: idNumber ?? this.idNumber,
+      idPictureConsent: idPictureConsent ?? this.idPictureConsent,
+      noConsentReason: noConsentReason ?? this.noConsentReason,
+      idImagePath: idImagePath ?? this.idImagePath,
+      contactNumber: contactNumber ?? this.contactNumber,
+      childrenCount: childrenCount ?? this.childrenCount,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isSynced: isSynced ?? this.isSynced,
+      syncStatus: syncStatus ?? this.syncStatus,
+      children: children ?? (preserveControllers ? this.children : List.from(this.children)),
+    );
   }
 
   /// Prepares the data for submission by ensuring all fields are properly formatted
@@ -1090,11 +1114,11 @@ class FarmerIdentificationData {
       'hasGhanaCard': hasGhanaCard,
       'selectedIdType': selectedIdType,
       'idPictureConsent': idPictureConsent,
-      'ghanaCardNumber': ghanaCardNumberController.text,
-      'idNumber': idNumberController.text,
-      'noConsentReason': noConsentReasonController.text,
-      'idImagePath': idImagePath,
-      'contactNumber': contactNumberController.text,
+      'ghanaCardNumber': ghanaCardNumber ?? '',
+      'idNumber': idNumber ?? '',
+      'noConsentReason': noConsentReason ?? '',
+      'idImagePath': idImagePath ?? '',
+      'contactNumber': contactNumber ?? '',
       'childrenCount': childrenCount,
       'children': children.map((child) => child.toMap()).toList(),
     };
@@ -1121,16 +1145,170 @@ class FarmerIdentificationData {
   }
 }
 
-// Extension for firstOrNull on List
-extension FirstWhereOrNullExtension<T> on List<T> {
-  T? firstOrNull(bool Function(T element) test) {
-    for (final element in this) {
-      if (test(element)) return element;
-    }
-    return null;
+/// Model for storing detailed information about a child in the household
+class ChildrenHouseholdModel {
+  final int? id;
+  final int? coverPageId;
+  final String? hasChildrenInHousehold;
+  final int numberOfChildren;
+  final int children5To17;
+  final List<Map<String, dynamic>> childrenDetails;
+  final DateTime? timestamp;
+
+  ChildrenHouseholdModel({
+    this.id,
+    this.coverPageId,
+    this.hasChildrenInHousehold,
+    this.numberOfChildren = 0,
+    this.children5To17 = 0,
+    List<Map<String, dynamic>>? childrenDetails,
+    this.timestamp,
+  }) : childrenDetails = childrenDetails ?? [];
+
+  factory ChildrenHouseholdModel.empty() {
+    return ChildrenHouseholdModel(
+      hasChildrenInHousehold: null,
+      numberOfChildren: 0,
+      children5To17: 0,
+      childrenDetails: [],
+      timestamp: DateTime.now(),
+    );
+  }
+
+  factory ChildrenHouseholdModel.fromJson(Map<String, dynamic> json) {
+    return ChildrenHouseholdModel(
+      id: json['id'],
+      coverPageId: json['coverPageId'],
+      hasChildrenInHousehold: json['hasChildrenInHousehold'],
+      numberOfChildren: json['numberOfChildren'] ?? 0,
+      children5To17: json['children5To17'] ?? 0,
+      childrenDetails:
+          List<Map<String, dynamic>>.from(json['childrenDetails'] ?? []),
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'])
+          : DateTime.now(),
+    );
+  }
+
+  factory ChildrenHouseholdModel.fromMap(Map<String, dynamic> map) {
+    return ChildrenHouseholdModel(
+      id: map['id'],
+      coverPageId: map['cover_page_id'],
+      hasChildrenInHousehold: map['has_children_in_household'],
+      numberOfChildren: map['number_of_children'] ?? 0,
+      children5To17: map['children_5_to_17'] ?? 0,
+      childrenDetails: map['children_details'] != null
+          ? List<Map<String, dynamic>>.from(
+              jsonDecode(map['children_details']))
+          : [],
+      timestamp: map['created_at'] != null
+          ? DateTime.parse(map['created_at'])
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'coverPageId': coverPageId,
+      'hasChildrenInHousehold': hasChildrenInHousehold,
+      'numberOfChildren': numberOfChildren,
+      'children5To17': children5To17,
+      'childrenDetails': childrenDetails,
+      'timestamp': timestamp?.toIso8601String(),
+    };
+  }
+
+  Map<String, dynamic> toMap() {
+    final now = DateTime.now().toIso8601String();
+    return {
+      'id': id,
+      'farm_identification_id': coverPageId,
+      'has_children_in_household': hasChildrenInHousehold,
+      'number_of_children': numberOfChildren,
+      'children_5_to_17': children5To17,
+      'children_details': jsonEncode(childrenDetails),
+      'created_at': timestamp?.toIso8601String() ?? now,
+      'updated_at': now,
+      'is_synced': 0,
+      'sync_status': 0,
+    };
+  }
+
+  ChildrenHouseholdModel copyWith({
+    int? id,
+    int? coverPageId,
+    String? hasChildrenInHousehold,
+    int? numberOfChildren,
+    int? children5To17,
+    List<Map<String, dynamic>>? childrenDetails,
+    DateTime? timestamp,
+  }) {
+    return ChildrenHouseholdModel(
+      id: id ?? this.id,
+      coverPageId: coverPageId ?? this.coverPageId,
+      hasChildrenInHousehold: hasChildrenInHousehold ?? this.hasChildrenInHousehold,
+      numberOfChildren: numberOfChildren ?? this.numberOfChildren,
+      children5To17: children5To17 ?? this.children5To17,
+      childrenDetails: childrenDetails ?? this.childrenDetails,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
+  bool get hasChildren => hasChildrenInHousehold == 'Yes';
+  bool get hasChildren5To17 => hasChildren && children5To17 > 0;
+  bool get allChildrenDetailsCollected => childrenDetails.length >= children5To17;
+
+  bool get isValid {
+    if (hasChildrenInHousehold == null) return false;
+    if (!hasChildren) return true;
+    if (numberOfChildren <= 0) return false;
+    if (children5To17 < 0) return false;
+    if (children5To17 > numberOfChildren) return false;
+    return true;
+  }
+
+  @override
+  String toString() {
+    return 'ChildrenHouseholdModel(' +
+        'id: $id, ' +
+        'coverPageId: $coverPageId, ' +
+        'hasChildrenInHousehold: $hasChildrenInHousehold, ' +
+        'numberOfChildren: $numberOfChildren, ' +
+        'children5To17: $children5To17, ' +
+        'childrenDetails: ${childrenDetails.length} children, ' +
+        'timestamp: $timestamp' +
+        ')';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ChildrenHouseholdModel &&
+        other.id == id &&
+        other.coverPageId == coverPageId &&
+        other.hasChildrenInHousehold == hasChildrenInHousehold &&
+        other.numberOfChildren == numberOfChildren &&
+        other.children5To17 == children5To17 &&
+        other.childrenDetails.length == childrenDetails.length &&
+        other.timestamp == timestamp;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      coverPageId,
+      hasChildrenInHousehold,
+      numberOfChildren,
+      children5To17,
+      childrenDetails.length,
+      timestamp,
+    );
   }
 }
 
+/// Main model for Farmer Identification Page data
 class CombinedFarmerIdentificationModel {
   final int? id; // For database primary key
   final int? coverPageId; // Reference to the cover page
@@ -1281,3 +1459,1140 @@ class CombinedFarmerIdentificationModel {
         'syncStatus: $syncStatus}';
   }
 }
+
+/// Model for storing detailed information about a child in the household
+class ChildDetailsModel {
+  // Basic Information
+  final String? name;
+  final String? surname;
+  final String? childNumber;
+  final int? birthYear;
+  final String? gender;
+  final bool? isFarmerChild;
+  final bool? canBeSurveyedNow;
+  final DateTime? interviewDate;
+
+  // Survey Availability
+  final List<String> surveyNotPossibleReasons;
+  final String? otherSurveyNotPossibleReason;
+  final String? respondentType;
+  final String? otherRespondentType;
+  final String? respondentName;
+  final String? otherRespondentSpecify;
+
+  // Birth and Documentation
+  final bool? hasBirthCertificate;
+  final String? noBirthCertificateReason;
+  final bool? bornInCommunity;
+  final String? birthCountry;
+
+  // Household Relationship
+  final String? relationshipToHead;
+  final String? otherRelationship;
+  final Map<String, bool> notLivingWithFamilyReasons;
+  final String? otherNotLivingWithFamilyReason;
+
+  // Family Decision Information
+  final String? whoDecidedChildJoin;
+  final String? otherPersonDecided;
+  final bool? childAgreedWithDecision;
+  final bool? hasSpokenWithParents;
+  final String? lastContactWithParents;
+  final String? timeInHousehold;
+  final String? whoAccompaniedChild;
+  final String? otherAccompaniedPerson;
+
+  // Parent Residence Information
+  final String? fatherResidence;
+  final String? fatherCountry;
+  final String? otherFatherCountry;
+  final String? motherResidence;
+  final String? motherCountry;
+  final String? otherMotherCountry;
+
+  // Education Information
+  final bool? isCurrentlyEnrolled;
+  final bool? hasEverBeenToSchool;
+  final String? schoolName;
+  final String? schoolType;
+  final String? gradeLevel;
+  final String? schoolAttendanceFrequency;
+  final Set<String> availableSchoolSupplies;
+  
+  // School Leaving Information
+  final String? leftSchoolYear;
+  final DateTime? leftSchoolDate;
+  final String? educationLevel;
+  final String? childLeaveSchoolReason;
+  final String? otherLeaveReason;
+  final String? neverBeenToSchoolReason;
+  final String? otherNeverSchoolReason;
+
+  // School Attendance
+  final bool? attendedSchoolLast7Days;
+  final String? selectedLeaveReason;
+  final String? otherAbsenceReason;
+
+  // Constructor
+  ChildDetailsModel({
+    // Basic Information
+    this.name,
+    this.surname,
+    this.childNumber,
+    this.birthYear,
+    this.gender,
+    this.isFarmerChild,
+    this.canBeSurveyedNow,
+    this.interviewDate,
+    
+    // Survey Availability
+    List<String>? surveyNotPossibleReasons,
+    this.otherSurveyNotPossibleReason,
+    this.respondentType,
+    this.otherRespondentType,
+    this.respondentName,
+    this.otherRespondentSpecify,
+    
+    // Birth and Documentation
+    this.hasBirthCertificate,
+    this.noBirthCertificateReason,
+    this.bornInCommunity,
+    this.birthCountry,
+    
+    // Household Relationship
+    this.relationshipToHead,
+    this.otherRelationship,
+    Map<String, bool>? notLivingWithFamilyReasons,
+    this.otherNotLivingWithFamilyReason,
+    
+    // Family Decision Information
+    this.whoDecidedChildJoin,
+    this.otherPersonDecided,
+    this.childAgreedWithDecision,
+    this.hasSpokenWithParents,
+    this.lastContactWithParents,
+    this.timeInHousehold,
+    this.whoAccompaniedChild,
+    this.otherAccompaniedPerson,
+    
+    // Parent Residence Information
+    this.fatherResidence,
+    this.fatherCountry,
+    this.otherFatherCountry,
+    this.motherResidence,
+    this.motherCountry,
+    this.otherMotherCountry,
+    
+    // Education Information
+    this.isCurrentlyEnrolled,
+    this.hasEverBeenToSchool,
+    this.schoolName,
+    this.schoolType,
+    this.gradeLevel,
+    this.schoolAttendanceFrequency,
+    Set<String>? availableSchoolSupplies,
+    
+    // School Leaving Information
+    this.leftSchoolYear,
+    this.leftSchoolDate,
+    this.educationLevel,
+    this.childLeaveSchoolReason,
+    this.otherLeaveReason,
+    this.neverBeenToSchoolReason,
+    this.otherNeverSchoolReason,
+    
+    // School Attendance
+    this.attendedSchoolLast7Days,
+    this.selectedLeaveReason,
+    this.otherAbsenceReason,
+  }) : surveyNotPossibleReasons = surveyNotPossibleReasons ?? [],
+       notLivingWithFamilyReasons = notLivingWithFamilyReasons ?? {},
+       availableSchoolSupplies = availableSchoolSupplies ?? {};
+
+  // Create a copyWith method for immutability
+  ChildDetailsModel copyWith({
+    String? name,
+    String? surname,
+    String? childNumber,
+    int? birthYear,
+    String? gender,
+    bool? isFarmerChild,
+    bool? canBeSurveyedNow,
+    DateTime? interviewDate,
+    
+    // Survey Availability
+    List<String>? surveyNotPossibleReasons,
+    String? otherSurveyNotPossibleReason,
+    String? respondentType,
+    String? otherRespondentType,
+    String? respondentName,
+    String? otherRespondentSpecify,
+    
+    // Birth and Documentation
+    bool? hasBirthCertificate,
+    String? noBirthCertificateReason,
+    bool? bornInCommunity,
+    String? birthCountry,
+    
+    // Household Relationship
+    String? relationshipToHead,
+    String? otherRelationship,
+    Map<String, bool>? notLivingWithFamilyReasons,
+    String? otherNotLivingWithFamilyReason,
+    
+    // Family Decision Information
+    String? whoDecidedChildJoin,
+    String? otherPersonDecided,
+    bool? childAgreedWithDecision,
+    bool? hasSpokenWithParents,
+    String? lastContactWithParents,
+    String? timeInHousehold,
+    String? whoAccompaniedChild,
+    String? otherAccompaniedPerson,
+    
+    // Parent Residence Information
+    String? fatherResidence,
+    String? fatherCountry,
+    String? otherFatherCountry,
+    String? motherResidence,
+    String? motherCountry,
+    String? otherMotherCountry,
+    
+    // Education Information
+    bool? isCurrentlyEnrolled,
+    bool? hasEverBeenToSchool,
+    String? schoolName,
+    String? schoolType,
+    String? gradeLevel,
+    String? schoolAttendanceFrequency,
+    Set<String>? availableSchoolSupplies,
+    
+    // School Leaving Information
+    String? leftSchoolYear,
+    DateTime? leftSchoolDate,
+    String? educationLevel,
+    String? childLeaveSchoolReason,
+    String? otherLeaveReason,
+    String? neverBeenToSchoolReason,
+    String? otherNeverSchoolReason,
+    
+    // School Attendance
+    bool? attendedSchoolLast7Days,
+    String? selectedLeaveReason,
+    String? otherAbsenceReason,
+  }) {
+    // Create a map of the current instance's data
+    final map = this.toMap();
+    
+    // Update the map with non-null values from parameters
+    if (name != null) map['name'] = name;
+    if (surname != null) map['surname'] = surname;
+    if (childNumber != null) map['childNumber'] = childNumber;
+    if (birthYear != null) map['birthYear'] = birthYear;
+    if (gender != null) map['gender'] = gender;
+    if (isFarmerChild != null) map['isFarmerChild'] = isFarmerChild;
+    if (canBeSurveyedNow != null) map['canBeSurveyedNow'] = canBeSurveyedNow;
+    if (interviewDate != null) map['interviewDate'] = interviewDate.toIso8601String();
+    if (surveyNotPossibleReasons != null) map['surveyNotPossibleReasons'] = surveyNotPossibleReasons.join('|');
+    if (otherSurveyNotPossibleReason != null) map['otherSurveyNotPossibleReason'] = otherSurveyNotPossibleReason;
+    if (respondentType != null) map['respondentType'] = respondentType;
+    if (otherRespondentType != null) map['otherRespondentType'] = otherRespondentType;
+    if (respondentName != null) map['respondentName'] = respondentName;
+    if (otherRespondentSpecify != null) map['otherRespondentSpecify'] = otherRespondentSpecify;
+    if (hasBirthCertificate != null) map['hasBirthCertificate'] = hasBirthCertificate ? 1 : 0;
+    if (noBirthCertificateReason != null) map['noBirthCertificateReason'] = noBirthCertificateReason;
+    if (bornInCommunity != null) map['bornInCommunity'] = bornInCommunity ? 1 : 0;
+    if (birthCountry != null) map['birthCountry'] = birthCountry;
+    if (relationshipToHead != null) map['relationshipToHead'] = relationshipToHead;
+    if (otherRelationship != null) map['otherRelationship'] = otherRelationship;
+    if (notLivingWithFamilyReasons != null) {
+      map['notLivingWithFamilyReasons'] = notLivingWithFamilyReasons.entries
+          .where((entry) => entry.value)
+          .map((entry) => entry.key)
+          .join('|');
+    }
+    if (otherNotLivingWithFamilyReason != null) map['otherNotLivingWithFamilyReason'] = otherNotLivingWithFamilyReason;
+    if (whoDecidedChildJoin != null) map['whoDecidedChildJoin'] = whoDecidedChildJoin;
+    if (otherPersonDecided != null) map['otherPersonDecided'] = otherPersonDecided;
+    if (childAgreedWithDecision != null) map['childAgreedWithDecision'] = childAgreedWithDecision ? 1 : 0;
+    if (hasSpokenWithParents != null) map['hasSpokenWithParents'] = hasSpokenWithParents ? 1 : 0;
+    if (lastContactWithParents != null) map['lastContactWithParents'] = lastContactWithParents;
+    if (timeInHousehold != null) map['timeInHousehold'] = timeInHousehold;
+    if (whoAccompaniedChild != null) map['whoAccompaniedChild'] = whoAccompaniedChild;
+    if (otherAccompaniedPerson != null) map['otherAccompaniedPerson'] = otherAccompaniedPerson;
+    if (fatherResidence != null) map['fatherResidence'] = fatherResidence;
+    if (fatherCountry != null) map['fatherCountry'] = fatherCountry;
+    if (otherFatherCountry != null) map['otherFatherCountry'] = otherFatherCountry;
+    if (motherResidence != null) map['motherResidence'] = motherResidence;
+    if (motherCountry != null) map['motherCountry'] = motherCountry;
+    if (otherMotherCountry != null) map['otherMotherCountry'] = otherMotherCountry;
+    if (isCurrentlyEnrolled != null) map['isCurrentlyEnrolled'] = isCurrentlyEnrolled ? 1 : 0;
+    if (hasEverBeenToSchool != null) map['hasEverBeenToSchool'] = hasEverBeenToSchool ? 1 : 0;
+    if (schoolName != null) map['schoolName'] = schoolName;
+    if (schoolType != null) map['schoolType'] = schoolType;
+    if (gradeLevel != null) map['gradeLevel'] = gradeLevel;
+    if (schoolAttendanceFrequency != null) map['schoolAttendanceFrequency'] = schoolAttendanceFrequency;
+    if (availableSchoolSupplies != null) map['availableSchoolSupplies'] = availableSchoolSupplies.join('|');
+    if (leftSchoolYear != null) map['leftSchoolYear'] = leftSchoolYear;
+    if (leftSchoolDate != null) map['leftSchoolDate'] = leftSchoolDate.toIso8601String();
+    if (educationLevel != null) map['educationLevel'] = educationLevel;
+    if (childLeaveSchoolReason != null) map['childLeaveSchoolReason'] = childLeaveSchoolReason;
+    if (otherLeaveReason != null) map['otherLeaveReason'] = otherLeaveReason;
+    if (neverBeenToSchoolReason != null) map['neverBeenToSchoolReason'] = neverBeenToSchoolReason;
+    if (otherNeverSchoolReason != null) map['otherNeverSchoolReason'] = otherNeverSchoolReason;
+    if (attendedSchoolLast7Days != null) map['attendedSchoolLast7Days'] = attendedSchoolLast7Days ? 1 : 0;
+    if (selectedLeaveReason != null) map['selectedLeaveReason'] = selectedLeaveReason;
+    if (otherAbsenceReason != null) map['otherAbsenceReason'] = otherAbsenceReason;
+
+    // Create and return a new instance with the updated data
+    return ChildDetailsModel.fromMap(map);
+  }
+
+  // Convert to map for database operations
+  Map<String, dynamic> toMap() {
+    return {
+      // Basic Information
+      'name': name,
+      'surname': surname,
+      'childNumber': childNumber,
+      'birthYear': birthYear,
+      'gender': gender,
+      'isFarmerChild': isFarmerChild ?? false ? 1 : 0,
+      'canBeSurveyedNow': canBeSurveyedNow ?? false ? 1 : 0,
+      'interviewDate': interviewDate?.toIso8601String(),
+      
+      // Survey Availability
+      'surveyNotPossibleReasons': surveyNotPossibleReasons.join('|'),
+      'otherSurveyNotPossibleReason': otherSurveyNotPossibleReason,
+      'respondentType': respondentType,
+      'otherRespondentType': otherRespondentType,
+      'respondentName': respondentName,
+      'otherRespondentSpecify': otherRespondentSpecify,
+      
+      // Birth and Documentation
+      'hasBirthCertificate': (hasBirthCertificate ?? false) ? 1 : 0,
+      'noBirthCertificateReason': noBirthCertificateReason,
+      'bornInCommunity': (bornInCommunity ?? false) ? 1 : 0,
+      'birthCountry': birthCountry,
+      
+      // Household Relationship
+      'relationshipToHead': relationshipToHead,
+      'otherRelationship': otherRelationship,
+      'notLivingWithFamilyReasons': notLivingWithFamilyReasons.entries
+          .where((entry) => entry.value)
+          .map((entry) => entry.key)
+          .join('|'),
+      'otherNotLivingWithFamilyReason': otherNotLivingWithFamilyReason,
+      
+      // Family Decision Information
+      'whoDecidedChildJoin': whoDecidedChildJoin,
+      'otherPersonDecided': otherPersonDecided,
+      'childAgreedWithDecision': childAgreedWithDecision == true ? 1 : 0,
+      'hasSpokenWithParents': hasSpokenWithParents == true ? 1 : 0,
+      'lastContactWithParents': lastContactWithParents,
+      'timeInHousehold': timeInHousehold,
+      'whoAccompaniedChild': whoAccompaniedChild,
+      'otherAccompaniedPerson': otherAccompaniedPerson,
+      
+      // Parent Residence Information
+      'fatherResidence': fatherResidence,
+      'fatherCountry': fatherCountry,
+      'otherFatherCountry': otherFatherCountry,
+      'motherResidence': motherResidence,
+      'motherCountry': motherCountry,
+      'otherMotherCountry': otherMotherCountry,
+      
+      // Education Information
+      'isCurrentlyEnrolled': isCurrentlyEnrolled == true ? 1 : 0,
+      'hasEverBeenToSchool': hasEverBeenToSchool == true ? 1 : 0,
+      'schoolName': schoolName,
+      'schoolType': schoolType,
+      'gradeLevel': gradeLevel,
+      'schoolAttendanceFrequency': schoolAttendanceFrequency,
+      'availableSchoolSupplies': availableSchoolSupplies.join('|'),
+      
+      // School Leaving Information
+      'leftSchoolYear': leftSchoolYear,
+      'leftSchoolDate': leftSchoolDate?.toIso8601String(),
+      'educationLevel': educationLevel,
+      'childLeaveSchoolReason': childLeaveSchoolReason,
+      'otherLeaveReason': otherLeaveReason,
+      'neverBeenToSchoolReason': neverBeenToSchoolReason,
+      'otherNeverSchoolReason': otherNeverSchoolReason,
+      
+      // School Attendance
+      'attendedSchoolLast7Days': (attendedSchoolLast7Days ?? false) ? 1 : 0,
+      'selectedLeaveReason': selectedLeaveReason,
+      'otherAbsenceReason': otherAbsenceReason,
+    };
+  }
+
+  // Create from map (for database retrieval)
+  factory ChildDetailsModel.fromMap(Map<String, dynamic> map) {
+    return ChildDetailsModel(
+      // Basic Information
+      name: map['name'],
+      surname: map['surname'],
+      childNumber: map['childNumber'],
+      birthYear: map['birthYear'],
+      gender: map['gender'],
+      isFarmerChild: map['isFarmerChild'] == 1,
+      canBeSurveyedNow: map['canBeSurveyedNow'] == 1,
+      interviewDate: map['interviewDate'] != null ? DateTime.parse(map['interviewDate']) : null,
+      
+      // Survey Availability
+      surveyNotPossibleReasons: (map['surveyNotPossibleReasons'] as String?)?.split('|').where((s) => s.isNotEmpty).toList() ?? [],
+      otherSurveyNotPossibleReason: map['otherSurveyNotPossibleReason'],
+      respondentType: map['respondentType'],
+      otherRespondentType: map['otherRespondentType'],
+      respondentName: map['respondentName'],
+      otherRespondentSpecify: map['otherRespondentSpecify'],
+      
+      // Birth and Documentation
+      hasBirthCertificate: map['hasBirthCertificate'] == 1,
+      noBirthCertificateReason: map['noBirthCertificateReason'],
+      bornInCommunity: map['bornInCommunity'] == 1,
+      birthCountry: map['birthCountry'],
+      
+      // Household Relationship
+      relationshipToHead: map['relationshipToHead'],
+      otherRelationship: map['otherRelationship'],
+      notLivingWithFamilyReasons: {
+        for (var reason in (map['notLivingWithFamilyReasons'] as String?)?.split('|') ?? [])
+          reason: true
+      },
+      otherNotLivingWithFamilyReason: map['otherNotLivingWithFamilyReason'],
+      
+      // Family Decision Information
+      whoDecidedChildJoin: map['whoDecidedChildJoin'],
+      otherPersonDecided: map['otherPersonDecided'],
+      childAgreedWithDecision: map['childAgreedWithDecision'] == 1,
+      hasSpokenWithParents: map['hasSpokenWithParents'] == 1,
+      lastContactWithParents: map['lastContactWithParents'],
+      timeInHousehold: map['timeInHousehold'],
+      whoAccompaniedChild: map['whoAccompaniedChild'],
+      otherAccompaniedPerson: map['otherAccompaniedPerson'],
+      
+      // Parent Residence Information
+      fatherResidence: map['fatherResidence'],
+      fatherCountry: map['fatherCountry'],
+      otherFatherCountry: map['otherFatherCountry'],
+      motherResidence: map['motherResidence'],
+      motherCountry: map['motherCountry'],
+      otherMotherCountry: map['otherMotherCountry'],
+      
+      // Education Information
+      isCurrentlyEnrolled: map['isCurrentlyEnrolled'] == 1,
+      hasEverBeenToSchool: map['hasEverBeenToSchool'] == 1,
+      schoolName: map['schoolName'],
+      schoolType: map['schoolType'],
+      gradeLevel: map['gradeLevel'],
+      schoolAttendanceFrequency: map['schoolAttendanceFrequency'],
+      availableSchoolSupplies: (map['availableSchoolSupplies'] as String?)?.split('|').where((s) => s.isNotEmpty).toSet() ?? {},
+      
+      // School Leaving Information
+      leftSchoolYear: map['leftSchoolYear'],
+      leftSchoolDate: map['leftSchoolDate'] != null ? DateTime.parse(map['leftSchoolDate']) : null,
+      educationLevel: map['educationLevel'],
+      childLeaveSchoolReason: map['childLeaveSchoolReason'],
+      otherLeaveReason: map['otherLeaveReason'],
+      neverBeenToSchoolReason: map['neverBeenToSchoolReason'],
+      otherNeverSchoolReason: map['otherNeverSchoolReason'],
+      
+      // School Attendance
+      attendedSchoolLast7Days: map['attendedSchoolLast7Days'] == 1,
+      selectedLeaveReason: map['selectedLeaveReason'],
+      otherAbsenceReason: map['otherAbsenceReason'],
+    );
+  }
+}
+
+/// Model for remediation information
+class RemediationModel {
+  final int? id;
+  final int? coverPageId;
+  
+  // School Fees Information
+  final bool? hasSchoolFees;
+  
+  // Support Options
+  final bool childProtectionEducation;
+  final bool schoolKitsSupport;
+  final bool igaSupport;
+  final bool otherSupport;
+  final String? otherSupportDetails;
+  
+  // Community Action
+  final String? communityAction;
+  final String? otherCommunityActionDetails;
+
+  const RemediationModel({
+    this.id,
+    this.coverPageId,
+    this.hasSchoolFees,
+    this.childProtectionEducation = false,
+    this.schoolKitsSupport = false,
+    this.igaSupport = false,
+    this.otherSupport = false,
+    this.otherSupportDetails,
+    this.communityAction,
+    this.otherCommunityActionDetails,
+  });
+
+  // Convert to Map for database storage
+  Map<String, dynamic> toMap() {
+    final map = <String, dynamic>{
+      'cover_page_id': coverPageId,
+      'hasSchoolFees': hasSchoolFees == null ? null : (hasSchoolFees! ? 1 : 0),
+      'childProtectionEducation': childProtectionEducation ? 1 : 0,
+      'schoolKitsSupport': schoolKitsSupport ? 1 : 0,
+      'igaSupport': igaSupport ? 1 : 0,
+      'otherSupport': otherSupport ? 1 : 0,
+      'otherSupportDetails': otherSupportDetails,
+      'communityAction': communityAction,
+      'otherCommunityActionDetails': otherCommunityActionDetails,
+    };
+    
+    if (id != null) {
+      map['id'] = id;
+    }
+    
+    return map;
+  }
+
+  // Create from Map (for database retrieval)
+  factory RemediationModel.fromMap(Map<String, dynamic> map) {
+    return RemediationModel(
+      id: map['id'] as int?,
+      coverPageId: map['cover_page_id'] as int?,
+      hasSchoolFees: map['hasSchoolFees'] == null 
+          ? null 
+          : map['hasSchoolFees'] == 1,
+      childProtectionEducation: map['childProtectionEducation'] == 1,
+      schoolKitsSupport: map['schoolKitsSupport'] == 1,
+      igaSupport: map['igaSupport'] == 1,
+      otherSupport: map['otherSupport'] == 1,
+      otherSupportDetails: map['otherSupportDetails'],
+      communityAction: map['communityAction'],
+      otherCommunityActionDetails: map['otherCommunityActionDetails'],
+    );
+  }
+
+  // Create a copy with some fields updated
+  RemediationModel copyWith({
+    int? id,
+    int? coverPageId,
+    bool? hasSchoolFees,
+    bool? childProtectionEducation,
+    bool? schoolKitsSupport,
+    bool? igaSupport,
+    bool? otherSupport,
+    String? otherSupportDetails,
+    String? communityAction,
+    String? otherCommunityActionDetails,
+  }) {
+    return RemediationModel(
+      id: id ?? this.id,
+      coverPageId: coverPageId ?? this.coverPageId,
+      hasSchoolFees: hasSchoolFees ?? this.hasSchoolFees,
+      childProtectionEducation: childProtectionEducation ?? this.childProtectionEducation,
+      schoolKitsSupport: schoolKitsSupport ?? this.schoolKitsSupport,
+      igaSupport: igaSupport ?? this.igaSupport,
+      otherSupport: otherSupport ?? this.otherSupport,
+      otherSupportDetails: otherSupportDetails ?? this.otherSupportDetails,
+      communityAction: communityAction ?? this.communityAction,
+      otherCommunityActionDetails: otherCommunityActionDetails ?? this.otherCommunityActionDetails,
+    );
+  }
+
+  // Create an empty instance
+  static RemediationModel empty() => const RemediationModel();
+
+  // Check if the model is empty
+  bool get isEmpty => this == empty();
+
+  // Check if the model is not empty
+  bool get isNotEmpty => this != empty();
+
+  // Check if the model has a valid ID
+  bool get hasId => id != null && id! > 0;
+
+  @override
+  String toString() {
+    return 'RemediationModel(id: $id, coverPageId: $coverPageId, hasSchoolFees: $hasSchoolFees, childProtectionEducation: $childProtectionEducation, schoolKitsSupport: $schoolKitsSupport, igaSupport: $igaSupport, otherSupport: $otherSupport, otherSupportDetails: $otherSupportDetails, communityAction: $communityAction, otherCommunityActionDetails: $otherCommunityActionDetails)';
+  }
+}
+
+/// Represents the user's acknowledgment of sensitization information.
+class SensitizationData {
+  final int? id;
+  final int? coverPageId;  // Reference to the cover page this sensitization belongs to
+  final int? farmIdentificationId;  // Reference to the farm identification record
+  final bool isAcknowledged;
+  final DateTime? acknowledgedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final bool isSynced;
+  final int? syncStatus;
+
+  /// Creates a new [SensitizationData] instance.
+  ///
+  /// - [id]: The unique identifier for this record.
+  /// - [coverPageId]: The ID of the cover page this sensitization belongs to.
+  /// - [farmIdentificationId]: The ID of the farm identification record.
+  /// - [isAcknowledged]: Whether the user has acknowledged the information.
+  /// - [acknowledgedAt]: When the acknowledgment was made.
+  /// - [createdAt]: When this record was created.
+  /// - [updatedAt]: When this record was last updated.
+  /// - [isSynced]: Whether this record has been synced with the server.
+  /// - [syncStatus]: The sync status of this record.
+  const SensitizationData({
+    this.id,
+    this.coverPageId,
+    this.farmIdentificationId,
+    this.isAcknowledged = false,
+    this.acknowledgedAt,
+    this.createdAt,
+    this.updatedAt,
+    this.isSynced = false,
+    this.syncStatus = 0,
+  });
+
+  /// Creates a [SensitizationData] from a database map.
+  factory SensitizationData.fromMap(Map<String, dynamic> map) {
+    return SensitizationData(
+      id: map['id'],
+      coverPageId: map['cover_page_id'],
+      farmIdentificationId: map['farm_identification_id'],
+      isAcknowledged: map['is_acknowledged'] == 1,
+      acknowledgedAt: map['acknowledged_at'] != null 
+          ? DateTime.parse(map['acknowledged_at']) 
+          : null,
+      createdAt: map['created_at'] != null 
+          ? DateTime.parse(map['created_at'])
+          : null,
+      updatedAt: map['updated_at'] != null 
+          ? DateTime.parse(map['updated_at'])
+          : null,
+      isSynced: map['is_synced'] == 1,
+      syncStatus: map['sync_status'] as int? ?? 0,
+    );
+  }
+
+  /// Creates a copy of this [SensitizationData] with the given fields replaced.
+  SensitizationData copyWith({
+    int? id,
+    int? coverPageId,
+    int? farmIdentificationId,
+    bool? isAcknowledged,
+    DateTime? acknowledgedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isSynced,
+    int? syncStatus,
+  }) {
+    return SensitizationData(
+      id: id ?? this.id,
+      coverPageId: coverPageId ?? this.coverPageId,
+      farmIdentificationId: farmIdentificationId ?? this.farmIdentificationId,
+      isAcknowledged: isAcknowledged ?? this.isAcknowledged,
+      acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isSynced: isSynced ?? this.isSynced,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  /// Converts the [SensitizationData] to a map for database storage.
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'cover_page_id': coverPageId,
+      'farm_identification_id': farmIdentificationId,
+      'is_acknowledged': isAcknowledged ? 1 : 0,
+      'acknowledged_at': acknowledgedAt?.toIso8601String(),
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'is_synced': isSynced ? 1 : 0,
+      'sync_status': syncStatus,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'SensitizationData(' 
+        'id: $id, '
+        'coverPageId: $coverPageId, '
+        'isAcknowledged: $isAcknowledged, '
+        'acknowledgedAt: $acknowledgedAt, '
+        'createdAt: $createdAt, '
+        'updatedAt: $updatedAt, '
+        'isSynced: $isSynced, '
+        'syncStatus: $syncStatus)';
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SensitizationData &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          coverPageId == other.coverPageId &&
+          isAcknowledged == other.isAcknowledged &&
+          acknowledgedAt == other.acknowledgedAt &&
+          createdAt == other.createdAt &&
+          updatedAt == other.updatedAt &&
+          isSynced == other.isSynced &&
+          syncStatus == other.syncStatus;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        coverPageId,
+        isAcknowledged,
+        acknowledgedAt,
+        createdAt,
+        updatedAt,
+        isSynced,
+        syncStatus,
+      );
+}
+
+/// A class containing all the sensitization content for the application.
+class SensitizationContent {
+  /// Title for the Good Parenting section.
+  static const String goodParentingTitle = 'GOOD PARENTING';
+
+  /// Bullet points for the Good Parenting section.
+  static const List<String> goodParentingBullets = [
+    'Every parent is responsible for loving, protecting, training and discipling their children.',
+    'Good parenting begins from inception. It is cheaper to get things right during early childhood than trying to fix it later.',
+    'Good parenting nurtures innovation and creative thinking in children.',
+    'Parenting a child is a one-time opportunity; there is no do-over.',
+  ];
+
+  /// Title for the Child Protection section.
+  static const String childProtectionTitle = 'CHILD PROTECTION';
+
+  /// Bullet points for the Child Protection section.
+  static const List<String> childProtectionBullets = [
+    'Children\'s rights are all about the needs of a child, all the care and the protection a child must enjoy to guarantee his/her development and full growth.',
+    'Child labour is mentally, physically, socially, morally dangerous and detrimental to children\'s development.',
+    'Socialization of children must not be an excuse for exploitation or compromise their education.',
+    'Children are more likely to have occupational accidents because they are less experienced, less aware of the risks and means to prevent them.',
+    'Child labour can have tragic consequences at individual, family, community and national levels.',
+  ];
+
+  /// Title for the Safe Labour Practices section.
+  static const String safeLabourPracticesTitle = 'SAFE LABOUR PRACTICES';
+
+  /// Bullet points for the Safe Labour Practices section.
+  static const List<String> safeLabourPracticesBullets = [
+    'Carefully read the instructions provided for the use of the chemical product before application.',
+    'Wear the appropriate protective clothing and footwear before setting off to the farm.',
+    'Wear protective clothing during spraying of agrochemical products, fertilizer application and pruning.',
+    'Threats, harassment, assault and deprivations of all kinds are all characteristics of forced labour.',
+    'Forced/compulsory labour is an affront to children\'s rights and development.',
+    'Promote safe labour practices in cocoa cultivation among adults.',
+  ];
+
+  /// The main description text shown at the top of the sensitization page.
+  static const String description =
+      'Please take a moment to understand the dangers and impact of child labour and to promote child protection and education.';
+}
+
+/// Represents the data collected from the Sensitization Questions form.
+/// Represents the data collected from the Sensitization Questions form.
+class SensitizationQuestionsData {
+  /// Database primary key
+  final int? id;
+  
+  /// Reference to the cover page record
+  final int? coverPageId;
+
+  /// Whether the household has been sensitized
+  final bool? hasSensitizedHousehold;
+
+  /// Whether sensitization on protection was conducted
+  final bool? hasSensitizedOnProtection;
+
+  /// Whether sensitization on safe labor was conducted
+  final bool? hasSensitizedOnSafeLabour;
+
+  /// Number of female adults present during sensitization
+  final String femaleAdultsCount;
+
+  /// Number of male adults present during sensitization
+  final String maleAdultsCount;
+
+  /// Whether consent was given for taking pictures
+  final bool? consentForPicture;
+
+  /// Reason for not giving consent (if applicable)
+  final String consentReason;
+
+  /// Path to the sensitization session image
+  final String? sensitizationImagePath;
+
+  /// Path to the household with user image
+  final String? householdWithUserImagePath;
+
+  /// Observations about parents' reaction to sensitization
+  final String parentsReaction;
+
+  /// Timestamp when the form was submitted
+  final DateTime submittedAt;
+  
+  /// Timestamp when the record was created
+  final DateTime? createdAt;
+  
+  /// Timestamp when the record was last updated
+  final DateTime? updatedAt;
+  
+  /// Whether the record has been synced with the server
+  final bool? isSynced;
+  
+  /// Sync status (0 = not synced, 1 = synced, 2 = sync failed)
+  final int? syncStatus;
+
+  /// Creates a new instance of [SensitizationQuestionsData].
+  SensitizationQuestionsData({
+    this.id,
+    this.coverPageId,
+    this.hasSensitizedHousehold,
+    this.hasSensitizedOnProtection,
+    this.hasSensitizedOnSafeLabour,
+    this.femaleAdultsCount = '',
+    this.maleAdultsCount = '',
+    this.consentForPicture,
+    this.consentReason = '',
+    this.sensitizationImagePath,
+    this.householdWithUserImagePath,
+    this.parentsReaction = '',
+    DateTime? submittedAt,
+    this.createdAt,
+    this.updatedAt,
+    this.isSynced = false,
+    this.syncStatus = 0,
+  }) : submittedAt = submittedAt ?? DateTime.now();
+
+  /// Creates an empty instance with default values.
+  factory SensitizationQuestionsData.empty() {
+    return SensitizationQuestionsData();
+  }
+
+  /// Creates a copy of this [SensitizationQuestionsData] with the given fields replaced.
+  SensitizationQuestionsData copyWith({
+    int? id,
+    int? coverPageId,
+    bool? hasSensitizedHousehold,
+    bool? hasSensitizedOnProtection,
+    bool? hasSensitizedOnSafeLabour,
+    String? femaleAdultsCount,
+    String? maleAdultsCount,
+    bool? consentForPicture,
+    String? consentReason,
+    String? sensitizationImagePath,
+    String? householdWithUserImagePath,
+    String? parentsReaction,
+    DateTime? submittedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isSynced,
+    int? syncStatus,
+  }) {
+    return SensitizationQuestionsData(
+      id: id ?? this.id,
+      coverPageId: coverPageId ?? this.coverPageId,
+      hasSensitizedHousehold: hasSensitizedHousehold ?? this.hasSensitizedHousehold,
+      hasSensitizedOnProtection: hasSensitizedOnProtection ?? this.hasSensitizedOnProtection,
+      hasSensitizedOnSafeLabour: hasSensitizedOnSafeLabour ?? this.hasSensitizedOnSafeLabour,
+      femaleAdultsCount: femaleAdultsCount ?? this.femaleAdultsCount,
+      maleAdultsCount: maleAdultsCount ?? this.maleAdultsCount,
+      consentForPicture: consentForPicture ?? this.consentForPicture,
+      consentReason: consentReason ?? this.consentReason,
+      sensitizationImagePath: sensitizationImagePath ?? this.sensitizationImagePath,
+      householdWithUserImagePath: householdWithUserImagePath ?? this.householdWithUserImagePath,
+      parentsReaction: parentsReaction ?? this.parentsReaction,
+      submittedAt: submittedAt ?? this.submittedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isSynced: isSynced ?? this.isSynced,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  /// Converts this [SensitizationQuestionsData] to a Map for database storage.
+  Map<String, dynamic> toMap() {
+    final map = <String, dynamic>{};
+    
+    // Only include non-null values
+    if (id != null) map['id'] = id;
+    if (coverPageId != null) map['farm_identification_id'] = coverPageId;
+    
+    if (hasSensitizedHousehold != null) {
+      map['has_sensitized_household'] = hasSensitizedHousehold! ? 1 : 0;
+    }
+    
+    if (hasSensitizedOnProtection != null) {
+      map['has_sensitized_on_protection'] = hasSensitizedOnProtection! ? 1 : 0;
+    }
+    
+    if (hasSensitizedOnSafeLabour != null) {
+      map['has_sensitized_on_safe_labour'] = hasSensitizedOnSafeLabour! ? 1 : 0;
+    }
+    
+    map['female_adults_count'] = femaleAdultsCount;
+    map['male_adults_count'] = maleAdultsCount;
+    
+    if (consentForPicture != null) {
+      map['consent_for_picture'] = consentForPicture! ? 1 : 0;
+    }
+    
+    map['consent_reason'] = consentReason;
+    
+    if (sensitizationImagePath != null) {
+      map['sensitization_image_path'] = sensitizationImagePath;
+    }
+    
+    if (householdWithUserImagePath != null) {
+      map['household_with_user_image_path'] = householdWithUserImagePath;
+    }
+    
+    map['parents_reaction'] = parentsReaction;
+    map['submitted_at'] = submittedAt.toIso8601String();
+    
+    // Ensure these fields are always included
+    map['created_at'] = (createdAt ?? DateTime.now()).toIso8601String();
+    map['updated_at'] = (updatedAt ?? DateTime.now()).toIso8601String();
+    map['is_synced'] = (isSynced ?? false) ? 1 : 0;
+    map['sync_status'] = syncStatus ?? 0;
+    
+    return map;
+  }
+
+  /// Converts this [SensitizationQuestionsData] to a JSON map.
+  Map<String, dynamic> toJson() {
+    return toMap();
+  }
+
+  /// Creates a SensitizationQuestionsData from a Map (e.g., from database).
+  factory SensitizationQuestionsData.fromMap(Map<String, dynamic> map) {
+    return SensitizationQuestionsData(
+      id: map['id'],
+      coverPageId: map['farm_identification_id'],
+      hasSensitizedHousehold: map['has_sensitized_household'] == 1,
+      hasSensitizedOnProtection: map['has_sensitized_on_protection'] == 1,
+      hasSensitizedOnSafeLabour: map['has_sensitized_on_safe_labour'] == 1,
+      femaleAdultsCount: map['female_adults_count'] ?? '',
+      maleAdultsCount: map['male_adults_count'] ?? '',
+      consentForPicture: map['consent_for_picture'] == 1,
+      consentReason: map['consent_reason'] ?? '',
+      sensitizationImagePath: map['sensitization_image_path'],
+      householdWithUserImagePath: map['household_with_user_image_path'],
+      parentsReaction: map['parents_reaction'] ?? '',
+      submittedAt: map['submitted_at'] != null 
+          ? DateTime.parse(map['submitted_at']) 
+          : DateTime.now(),
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : null,
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
+      isSynced: map['is_synced'] == 1,
+      syncStatus: map['sync_status'] ?? 0,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SensitizationQuestionsData &&
+        other.hasSensitizedHousehold == hasSensitizedHousehold &&
+        other.hasSensitizedOnProtection == hasSensitizedOnProtection &&
+        other.hasSensitizedOnSafeLabour == hasSensitizedOnSafeLabour &&
+        other.femaleAdultsCount == femaleAdultsCount &&
+        other.maleAdultsCount == maleAdultsCount &&
+        other.consentForPicture == consentForPicture &&
+        other.consentReason == consentReason &&
+        other.sensitizationImagePath == sensitizationImagePath &&
+        other.householdWithUserImagePath == householdWithUserImagePath &&
+        other.parentsReaction == parentsReaction;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      hasSensitizedHousehold,
+      hasSensitizedOnProtection,
+      hasSensitizedOnSafeLabour,
+      femaleAdultsCount,
+      maleAdultsCount,
+      consentForPicture,
+      consentReason,
+      sensitizationImagePath,
+      householdWithUserImagePath,
+      parentsReaction,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'SensitizationQuestionsData(' +
+        'id: $id, ' +
+        'coverPageId: $coverPageId, ' +
+        'hasSensitizedHousehold: $hasSensitizedHousehold, ' +
+        'hasSensitizedOnProtection: $hasSensitizedOnProtection, ' +
+        'hasSensitizedOnSafeLabour: $hasSensitizedOnSafeLabour, ' +
+        'femaleAdultsCount: $femaleAdultsCount, ' +
+        'maleAdultsCount: $maleAdultsCount, ' +
+        'consentForPicture: $consentForPicture, ' +
+        'consentReason: $consentReason, ' +
+        'sensitizationImagePath: $sensitizationImagePath, ' +
+        'householdWithUserImagePath: $householdWithUserImagePath, ' +
+        'parentsReaction: $parentsReaction, ' +
+        'submittedAt: $submittedAt, ' +
+        'createdAt: $createdAt, ' +
+        'updatedAt: $updatedAt, ' +
+        'isSynced: $isSynced, ' +
+        'syncStatus: $syncStatus' +
+        ')';
+  }
+}
+class EndOfCollectionModel {
+  final int? id; // For database primary key
+  final int? coverPageId; // Reference to the cover page
+  final int? farmIdentificationId; // Reference to the farmer identification
+  
+  // Image paths (stored as file paths in local storage)
+  final String? respondentImagePath;
+  final String? producerSignaturePath;
+  
+  // Location data
+  final double? latitude;
+  final double? longitude;
+  final String? gpsCoordinates; // Formatted as "latitude,longitude"
+  
+  // Timestamps
+  final DateTime? endTime;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  
+  // Additional information
+  final String? remarks;
+  final bool isSynced; // Track if synced with server
+
+  const EndOfCollectionModel({
+    this.id,
+    this.coverPageId,
+    this.farmIdentificationId,
+    this.respondentImagePath, 
+    this.producerSignaturePath,
+    this.latitude,
+    this.longitude,
+    this.gpsCoordinates,
+    this.endTime,
+    this.createdAt,
+    this.updatedAt,
+    this.remarks,
+    this.isSynced = false,
+  });
+
+  // Convert to Map for database storage
+  Map<String, dynamic> toMap() {
+    return {
+      if (id != null) 'id': id,
+      'cover_page_id': coverPageId, // This was missing!
+      'farm_identification_id': coverPageId, // Or use farmerId if different
+      'respondent_image_path': respondentImagePath,
+      'producer_signature_path': producerSignaturePath,
+      'latitude': latitude,
+      'longitude': longitude,
+      'gps_coordinates': gpsCoordinates,
+      'end_time': endTime?.toIso8601String(),
+      'remarks': remarks,
+      'created_at': createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+      'is_synced': isSynced ? 1 : 0,
+      'sync_status': 0, // Default sync status
+    };
+  }
+
+  // Create from Map (for database retrieval)
+  factory EndOfCollectionModel.fromMap(Map<String, dynamic> map) {
+    return EndOfCollectionModel(
+      id: map['id'] as int?,
+      coverPageId: map['cover_page_id'] as int?,
+      farmIdentificationId: map['farm_identification_id'] as int?,
+      respondentImagePath: map['respondent_image_path'] as String?,
+      producerSignaturePath: map['producer_signature_path'] as String?,
+      latitude: map['latitude'] != null ? (map['latitude'] is double ? map['latitude'] : (map['latitude'] as num).toDouble()) : null,
+      longitude: map['longitude'] != null ? (map['longitude'] is double ? map['longitude'] : (map['longitude'] as num).toDouble()) : null,
+      gpsCoordinates: map['gps_coordinates'] as String?,
+      endTime: map['end_time'] != null ? DateTime.parse(map['end_time'] as String) : null,
+      remarks: map['remarks'] as String?,
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'] as String) : null,
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'] as String) : null,
+      isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
+    );
+  }
+
+  // Create a copy with some fields updated
+  EndOfCollectionModel copyWith({
+    int? id,
+    int? coverPageId,
+    int? farmIdentificationId,  // Add farmIdentificationId parameter
+    String? respondentImagePath,
+    String? producerSignaturePath,
+    double? latitude,
+    double? longitude,
+    String? gpsCoordinates,
+    DateTime? endTime,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? remarks,
+    bool? isSynced,
+  }) {
+    return EndOfCollectionModel(
+      id: id ?? this.id,
+      coverPageId: coverPageId ?? this.coverPageId,
+      farmIdentificationId: farmIdentificationId ?? this.farmIdentificationId,  // Use the parameter
+      respondentImagePath: respondentImagePath ?? this.respondentImagePath,
+      producerSignaturePath: producerSignaturePath ?? this.producerSignaturePath,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      gpsCoordinates: gpsCoordinates ?? this.gpsCoordinates,
+      endTime: endTime ?? this.endTime,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      remarks: remarks ?? this.remarks,
+      isSynced: isSynced ?? this.isSynced,
+    );
+  }
+
+  // Create an empty instance
+  static EndOfCollectionModel empty() => const EndOfCollectionModel();
+
+  // Check if the model is empty
+  bool get isEmpty => this == empty();
+
+  // Check if the model is not empty
+  bool get isNotEmpty => this != empty();
+
+  @override
+  String toString() {
+    return 'EndOfCollectionModel{\n'
+           '  id: $id,\n'
+           '  coverPageId: $coverPageId,\n'
+           '  respondentImagePath: $respondentImagePath,\n'
+           '  producerSignaturePath: $producerSignaturePath,\n'
+           '  latitude: $latitude,\n'
+           '  longitude: $longitude,\n'
+           '  gpsCoordinates: $gpsCoordinates,\n'
+           '  endTime: $endTime,\n'
+           '  remarks: $remarks,\n'
+           '  createdAt: $createdAt,\n'
+           '  updatedAt: $updatedAt,\n'
+           '  isSynced: $isSynced\n'
+           '}';
+  }
+}
+
