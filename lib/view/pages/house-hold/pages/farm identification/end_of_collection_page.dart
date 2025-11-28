@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:human_rights_monitor/controller/db/daos/cover_page_dao.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 
 import '../../../../../controller/db/db.dart';
 import '../survey_completion_page.dart';
@@ -24,11 +26,13 @@ class _Spacing {
 class EndOfCollectionPage extends StatefulWidget {
   final VoidCallback onComplete;
   final VoidCallback onPrevious;
+  final HouseholdDBHelper householdDBHelper;
   
   const EndOfCollectionPage({
     Key? key,
     required this.onComplete,
     required this.onPrevious,
+    required this.householdDBHelper,
   }) : super(key: key);
 
   @override
@@ -98,10 +102,23 @@ class EndOfCollectionPageState extends State<EndOfCollectionPage> {
     final time = _endTime ?? TimeOfDay.now();
     final endTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
     
+    // Parse latitude and longitude from _gpsCoordinates if available
+    double? latitude;
+    double? longitude;
+    if (_gpsCoordinates != null && _gpsCoordinates!.contains(',')) {
+      final parts = _gpsCoordinates!.split(',');
+      if (parts.length == 2) {
+        latitude = double.tryParse(parts[0].trim());
+        longitude = double.tryParse(parts[1].trim());
+      }
+    }
+    
     return {
       'respondentImagePath': _respondentImage?.path,
       'producerSignaturePath': _producerSignatureImage?.path,
       'gpsCoordinates': _gpsCoordinates,
+      'latitude': latitude,
+      'longitude': longitude,
       'endTime': endTime.toIso8601String(),
       'remarks': _remarksController.text,
       'createdAt': now.toIso8601String(),
@@ -223,18 +240,20 @@ class EndOfCollectionPageState extends State<EndOfCollectionPage> {
             '- Additional Remarks: ${_remarksController.text.isNotEmpty ? _remarksController.text : 'None'}',
             name: _logTag);
 
-        // // Update the survey status to submitted (1)
-        // final dbHelper = LocalDBHelper.instance;
-        // final latestSurvey = await dbHelper.getLatestCoverPageData();
+        // Update the survey status to submitted (1)
+        final coverPageDao = CoverPageDao(dbHelper: widget.householdDBHelper);
+        final latestSurvey = await coverPageDao.getLatestCoverPage();
 
-        // if (latestSurvey != null) {
-        //   await dbHelper.updateCoverPageStatus(
-        //     id: latestSurvey['id'],
-        //     status: 1, // 1 for submitted
-           
-        //   );
-        //   developer.log('Updated survey status to submitted', name: _logTag);
-        // }
+        if (latestSurvey != null) {
+          // Update the cover page with synced status and current timestamp
+          await coverPageDao.update(latestSurvey.copyWith(
+            isSynced: 1, // Mark as synced
+            updatedAt: DateTime.now(),
+          ));
+          
+          debugPrint('✅ Survey marked as synced in local database');
+        } 
+        developer.log('Updated survey status to submitted', name: _logTag);
 
           // Navigate to completion page
         if (mounted) {

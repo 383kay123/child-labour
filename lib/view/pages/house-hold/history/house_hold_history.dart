@@ -1,38 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:human_rights_monitor/controller/db/household_tables.dart';
 import 'package:human_rights_monitor/controller/db/table_names.dart';
 import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 import 'package:human_rights_monitor/controller/models/fullsurveymodel.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:human_rights_monitor/controller/models/survey_summary.dart';
 import 'package:human_rights_monitor/controller/db/daos/end_of_collection_dao.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/components/survey_data_viewer.dart';
 import 'package:human_rights_monitor/view/theme/app_theme.dart';
 import 'package:intl/intl.dart';
-
-// Import the survey data viewer if it exists, otherwise we'll create a placeholder
-// import 'package:human_rights_monitor/view/pages/house-hold/history/survey_data_viewer.dart';
-
-// Placeholder for SurveyDataViewer if it doesn't exist
-class SurveyDataViewer extends StatelessWidget {
-  final dynamic surveyData;
-  
-  const SurveyDataViewer({Key? key, required this.surveyData}) : super(key: key);
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Survey Details'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Text(
-          'Survey Details: ${surveyData.toString()}',
-          style: const TextStyle(fontSize: 16),
-        ),
-      ),
-    );
-  }
-}
 
 class SurveyListPage extends StatefulWidget {
   const SurveyListPage({Key? key}) : super(key: key);
@@ -44,11 +22,10 @@ class SurveyListPage extends StatefulWidget {
 class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final HouseholdDBHelper _dbHelper = HouseholdDBHelper.instance;
   late final EndOfCollectionDao _endOfCollectionDao;
-  TabController? _tabController; // Make nullable to handle initialization errors
+  late TabController _tabController;
   
-  List<SurveySummary> _allSurveys = [];
   List<SurveySummary> _pendingSurveys = [];
-  List<SurveySummary> _submittedSurveys = [];
+  List<SurveySummary> _completedSurveys = [];
   bool _isLoading = true;
   bool _hasError = false;
 
@@ -60,7 +37,6 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
       _endOfCollectionDao = EndOfCollectionDao(dbHelper: _dbHelper);
       _loadSurveys();
       
-      // Add observer to detect when the page becomes visible again
       WidgetsBinding.instance.addObserver(this);
     } catch (e) {
       debugPrint('❌ Error initializing SurveyListPage: $e');
@@ -74,14 +50,13 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _tabController?.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Page became visible again, refresh the list
       _loadSurveys();
     }
   }
@@ -96,24 +71,13 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
       final allSurveys = await _dbHelper.getAllSurveys();
       print('✅ [SurveyList] Successfully loaded ${allSurveys.length} surveys');
       
-      if (allSurveys.isEmpty) {
-        print('ℹ️ [SurveyList] No surveys found in the database');
-      } else {
-        print('📋 [SurveyList] First survey details:');
-        print('   - ID: ${allSurveys.first.id}');
-        print('   - Name: ${allSurveys.first.farmerName}');
-        print('   - Date: ${allSurveys.first.submissionDate}');
-        print('   - Has cover data: ${allSurveys.first.hasCoverData}');
-      }
+      // Separate into pending and completed surveys based on isSubmitted flag
+      _pendingSurveys = allSurveys.where((survey) => !survey.isSubmitted).toList();
+      _completedSurveys = allSurveys.where((survey) => survey.isSubmitted).toList();
       
-      // Categorize surveys based on completion status
-      final pending = allSurveys.where((survey) => !_isSurveyComplete(survey)).toList();
-      final submitted = allSurveys.where((survey) => _isSurveyComplete(survey)).toList();
+      print('📋 [SurveyList] Found ${_pendingSurveys.length} pending and ${_completedSurveys.length} completed surveys');
       
       setState(() {
-        _allSurveys = allSurveys;
-        _pendingSurveys = pending;
-        _submittedSurveys = submitted;
         _isLoading = false;
       });
     } catch (e, stackTrace) {
@@ -126,17 +90,8 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
     }
   }
 
-  bool _isSurveyComplete(SurveySummary survey) {
-    // A survey is considered complete if it has data in critical tables
-    return survey.hasFarmerData && 
-           survey.hasConsentData && 
-           survey.hasCoverData &&
-           survey.hasEndOfCollectionData;
-  }
-
   @override
   Widget build(BuildContext context) {
-    // If there was an error during initialization, show error UI
     if (_hasError) {
       return Scaffold(
         appBar: AppBar(
@@ -202,26 +157,6 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
       );
     }
 
-    // If tab controller is null, show loading state
-    if (_tabController == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Survey History',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-          backgroundColor: AppTheme.primaryColor,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        body: _buildLoadingState(),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -277,8 +212,8 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Submitted'),
-                  if (_submittedSurveys.isNotEmpty) ...[
+                  Text('Completed'),
+                  if (_completedSurveys.isNotEmpty) ...[
                     SizedBox(width: 6),
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -287,7 +222,7 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        _submittedSurveys.length.toString(),
+                        _completedSurveys.length.toString(),
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 10,
@@ -305,10 +240,10 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
       body: _isLoading
           ? _buildLoadingState()
           : TabBarView(
-              controller: _tabController!,
+              controller: _tabController,
               children: [
                 _buildSurveyList(_pendingSurveys, false),
-                _buildSurveyList(_submittedSurveys, true),
+                _buildSurveyList(_completedSurveys, true),
               ],
             ),
     );
@@ -335,20 +270,20 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
     );
   }
 
-  Widget _buildSurveyList(List<SurveySummary> surveys, bool isSubmitted) {
+  Widget _buildSurveyList(List<SurveySummary> surveys, bool isCompleted) {
     if (surveys.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isSubmitted ? Icons.assignment_turned_in : Icons.assignment_outlined,
+              isCompleted ? Icons.assignment_turned_in : Icons.assignment_outlined,
               size: 64,
               color: Colors.grey[300],
             ),
             SizedBox(height: 16),
             Text(
-              isSubmitted ? 'No submitted surveys' : 'No pending surveys',
+              isCompleted ? 'No completed surveys' : 'No pending surveys',
               style: GoogleFonts.poppins(
                 color: Colors.grey[600],
                 fontSize: 14,
@@ -366,13 +301,13 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
         padding: const EdgeInsets.all(12),
         itemCount: surveys.length,
         itemBuilder: (context, index) {
-          return _buildSurveyCard(surveys[index], isSubmitted);
+          return _buildSurveyCard(surveys[index], isCompleted);
         },
       ),
     );
   }
 
-  Widget _buildSurveyCard(SurveySummary survey, bool isSubmitted) {
+  Widget _buildSurveyCard(SurveySummary survey, bool isCompleted) {
     DateTime createdAt = survey.submissionDate;
     String farmerName = survey.farmerName.isNotEmpty 
         ? survey.farmerName 
@@ -380,9 +315,9 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
     int score = _calculateSurveyScore(survey);
 
     return GestureDetector(
-      onTap: () async {
+      onTap: isCompleted ? () async {
         if (survey.id != null) {
-          final fullSurvey = await _loadCompleteSurveyData(survey.id!);
+          final fullSurvey = await _dbHelper.getFullSurvey(survey.id!);
           if (fullSurvey != null && mounted) {
             Navigator.push(
               context,
@@ -390,9 +325,16 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
                 builder: (context) => SurveyDataViewer(surveyData: fullSurvey),
               ),
             );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Error loading survey data'),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
         }
-      },
+      } : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
@@ -412,7 +354,7 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isSubmitted ? Colors.green[50] : Colors.orange[50],
+                color: isCompleted ? Colors.green[50] : Colors.orange[50],
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
@@ -423,11 +365,11 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isSubmitted ? Colors.green : Colors.orange,
+                      color: isCompleted ? Colors.green : Colors.orange,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      isSubmitted ? 'SUBMITTED' : 'DRAFT',
+                      isCompleted ? 'COMPLETED' : 'DRAFT',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         color: Colors.white,
@@ -515,7 +457,7 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
                   Row(
                     children: [
                       _buildDetailChip(
-                        Icons.person, 
+                        Icons.location_on, 
                         survey.community.isNotEmpty ? survey.community : 'No community'
                       ),
                       SizedBox(width: 8),
@@ -558,25 +500,25 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
                   SizedBox(height: 12),
                   
                   // Action buttons for pending surveys
-                  if (!isSubmitted)
+                  if (!isCompleted)
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
+                          child: ElevatedButton(
                             onPressed: () => _continueSurvey(survey),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.primaryColor,
-                              side: BorderSide(color: AppTheme.primaryColor),
-                              padding: EdgeInsets.symmetric(vertical: 8),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             child: Text(
-                              'Continue',
+                              'Submit',
                               style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -588,7 +530,7 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.red,
                               side: BorderSide(color: Colors.red),
-                              padding: EdgeInsets.symmetric(vertical: 8),
+                              padding: EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -596,8 +538,8 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
                             child: Text(
                               'Delete',
                               style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -647,7 +589,6 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
     if (survey.hasConsentData) score += 15;
     if (survey.hasFarmerData) score += 20;
     if (survey.hasCombinedData) score += 10;
-    // if (survey.hasChildrenData) score += 10;
     if (survey.hasRemediationData) score += 10;
     if (survey.hasSensitizationData) score += 10;
     if (survey.hasSensitizationQuestionsData) score += 5;
@@ -663,16 +604,48 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
   }
 
   Future<void> _continueSurvey(SurveySummary survey) async {
-    // TODO: Implement navigation to continue the survey
-    // This would navigate back to the survey form with the existing data
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Continue survey: ${survey.farmerName}'),
-          backgroundColor: AppTheme.primaryColor,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    try {
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      final fullSurvey = await _dbHelper.getFullSurvey(survey.id!);
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+        
+        if (fullSurvey != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SurveyDataViewer(surveyData: fullSurvey),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to load survey data. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -680,9 +653,11 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete Survey', style: GoogleFonts.poppins()),
-        content: Text('Are you sure you want to delete this survey? This action cannot be undone.', 
-          style: GoogleFonts.poppins()),
+        title: Text('Delete Survey', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Text(
+          'Are you sure you want to delete this survey? This action cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -699,18 +674,27 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
 
     if (confirmed == true) {
       try {
-        // TODO: Implement delete functionality
-        // await _dbHelper.deleteSurvey(survey.id!);
+        final deletedCount = await _dbHelper.deleteSurvey(survey.id!);
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Survey deleted successfully'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-          _loadSurveys();
+          if (deletedCount > 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Survey deleted successfully'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            _loadSurveys();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No survey found to delete'),
+                backgroundColor: Colors.orange,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       } catch (e) {
         if (mounted) {
@@ -723,61 +707,6 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
           );
         }
       }
-    }
-  }
-
-  Future<FullSurveyModel?> _loadCompleteSurveyData(int coverPageId) async {
-    final db = await _dbHelper.database;
-    final Map<String, dynamic> rawData = {};
-
-    try {
-      // 1. Cover Page
-      final cover = await db.query(TableNames.coverPageTBL, where: 'id = ?', whereArgs: [coverPageId]);
-      if (cover.isEmpty) return null;
-      rawData['cover_page'] = cover.first;
-
-      // 2. Consent
-      final consent = await db.query(TableNames.consentTBL, where: 'coverPageId = ?', whereArgs: [coverPageId]);
-      if (consent.isNotEmpty) rawData['consent'] = consent.first;
-
-      // 3. Farmer Identification
-      final farmer = await db.query(TableNames.farmerIdentificationTBL, where: 'coverPageId = ?', whereArgs: [coverPageId]);
-      final farmerId = farmer.isNotEmpty ? farmer.first['id'] as int : null;
-      if (farmer.isNotEmpty) rawData['farmer_identification'] = farmer.first;
-
-      // 4. Combined Farm
-      final combined = await db.query(TableNames.combinedFarmIdentificationTBL, where: 'coverPageId = ?', whereArgs: [coverPageId]);
-      if (combined.isNotEmpty) rawData['combined_farm'] = combined.first;
-
-      // 5. Children Household
-      final children = await db.query(TableNames.childrenHouseholdTBL, where: 'farmerId = ?', whereArgs: [farmerId]);
-      if (children.isNotEmpty) rawData['children_household'] = children.first;
-
-      // 6. Remediation
-      final remediation = await db.query(TableNames.remediationTBL, where: 'farm_identification_id = ?', whereArgs: [farmerId]);
-      if (remediation.isNotEmpty) rawData['remediation'] = remediation.first;
-
-      // 7. Sensitization
-      final sensitization = await db.query(TableNames.sensitizationTBL, where: 'farm_identification_id = ?', whereArgs: [farmerId]);
-      if (sensitization.isNotEmpty) rawData['sensitization'] = sensitization.first;
-
-      // 8. Sensitization Questions
-      final questions = await db.query(TableNames.sensitizationQuestionsTBL, where: 'farm_identification_id = ?', whereArgs: [farmerId]);
-      rawData['sensitization_questions'] = questions;
-
-      // 9. End of Collection
-      if (farmerId != null) {
-        final end = await _endOfCollectionDao.getByFarmIdentificationId(farmerId);
-        if (end != null) rawData['end_of_collection'] = end;
-      }
-
-      rawData['created_at'] = rawData['cover_page']?['createdAt'] ?? rawData['farmer_identification']?['createdAt'];
-      rawData['id'] = coverPageId;
-
-      return FullSurveyModel.fromMap(rawData);
-    } catch (e) {
-      debugPrint('Error loading full survey: $e');
-      return null;
     }
   }
 }

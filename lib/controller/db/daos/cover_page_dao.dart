@@ -196,4 +196,31 @@ class CoverPageDao {
       rethrow;
     }
   }
+
+  /// Retrieves the most recent cover page record
+  /// Returns null if no records exist
+  Future<CoverPageData?> getLatestCoverPage() async {
+    try {
+      final db = await dbHelper.database;
+      final result = await db.query(
+        CoverPageTable.tableName,
+        orderBy: '${CoverPageTable.id} DESC',
+        limit: 1,
+      );
+
+      if (result.isNotEmpty) {
+        debugPrint('✅ Retrieved latest cover page');
+        return CoverPageTable.fromMap(result.first);
+      }
+      debugPrint('ℹ️ No cover page records found');
+      return null;
+    } on DatabaseException catch (e) {
+      debugPrint('❌ Database error getting latest cover page: $e');
+      rethrow;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error getting latest cover page: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
 }

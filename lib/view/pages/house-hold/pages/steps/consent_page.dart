@@ -219,100 +219,107 @@ class ConsentPageState extends State<ConsentPage> {
   }
 
   /// Saves the current consent data to the local database
-  Future<bool> saveData() async {
-    if (!mounted) return false;
+ Future<bool> saveData() async {
+  if (!mounted) return false;
+  
+  try {
+    // First try to get coverPageId from widget.coverPageId
+    int? coverPageId = widget.coverPageId;
     
-    try {
-      // Ensure coverPageId is set
-      if (widget.coverPageId == null) {
-        debugPrint('Error: coverPageId is null when saving consent data');
-        return false;
-      }
-
-      // Create a copy of the current data with updated values from the form
-      final updatedData = widget.data.copyWith(
-        coverPageId: widget.coverPageId, // Include coverPageId in the update
-        communityType: widget.data.communityType,
-        residesInCommunityConsent: _residesInCommunity == true ? 'Yes' : 'No',
-        farmerAvailable: widget.data.farmerAvailable,
-        farmerStatus: widget.data.farmerStatus,
-        availablePerson: widget.data.availablePerson,
-        otherSpecification: _otherSpecController.text.trim(),
-        otherCommunityName: _otherCommunityController.text.trim(),
-        consentGiven: _hasGivenConsent,
-        declinedConsent: _declinedConsent,
-        refusalReason: _refusalReasonController.text.trim(),
-        consentTimestamp: DateTime.now(),
-        interviewStartTime: widget.data.interviewStartTime ?? DateTime.now(),
-        timeStatus: widget.data.timeStatus ?? 'Started at ${TimeOfDay.now().format(context)}',
-        currentPosition: widget.data.currentPosition,
-        locationStatus: widget.data.locationStatus,
-      );
-      
-      debugPrint('Saving consent data with coverPageId: ${widget.coverPageId}');
-
-      // Use HouseholdDBHelper which has the table existence checks
-      final dbHelper = HouseholdDBHelper.instance;
-      
-      try {
-        // Save the data using HouseholdDBHelper
-        int? id;
-        if (updatedData.id == null) {
-          // Insert new record
-          id = await dbHelper.insertConsent(updatedData);
-          devtools.log('Consent data saved with ID: $id', name: 'database');
-        } else {
-          // Update existing record
-          await dbHelper.updateConsent(updatedData);
-          id = updatedData.id;
-          devtools.log('Consent data updated for ID: ${updatedData.id}', name: 'database');
-        }
-        
-        // Verify the data was saved
-        if (id != null && id > 0) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Consent data saved successfully'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-          return true;
-        } else {
-          devtools.log('Failed to save consent data: No valid ID returned', name: 'database', error: true);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Failed to save consent data: No ID returned'),
-                backgroundColor: Colors.orange,
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
-          return false;
-        }
-      } catch (e) {
-        devtools.log('Database error in save operation: $e', name: 'database', error: true);
-        rethrow;
-      }
-    } catch (e, stackTrace) {
-      devtools.log('Error in saveData: $e', name: 'database', error: true, stackTrace: stackTrace);
-      
+    // If not available in widget, try to get it from the data
+    if (coverPageId == null && widget.data.coverPageId != null) {
+      coverPageId = widget.data.coverPageId;
+    }
+    
+    // If we don't have a coverPageId, we can't proceed
+    if (coverPageId == null) {
+      debugPrint('Error: coverPageId is null when saving consent data');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving consent data: ${e.toString()}'),
+          const SnackBar(
+            content: Text('Error: Missing cover page reference. Please save the cover page first.'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
+            duration: Duration(seconds: 3),
           ),
         );
       }
       return false;
-    }  
-  }
+    }
 
+    // Create a copy of the current data with updated values from the form
+    final updatedData = widget.data.copyWith(
+      coverPageId: coverPageId, // Use the resolved coverPageId
+      communityType: widget.data.communityType,
+      residesInCommunityConsent: _residesInCommunity == true ? 'Yes' : 'No',
+      farmerAvailable: widget.data.farmerAvailable,
+      farmerStatus: widget.data.farmerStatus,
+      availablePerson: widget.data.availablePerson,
+      otherSpecification: _otherSpecController.text.trim(),
+      otherCommunityName: _otherCommunityController.text.trim(),
+      consentGiven: _hasGivenConsent,
+      declinedConsent: _declinedConsent,
+      refusalReason: _declinedConsent ? _refusalReasonController.text.trim() : null,
+      consentTimestamp: DateTime.now(),
+      interviewStartTime: widget.data.interviewStartTime ?? DateTime.now(),
+      timeStatus: widget.data.timeStatus ?? 'Started at ${TimeOfDay.now().format(context)}',
+      currentPosition: widget.data.currentPosition,
+      locationStatus: widget.data.locationStatus,
+    );
+    
+    debugPrint('Saving consent data with coverPageId: $coverPageId');
+    debugPrint('Consent data to save: ${updatedData.toMap()}');
+
+    // Use HouseholdDBHelper which has the table existence checks
+    final dbHelper = HouseholdDBHelper.instance;
+    
+    try {
+      // Save the data using HouseholdDBHelper
+      int? id;
+      if (updatedData.id == null) {
+        // Insert new record
+        id = await dbHelper.insertConsent(updatedData);
+        devtools.log('✅ Consent data saved with ID: $id', name: 'database');
+      } else {
+        // Update existing record
+        await dbHelper.updateConsent(updatedData);
+        id = updatedData.id;
+        devtools.log('🔄 Consent data updated for ID: ${updatedData.id}', name: 'database');
+      }
+      
+      // Verify the data was saved
+      if (id != null && id > 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Consent data saved successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return true;
+      }
+      
+      throw Exception('Failed to save consent data: No valid ID returned');
+    } catch (e) {
+      devtools.log('❌ Database error in save operation: $e', name: 'database', error: true);
+      rethrow;
+    }
+  } catch (e, stackTrace) {
+    devtools.log('❌ Error in saveData: $e', name: 'database', error: true, stackTrace: stackTrace);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving consent data: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+    return false;
+  }  
+}
   // Helper method to build consistent question cards with error handling
   Widget _buildQuestionCard({
     required String errorKey,

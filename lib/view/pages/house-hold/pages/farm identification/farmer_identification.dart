@@ -229,6 +229,12 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       // Get the latest form data
       final updatedData = getData();
       
+      // Debug: Log the data being saved
+      developer.log('[$_tag] Saving form data:', name: _tag);
+      developer.log('[$_tag] - Ghana Card Number: ${updatedData.ghanaCardNumber}', name: _tag);
+      developer.log('[$_tag] - Has Ghana Card: ${updatedData.hasGhanaCard}', name: _tag);
+      developer.log('[$_tag] - ID Picture Consent: ${updatedData.idPictureConsent}', name: _tag);
+      
       // Update the data through the callback with the latest values
       widget.onDataChanged(updatedData);
       return true;
@@ -538,8 +544,8 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
       
       // Prepare data and call onComplete
       final submissionData = widget.data.toMap();
-    // Prepare data and call onComplete
-widget.onComplete?.call(widget.data);
+      // Commented out duplicate save operation to prevent duplicate records
+      // widget.onComplete?.call(widget.data);
       developer.log('[$_tag] Form submitted successfully', name: _tag);
       
       // Only proceed with navigation if we're still mounted
@@ -969,7 +975,12 @@ widget.onComplete?.call(widget.data);
                     groupValue: widget.data.idPictureConsent == 1 ? 'Yes' : 'No',
                     label: 'Yes',
                     onChanged: (value) {
-                      widget.onDataChanged(widget.data.updatePictureConsent(value));
+                      // When consent is given, update the data and clear the no consent reason
+                      var newData = widget.data.updatePictureConsent(value);
+                      if (newData.noConsentReason != null) {
+                        _noConsentReasonController.clear();
+                      }
+                      widget.onDataChanged(newData);
                     },
                     errorKey: 'consent',
                   ),

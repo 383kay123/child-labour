@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
+import 'package:human_rights_monitor/controller/models/enums.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:human_rights_monitor/controller/db/table_names.dart';
 
@@ -488,8 +489,8 @@ class ChildrenHouseholdTable {
   // Primary key
   static const String id = 'id';
 
-  // Foreign keys
-  static const String farmIdentificationId = 'farm_identification_id';
+  // Foreign keys - UPDATED: Only cover_page_id
+  static const String coverPageId = 'cover_page_id';
 
   // Fields
   static const String hasChildrenInHousehold = 'has_children_in_household';
@@ -503,12 +504,12 @@ class ChildrenHouseholdTable {
   static const String isSynced = 'is_synced';
   static const String syncStatus = 'sync_status';
 
-  /// Creates the children household table
+  /// Creates the children household table - UPDATED: Only cover_page_id
   static Future<void> createTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $farmIdentificationId INTEGER NOT NULL,
+        $coverPageId INTEGER NOT NULL,
         $hasChildrenInHousehold TEXT,
         $numberOfChildren INTEGER DEFAULT 0,
         $children5To17 INTEGER DEFAULT 0,
@@ -517,7 +518,7 @@ class ChildrenHouseholdTable {
         $updatedAt TEXT NOT NULL,
         $isSynced INTEGER DEFAULT 0,
         $syncStatus INTEGER DEFAULT 0,
-        FOREIGN KEY ($farmIdentificationId) REFERENCES ${TableNames.combinedFarmIdentificationTBL}(id) ON DELETE CASCADE
+        FOREIGN KEY ($coverPageId) REFERENCES ${TableNames.coverPageTBL}(id) ON DELETE CASCADE
       )
     ''');
 
@@ -561,7 +562,7 @@ class ChildrenHouseholdTable {
   /// Returns a map of all columns and their types
   static Map<String, String> get columns => {
         id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-        farmIdentificationId: 'INTEGER NOT NULL',
+        coverPageId: 'INTEGER NOT NULL',
         hasChildrenInHousehold: 'TEXT',
         numberOfChildren: 'INTEGER DEFAULT 0',
         children5To17: 'INTEGER DEFAULT 0',
@@ -575,7 +576,7 @@ class ChildrenHouseholdTable {
   /// Returns a list of all column names
   static List<String> get allColumns => [
         id,
-        farmIdentificationId,
+        coverPageId,
         hasChildrenInHousehold,
         numberOfChildren,
         children5To17,
@@ -588,7 +589,7 @@ class ChildrenHouseholdTable {
 
   /// Returns a list of columns without the ID (for inserts)
   static List<String> get insertableColumns => [
-        farmIdentificationId,
+        coverPageId,
         hasChildrenInHousehold,
         numberOfChildren,
         children5To17,
@@ -610,9 +611,9 @@ class ChildrenHouseholdTable {
         syncStatus,
       ];
 
-  /// Converts model data to database map
+  /// Converts model data to database map - UPDATED: Only cover_page_id
   static Map<String, dynamic> toMap({
-    required int farmIdentificationId,
+    required int coverPageId,
     String? hasChildrenInHousehold,
     int numberOfChildren = 0,
     int children5To17 = 0,
@@ -620,7 +621,7 @@ class ChildrenHouseholdTable {
   }) {
     final now = DateTime.now().toIso8601String();
     return {
-      ChildrenHouseholdTable.farmIdentificationId: farmIdentificationId,
+      ChildrenHouseholdTable.coverPageId: coverPageId,
       ChildrenHouseholdTable.hasChildrenInHousehold: hasChildrenInHousehold,
       ChildrenHouseholdTable.numberOfChildren: numberOfChildren,
       ChildrenHouseholdTable.children5To17: children5To17,
@@ -632,12 +633,11 @@ class ChildrenHouseholdTable {
     }..removeWhere((key, value) => value == null);
   }
 
-  /// Creates model data from database row
+  /// Creates model data from database row - UPDATED: Only cover_page_id
   static Map<String, dynamic> fromMap(Map<String, dynamic> map) {
     return {
       'id': map[ChildrenHouseholdTable.id],
-      'farm_identification_id':
-          map[ChildrenHouseholdTable.farmIdentificationId],
+      'cover_page_id': map[ChildrenHouseholdTable.coverPageId],
       'has_children_in_household':
           map[ChildrenHouseholdTable.hasChildrenInHousehold],
       'number_of_children': map[ChildrenHouseholdTable.numberOfChildren] ?? 0,
@@ -651,34 +651,14 @@ class ChildrenHouseholdTable {
   }
 }
 
-/// Extension to convert model to database map
-extension ChildrenHouseholdTableExt on Map<String, dynamic> {
-  Map<String, dynamic> toChildrenHouseholdMap() {
-    return {
-      ChildrenHouseholdTable.id: this['id'],
-      ChildrenHouseholdTable.farmIdentificationId:
-          this['farm_identification_id'],
-      ChildrenHouseholdTable.hasChildrenInHousehold:
-          this['has_children_in_household'],
-      ChildrenHouseholdTable.numberOfChildren: this['number_of_children'] ?? 0,
-      ChildrenHouseholdTable.children5To17: this['children_5_to_17'] ?? 0,
-      ChildrenHouseholdTable.childrenDetails: this['children_details'],
-      ChildrenHouseholdTable.createdAt: this['created_at'],
-      ChildrenHouseholdTable.updatedAt: this['updated_at'],
-      ChildrenHouseholdTable.isSynced: this['is_synced'] ?? 0,
-      ChildrenHouseholdTable.syncStatus: this['sync_status'] ?? 0,
-    }..removeWhere((key, value) => value == null);
-  }
-}
-
 class RemediationTable {
   static const String tableName = TableNames.remediationTBL;
 
   // Primary key
   static const String id = 'id';
 
-  // Foreign keys
-  static const String farmIdentificationId = 'farm_identification_id';
+  // Foreign keys - UPDATED: Only cover_page_id
+  static const String coverPageId = 'cover_page_id';
 
   // School Fees Information
   static const String hasSchoolFees = 'has_school_fees';
@@ -692,8 +672,7 @@ class RemediationTable {
 
   // Community Action
   static const String communityAction = 'community_action';
-  static const String otherCommunityActionDetails =
-      'other_community_action_details';
+  static const String otherCommunityActionDetails = 'other_community_action_details';
 
   // Timestamps and sync
   static const String createdAt = 'created_at';
@@ -701,12 +680,12 @@ class RemediationTable {
   static const String isSynced = 'is_synced';
   static const String syncStatus = 'sync_status';
 
-  /// Creates the remediation table
+  /// Creates the remediation table with updated schema - UPDATED: Only cover_page_id
   static Future<void> createTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $farmIdentificationId INTEGER,
+        $coverPageId INTEGER NOT NULL,
         $hasSchoolFees INTEGER,
         $childProtectionEducation INTEGER DEFAULT 0,
         $schoolKitsSupport INTEGER DEFAULT 0,
@@ -718,17 +697,17 @@ class RemediationTable {
         $createdAt TEXT NOT NULL,
         $updatedAt TEXT NOT NULL,
         $isSynced INTEGER DEFAULT 0,
-        $syncStatus INTEGER DEFAULT 0
+        $syncStatus INTEGER DEFAULT 0,
+        FOREIGN KEY ($coverPageId) REFERENCES ${TableNames.coverPageTBL}(id) ON DELETE CASCADE
       )
     ''');
 
     await _createTriggers(db);
     
-    // Create index on farm_identification_id for better query performance
+    // Create indexes for better query performance
     await db.execute('''
-      CREATE INDEX IF NOT EXISTS idx_${tableName}_farm_id 
-      ON $tableName($farmIdentificationId)
-      WHERE $farmIdentificationId IS NOT NULL
+      CREATE INDEX IF NOT EXISTS idx_${tableName}_cover_page 
+      ON $tableName($coverPageId)
     ''');
   }
 
@@ -769,7 +748,7 @@ class RemediationTable {
   /// Returns a map of all columns and their types
   static Map<String, String> get columns => {
         id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-        farmIdentificationId: 'INTEGER NOT NULL',
+        coverPageId: 'INTEGER NOT NULL',
         hasSchoolFees: 'INTEGER',
         childProtectionEducation: 'INTEGER DEFAULT 0',
         schoolKitsSupport: 'INTEGER DEFAULT 0',
@@ -787,7 +766,7 @@ class RemediationTable {
   /// Returns a list of all column names
   static List<String> get allColumns => [
         id,
-        farmIdentificationId,
+        coverPageId,
         hasSchoolFees,
         childProtectionEducation,
         schoolKitsSupport,
@@ -804,7 +783,7 @@ class RemediationTable {
 
   /// Returns a list of columns without the ID (for inserts)
   static List<String> get insertableColumns => [
-        farmIdentificationId,
+        coverPageId,
         hasSchoolFees,
         childProtectionEducation,
         schoolKitsSupport,
@@ -835,52 +814,26 @@ class RemediationTable {
       ];
 }
 
-/// Extension to convert model to database map
-extension RemediationTableExt on Map<String, dynamic> {
-  Map<String, dynamic> toRemediationMap() {
-    return {
-      RemediationTable.id: this['id'],
-      RemediationTable.farmIdentificationId: this['farm_identification_id'],
-      RemediationTable.hasSchoolFees: this['has_school_fees'],
-      RemediationTable.childProtectionEducation:
-          this['child_protection_education'] ?? 0,
-      RemediationTable.schoolKitsSupport: this['school_kits_support'] ?? 0,
-      RemediationTable.igaSupport: this['iga_support'] ?? 0,
-      RemediationTable.otherSupport: this['other_support'] ?? 0,
-      RemediationTable.otherSupportDetails: this['other_support_details'],
-      RemediationTable.communityAction: this['community_action'],
-      RemediationTable.otherCommunityActionDetails:
-          this['other_community_action_details'],
-      RemediationTable.createdAt: this['created_at'],
-      RemediationTable.updatedAt: this['updated_at'],
-      RemediationTable.isSynced: this['is_synced'] ?? 0,
-      RemediationTable.syncStatus: this['sync_status'] ?? 0,
-    }..removeWhere((key, value) => value == null);
-  }
-}
-
 class SensitizationTable {
   static const String tableName = TableNames.sensitizationTBL;
 
   // Primary key
   static const String id = 'id';
 
-  // Fields
-  static const String farmIdentificationId = 'farm_identification_id';
+  // Fields - UPDATED: Only cover_page_id
+  static const String coverPageId = 'cover_page_id';
   static const String isAcknowledged = 'is_acknowledged';
   static const String acknowledgedAt = 'acknowledged_at';
   static const String createdAt = 'created_at';
   static const String updatedAt = 'updated_at';
   static const String isSynced = 'is_synced';
   static const String syncStatus = 'sync_status';
-  static const String coverPageId = 'cover_page_id';
 
-  /// Creates the sensitization table
+  /// Creates the sensitization table - UPDATED: Only cover_page_id
   static Future<void> createTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $farmIdentificationId INTEGER NOT NULL,
         $coverPageId INTEGER NOT NULL,
         $isAcknowledged INTEGER DEFAULT 0,
         $acknowledgedAt TEXT,
@@ -888,7 +841,6 @@ class SensitizationTable {
         $updatedAt TEXT,
         $isSynced INTEGER DEFAULT 0,
         $syncStatus INTEGER DEFAULT 0,
-        FOREIGN KEY ($farmIdentificationId) REFERENCES ${TableNames.farmerIdentificationTBL}(${FarmerIdentificationTable.id}) ON DELETE CASCADE,
         FOREIGN KEY ($coverPageId) REFERENCES ${TableNames.coverPageTBL}(id) ON DELETE CASCADE
       )
     ''');
@@ -935,7 +887,7 @@ class SensitizationTable {
   /// Returns a map of all columns and their types
   static Map<String, String> get columns => {
         id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-        farmIdentificationId: 'INTEGER NOT NULL',
+        coverPageId: 'INTEGER NOT NULL',
         isAcknowledged: 'INTEGER DEFAULT 0',
         acknowledgedAt: 'TEXT',
         createdAt: 'TEXT',
@@ -944,10 +896,12 @@ class SensitizationTable {
         syncStatus: 'INTEGER DEFAULT 0',
       };
 
+      
+
   /// Returns a list of all column names
   static List<String> get allColumns => [
         id,
-        farmIdentificationId,
+        coverPageId,
         isAcknowledged,
         acknowledgedAt,
         createdAt,
@@ -958,7 +912,7 @@ class SensitizationTable {
 
   /// Returns a list of columns without the ID (for inserts)
   static List<String> get insertableColumns => [
-        farmIdentificationId,
+        coverPageId,
         isAcknowledged,
         acknowledgedAt,
         createdAt,
@@ -975,21 +929,39 @@ class SensitizationTable {
         isSynced,
         syncStatus,
       ];
-}
 
-/// Extension to convert model to database map
-extension SensitizationTableExt on Map<String, dynamic> {
-  Map<String, dynamic> toSensitizationMap() {
+  /// Converts a SensitizationData object to a map for database operations
+  static Map<String, dynamic> toMap(SensitizationData data) {
     return {
-      SensitizationTable.id: this['id'],
-      SensitizationTable.farmIdentificationId: this['farm_identification_id'],
-      SensitizationTable.isAcknowledged: this['is_acknowledged'] ?? 0,
-      SensitizationTable.acknowledgedAt: this['acknowledged_at'],
-      SensitizationTable.createdAt: this['created_at'],
-      SensitizationTable.updatedAt: this['updated_at'],
-      SensitizationTable.isSynced: this['is_synced'] ?? 0,
-      SensitizationTable.syncStatus: this['sync_status'] ?? 0,
-    }..removeWhere((key, value) => value == null);
+      id: data.id,
+      coverPageId: data.coverPageId,
+      isAcknowledged: data.isAcknowledged ? 1 : 0,
+      acknowledgedAt: data.acknowledgedAt?.toIso8601String(),
+      createdAt: data.createdAt?.toIso8601String(),
+      updatedAt: data.updatedAt?.toIso8601String(),
+      isSynced: data.isSynced ? 1 : 0,
+      syncStatus: data.syncStatus ?? 0,
+    };
+  }
+
+  /// Creates a SensitizationData object from a database row
+  static SensitizationData fromMap(Map<String, dynamic> map) {
+    return SensitizationData(
+      id: map[id] as int?,
+      coverPageId: map[coverPageId] as int,
+      isAcknowledged: map[isAcknowledged] == 1,
+      acknowledgedAt: map[acknowledgedAt] != null 
+          ? DateTime.parse(map[acknowledgedAt] as String) 
+          : null,
+      createdAt: map[createdAt] != null 
+          ? DateTime.parse(map[createdAt] as String) 
+          : DateTime.now(),
+      updatedAt: map[updatedAt] != null 
+          ? DateTime.parse(map[updatedAt] as String) 
+          : DateTime.now(),
+      isSynced: map[isSynced] == 1,
+      syncStatus: map[syncStatus] as int? ?? 0,
+    );
   }
 }
 
@@ -999,8 +971,8 @@ class SensitizationQuestionsTable {
   // Primary key
   static const String id = 'id';
 
-  // Foreign keys
-  static const String farmIdentificationId = 'farm_identification_id';
+  // Foreign keys - UPDATED: Only cover_page_id
+  static const String coverPageId = 'cover_page_id';
 
   // Sensitization status
   static const String hasSensitizedHousehold = 'has_sensitized_household';
@@ -1029,12 +1001,12 @@ class SensitizationQuestionsTable {
   static const String isSynced = 'is_synced';
   static const String syncStatus = 'sync_status';
 
-  /// Creates the sensitization questions table
+  /// Creates the sensitization questions table - UPDATED: Only cover_page_id
   static Future<void> createTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $farmIdentificationId INTEGER NOT NULL,
+        $coverPageId INTEGER NOT NULL,
         $hasSensitizedHousehold INTEGER,
         $hasSensitizedOnProtection INTEGER,
         $hasSensitizedOnSafeLabour INTEGER,
@@ -1049,7 +1021,7 @@ class SensitizationQuestionsTable {
         $updatedAt TEXT NOT NULL,
         $isSynced INTEGER DEFAULT 0,
         $syncStatus INTEGER DEFAULT 0,
-        FOREIGN KEY ($farmIdentificationId) REFERENCES ${TableNames.combinedFarmIdentificationTBL}(id) ON DELETE CASCADE
+        FOREIGN KEY ($coverPageId) REFERENCES ${TableNames.coverPageTBL}(id) ON DELETE CASCADE
       )
     ''');
 
@@ -1093,7 +1065,7 @@ class SensitizationQuestionsTable {
   /// Returns a map of all columns and their types
   static Map<String, String> get columns => {
         id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-        farmIdentificationId: 'INTEGER NOT NULL',
+        coverPageId: 'INTEGER NOT NULL',
         hasSensitizedHousehold: 'INTEGER',
         hasSensitizedOnProtection: 'INTEGER',
         hasSensitizedOnSafeLabour: 'INTEGER',
@@ -1113,7 +1085,7 @@ class SensitizationQuestionsTable {
   /// Returns a list of all column names
   static List<String> get allColumns => [
         id,
-        farmIdentificationId,
+        coverPageId,
         hasSensitizedHousehold,
         hasSensitizedOnProtection,
         hasSensitizedOnSafeLabour,
@@ -1132,7 +1104,7 @@ class SensitizationQuestionsTable {
 
   /// Returns a list of columns without the ID (for inserts)
   static List<String> get insertableColumns => [
-        farmIdentificationId,
+        coverPageId,
         hasSensitizedHousehold,
         hasSensitizedOnProtection,
         hasSensitizedOnSafeLabour,
@@ -1167,47 +1139,14 @@ class SensitizationQuestionsTable {
       ];
 }
 
-/// Extension to convert model to database map
-extension SensitizationQuestionsTableExt on Map<String, dynamic> {
-  Map<String, dynamic> toSensitizationQuestionsMap() {
-    return {
-      SensitizationQuestionsTable.id: this['id'],
-      SensitizationQuestionsTable.farmIdentificationId:
-          this['farm_identification_id'],
-      SensitizationQuestionsTable.hasSensitizedHousehold:
-          this['has_sensitized_household'],
-      SensitizationQuestionsTable.hasSensitizedOnProtection:
-          this['has_sensitized_on_protection'],
-      SensitizationQuestionsTable.hasSensitizedOnSafeLabour:
-          this['has_sensitized_on_safe_labour'],
-      SensitizationQuestionsTable.femaleAdultsCount:
-          this['female_adults_count'],
-      SensitizationQuestionsTable.maleAdultsCount: this['male_adults_count'],
-      SensitizationQuestionsTable.consentForPicture:
-          this['consent_for_picture'],
-      SensitizationQuestionsTable.consentReason: this['consent_reason'],
-      SensitizationQuestionsTable.sensitizationImagePath:
-          this['sensitization_image_path'],
-      SensitizationQuestionsTable.householdWithUserImagePath:
-          this['household_with_user_image_path'],
-      SensitizationQuestionsTable.parentsReaction: this['parents_reaction'],
-      SensitizationQuestionsTable.submittedAt: this['submitted_at'],
-      SensitizationQuestionsTable.updatedAt: this['updated_at'],
-      SensitizationQuestionsTable.isSynced: this['is_synced'] ?? 0,
-      SensitizationQuestionsTable.syncStatus: this['sync_status'] ?? 0,
-    }..removeWhere((key, value) => value == null);
-  }
-}
-
 class EndOfCollectionTable {
   static const String tableName = TableNames.endOfCollectionTBL;
 
   // Primary key
   static const String id = 'id';
 
-  // Foreign keys
+  // Foreign keys - UPDATED: Only cover_page_id
   static const String coverPageId = 'cover_page_id';
-  static const String farmIdentificationId = 'farm_identification_id';
 
   // Image paths
   static const String respondentImagePath = 'respondent_image_path';
@@ -1228,12 +1167,12 @@ class EndOfCollectionTable {
   static const String isSynced = 'is_synced';
   static const String syncStatus = 'sync_status';
 
-  /// Creates the end of collection table
+  /// Creates the end of collection table - UPDATED: Only cover_page_id
   static Future<void> createTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $farmIdentificationId INTEGER NOT NULL,
+        $coverPageId INTEGER NOT NULL,
         $respondentImagePath TEXT,
         $producerSignaturePath TEXT,
         $latitude REAL,
@@ -1245,7 +1184,7 @@ class EndOfCollectionTable {
         $updatedAt TEXT NOT NULL,
         $isSynced INTEGER DEFAULT 0,
         $syncStatus INTEGER DEFAULT 0,
-        FOREIGN KEY ($farmIdentificationId) REFERENCES ${TableNames.combinedFarmIdentificationTBL}(id) ON DELETE CASCADE
+        FOREIGN KEY ($coverPageId) REFERENCES ${TableNames.coverPageTBL}(id) ON DELETE CASCADE
       )
     ''');
 
@@ -1289,7 +1228,7 @@ class EndOfCollectionTable {
   /// Returns a map of all columns and their types
   static Map<String, String> get columns => {
         id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-        farmIdentificationId: 'INTEGER NOT NULL',
+        coverPageId: 'INTEGER NOT NULL',
         respondentImagePath: 'TEXT',
         producerSignaturePath: 'TEXT',
         latitude: 'REAL',
@@ -1306,7 +1245,7 @@ class EndOfCollectionTable {
   /// Returns a list of all column names
   static List<String> get allColumns => [
         id,
-        farmIdentificationId,
+        coverPageId,
         respondentImagePath,
         producerSignaturePath,
         latitude,
@@ -1322,7 +1261,7 @@ class EndOfCollectionTable {
 
   /// Returns a list of columns without the ID (for inserts)
   static List<String> get insertableColumns => [
-        farmIdentificationId,
+        coverPageId,
         respondentImagePath,
         producerSignaturePath,
         latitude,
@@ -1351,35 +1290,13 @@ class EndOfCollectionTable {
       ];
 }
 
-/// Extension to convert model to database map
-extension EndOfCollectionTableExt on Map<String, dynamic> {
-  Map<String, dynamic> toEndOfCollectionMap() {
-    return {
-      EndOfCollectionTable.id: this['id'],
-      EndOfCollectionTable.farmIdentificationId: this['farm_identification_id'],
-      EndOfCollectionTable.respondentImagePath: this['respondent_image_path'],
-      EndOfCollectionTable.producerSignaturePath:
-          this['producer_signature_path'],
-      EndOfCollectionTable.latitude: this['latitude'],
-      EndOfCollectionTable.longitude: this['longitude'],
-      EndOfCollectionTable.gpsCoordinates: this['gps_coordinates'],
-      EndOfCollectionTable.endTime: this['end_time'],
-      EndOfCollectionTable.remarks: this['remarks'],
-      EndOfCollectionTable.createdAt: this['created_at'],
-      EndOfCollectionTable.updatedAt: this['updated_at'],
-      EndOfCollectionTable.isSynced: this['is_synced'] ?? 0,
-      EndOfCollectionTable.syncStatus: this['sync_status'] ?? 0,
-    }..removeWhere((key, value) => value == null);
-  }
-}
-
 class CombinedFarmerIdentificationTable {
   static const String tableName = TableNames.combinedFarmIdentificationTBL;
 
   // Primary key
   static const String id = 'id';
 
-  // Foreign keys
+  // Foreign keys - UPDATED: Only cover_page_id
   static const String coverPageId = 'cover_page_id';
 
   // Form data columns (kept for backward compatibility)
@@ -1394,12 +1311,12 @@ class CombinedFarmerIdentificationTable {
   static const String isSynced = 'is_synced';
   static const String syncStatus = 'sync_status';
 
-  /// Creates the combined farmer identification table
+  /// Creates the combined farmer identification table - UPDATED: Only cover_page_id
   static Future<void> createTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $coverPageId INTEGER,
+        $coverPageId INTEGER NOT NULL,
         $visitInformation TEXT,
         $ownerInformation TEXT,
         $workersInFarm TEXT,
@@ -1418,7 +1335,7 @@ class CombinedFarmerIdentificationTable {
       IdentificationOfOwnerTable.createTable(db),
       WorkersInFarmTable.createTable(db),
       AdultsInformationTable.createTable(db),
-      ChildrenHouseholdTable.createTable(db), // Add children household table
+      ChildrenHouseholdTable.createTable(db),
     ]);
 
     await _createTriggers(db);
@@ -1560,7 +1477,7 @@ class CombinedFarmerIdentificationTable {
 }
 
 class ConsentTable {
-  static const String tableName = TableNames.consentTBL; // Using the constant from TableNames
+  static const String tableName = TableNames.consentTBL;
 
   // Column names as static constants
   static const String id = 'id';
@@ -1598,7 +1515,6 @@ class ConsentTable {
   /// Creates the consent table
   static Future<void> createTable(Database db) async {
     try {
-      // Log the start of table creation
       debugPrint('🔄 Ensuring table $tableName exists...');
       
       // First, check if the table already exists
@@ -1736,39 +1652,10 @@ class ConsentTable {
         debugPrint('✅ Successfully upgraded $tableName to version 2');
       }
       
-      // Add more version migrations here as needed
-      // if (oldVersion < 3) { ... }
-      
     } catch (e, stackTrace) {
       debugPrint('❌ Error upgrading $tableName: $e');
       debugPrint('Stack trace: $stackTrace');
       rethrow;
-    }
-  }
-  
-  /// Logs the current table structure for debugging
-  static Future<void> _logTableStructure(Database db) async {
-    try {
-      final result = await db.rawQuery('PRAGMA table_info($tableName)');
-      debugPrint('\n📋 Table Structure for $tableName:');
-      debugPrint('┌────────────────┬───────────┬───────────┬───────────┬───────────┬───────────┐');
-      debugPrint('│ Column Name    │ Type      │ Not Null  │ Default   │ Primary   │ Autoinc   │');
-      debugPrint('├────────────────┼───────────┼───────────┼───────────┼───────────┼───────────┤');
-      
-      for (var column in result) {
-        final name = (column['name'] as String).padRight(14);
-        final type = (column['type'] as String).padRight(9);
-        final notNull = (column['notnull'] as int) == 1 ? 'YES' : 'NO';
-        final dflt = (column['dflt_value'] ?? 'NULL').toString().padRight(9);
-        final pk = (column['pk'] as int) == 1 ? 'YES' : 'NO';
-        final autoinc = (column['auto_increment'] as int?) == 1 ? 'YES' : 'NO';
-        
-        debugPrint('│ $name │ $type │ $notNull     │ $dflt │ $pk         │ $autoinc     │');
-      }
-      
-      debugPrint('└────────────────┴───────────┴───────────┴───────────┴───────────┴───────────┘\n');
-    } catch (e) {
-      debugPrint('❌ Error getting table info for $tableName: $e');
     }
   }
 
@@ -1849,7 +1736,7 @@ class FarmerIdentificationTable {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableName (
         $id INTEGER PRIMARY KEY AUTOINCREMENT,
-        $coverPageId INTEGER,
+        $coverPageId INTEGER NOT NULL,
         $hasGhanaCard INTEGER DEFAULT 0,
         $ghanaCardNumber TEXT,
         $selectedIdType TEXT,
@@ -1925,7 +1812,7 @@ class FarmerIdentificationTable {
           await db.execute('''
             CREATE TABLE ${tableName}_new (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
-              cover_page_id INTEGER,
+              cover_page_id INTEGER NOT NULL,
               has_ghana_card INTEGER DEFAULT 0,
               ghana_card_number TEXT,
               selected_id_type TEXT,

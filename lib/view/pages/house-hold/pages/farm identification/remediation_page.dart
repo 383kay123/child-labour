@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
 import 'package:human_rights_monitor/controller/db/daos/remediation_dao.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 
 void _log(String message, {String name = 'RemediationPage', Object? error, StackTrace? stackTrace}) {
   developer.log(
@@ -25,7 +26,7 @@ void _log(String message, {String name = 'RemediationPage', Object? error, Stack
 // Public interface for the RemediationPage state
 abstract class RemediationPageStateInterface {
   bool validateForm();
-  Future<bool> saveData();
+  Future<bool> saveData([int? coverPageId]);
   Map<String, dynamic> getFormData();
   
   // Getters for form data
@@ -43,12 +44,14 @@ class RemediationPage extends StatefulWidget {
   final VoidCallback onNext;
   final VoidCallback onPrevious;
   final int coverPageId;
+  final RemediationModel? remediationModel;
 
   const RemediationPage({
     Key? key,
     required this.onNext,
     required this.onPrevious,
     required this.coverPageId,
+    this.remediationModel,
   }) : super(key: key);
 
   @override
@@ -64,8 +67,9 @@ class RemediationPage extends StatefulWidget {
   }
 }
 
-// Make the state class public by removing the underscore
-class RemediationPageState extends State<RemediationPage> with WidgetsBindingObserver implements RemediationPageStateInterface {
+class RemediationPageState extends State<RemediationPage> 
+    with WidgetsBindingObserver 
+    implements RemediationPageStateInterface {
   // Form state variables
   bool? _hasSchoolFees;
   bool _childProtectionEducation = false;
@@ -92,6 +96,14 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
     
     // Load saved data if any
     _loadSavedData();
+  }
+  
+  @override
+  void didUpdateWidget(RemediationPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.coverPageId != widget.coverPageId) {
+      _loadSavedData();
+    }
   }
   
   @override
@@ -125,22 +137,26 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
   String? get otherSupportText => _otherSupportController.text.trim().isNotEmpty ? _otherSupportController.text.trim() : null;
   
   @override
-  String? get communityActionOtherText => _communityAction == 'Other' ? _otherCommunityActionController.text.trim() : null;
+  String? get communityActionOtherText => _communityAction == 'Other (please specify)' ? _otherCommunityActionController.text.trim() : null;
   
   void _onOtherSupportChanged() {
-    // No need to call setState here as we're not updating any state variables
+    // Trigger validation when other support text changes
+    if (mounted) {
+      setState(() {});
+    }
   }
   
   void _onCommunityActionOtherChanged() {
-    setState(() {
-      // Update state when community action other text changes
-    });
+    // Trigger validation when community action other text changes
+    if (mounted) {
+      setState(() {});
+    }
   }
   
   // Load saved data if any
   Future<void> _loadSavedData() async {
     try {
-      final dbHelper = LocalDBHelper.instance;
+      final dbHelper = HouseholdDBHelper.instance;
       final remediationDao = RemediationDao(dbHelper: dbHelper);
       
       // Get the latest remediation data for this cover page
@@ -148,54 +164,22 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
       if (savedData != null && mounted) {
         setState(() {
           _hasSchoolFees = savedData.hasSchoolFees;
-          _childProtectionEducation = savedData.childProtectionEducation;
-          _schoolKitsSupport = savedData.schoolKitsSupport;
-          _igaSupport = savedData.igaSupport;
-          _otherSupport = savedData.otherSupport;
+          _childProtectionEducation = savedData.childProtectionEducation ?? false;
+          _schoolKitsSupport = savedData.schoolKitsSupport ?? false;
+          _igaSupport = savedData.igaSupport ?? false;
+          _otherSupport = savedData.otherSupport ?? false;
           _communityAction = savedData.communityAction;
           
           _otherSupportController.text = savedData.otherSupportDetails ?? '';
           _otherCommunityActionController.text = savedData.otherCommunityActionDetails ?? '';
         });
+        _log('Loaded saved remediation data for coverPageId: ${widget.coverPageId}');
+      } else {
+        _log('No saved remediation data found for coverPageId: ${widget.coverPageId}');
       }
-    } catch (e) {
-      _log('Error loading saved data', error: e);
+    } catch (e, stackTrace) {
+      _log('Error loading saved data', error: e, stackTrace: stackTrace);
     }
-  }
-  
-  // Validate the form
-  @override
-  bool validateForm() {
-    _log('Validating form...');
-    final formState = _formKey.currentState;
-    if (formState == null) {
-      _log('Form state is null', error: 'Form validation failed');
-      return false;
-    }
-    
-    final isValid = formState.validate();
-    _log('Form validation result: $isValid');
-    _log('Form data: ${getFormData().toString()}');
-    
-    if (mounted) {
-      setState(() {
-        _isFormValid = isValid;
-      });
-    }
-    
-    if (!isValid) {
-      _log('Validation errors present', error: 'Please check the form for errors');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please fill in all required fields'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-    
-    return isValid;
   }
   
   // Get form data as a map
@@ -213,146 +197,173 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
     };
   }
 
-  /// Public method to save data, called from parent widgets
+  /// Validates the form before saving
   @override
-  Future<bool> saveData() async {
-    return await saveFormData();
-  }
-
-  /// Saves the current form data to the database
-  Future<bool> saveFormData([int coverPageId = 0]) async {
-    _log('Saving form data for cover page ID: $coverPageId');
-  
-    if (!validateForm()) {
-      _log('Form validation failed, not saving', error: 'Invalid form data');
+  bool validateForm() {
+    _log('Validating form...');
+    
+    // Basic validation - at least one field should be filled
+    if (hasSchoolFees == null && 
+        !childProtectionEducation && 
+        !schoolKitsSupport && 
+        !igaSupport && 
+        !otherSupport &&
+        (communityAction == null || communityAction!.isEmpty)) {
+      _log('No data entered');
       if (mounted) {
+        setState(() {
+          _isFormValid = false;
+        });
+      }
+      return false;
+    }
+
+    // Validate other support details if other support is checked
+    if (otherSupport && _otherSupportController.text.trim().isEmpty) {
+      _log('Other support selected but no details provided');
+      if (mounted) {
+        setState(() {
+          _isFormValid = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please fix the validation errors before saving'),
-            backgroundColor: Colors.red,
+            content: Text('Please provide details for "Other Support"'),
+            backgroundColor: Colors.orange,
           ),
         );
       }
       return false;
     }
-    
-    // Show loading indicator
-    bool? isDialogShown;
-    
-    try {
-      _log('🔍 Getting database helper instance...');
-      final dbHelper = LocalDBHelper.instance;
-      final remediationDao = RemediationDao(dbHelper: dbHelper);
-      
-      _log('📋 Getting current form data...');
-      final formData = getFormData();
-      
-      // Convert form data to RemediationModel
-      final model = RemediationModel(
-        hasSchoolFees: formData['hasSchoolFees'] as bool?,
-        childProtectionEducation: formData['childProtectionEducation'] as bool? ?? false,
-        schoolKitsSupport: formData['schoolKitsSupport'] as bool? ?? false,
-        igaSupport: formData['igaSupport'] as bool? ?? false,
-        otherSupport: formData['otherSupport'] as bool? ?? false,
-        otherSupportDetails: formData['otherSupportText'] as String?,
-        communityAction: formData['communityAction'] as String?,
-        otherCommunityActionDetails: formData['communityActionOther'] as String?,
-      );
-      
-      _log('📝 Form data: ${model.toMap()}');
-      
-      // Show loading dialog
+
+    // Validate other community action details if "Other" is selected
+    if (communityAction == 'Other (please specify)' && 
+        _otherCommunityActionController.text.trim().isEmpty) {
+      _log('Other community action selected but no details provided');
       if (mounted) {
-        isDialogShown = true;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return const AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Saving data...'),
-                ],
-              ),
-            );
-          },
+        setState(() {
+          _isFormValid = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please provide details for "Other Community Action"'),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
+      return false;
+    }
+
+    _log('Form validation successful');
+    if (mounted) {
+      setState(() {
+        _isFormValid = true;
+      });
+    }
+    return true;
+  }
+
+  /// Saves the current form data to the database
+  @override
+  Future<bool> saveData([int? coverPageId]) async {
+    try {
+      final effectiveCoverPageId = coverPageId ?? widget.coverPageId;
       
-      _log('🔍 Checking for existing records for cover page ID: $coverPageId');
-      
-      // First try to find a record with matching farm_identification_id
-     final existingRecords = await remediationDao.findByCoverPageId(coverPageId);
-      final existingRecord = existingRecords.isNotEmpty ? existingRecords.first : null;
-      
-      if (existingRecord != null) {
-        _log('ℹ️ Found existing record ID: ${existingRecord.id}, will update');
-        _log('🔄 Updating existing record ID: ${existingRecord.id}');
-        final rowsUpdated = await remediationDao.update(model, existingRecord.id!);
-        _log('✅ Remediation data updated. Rows affected: $rowsUpdated');
-      } else {
-        _log('ℹ️ No existing record found, will insert new record');
-        _log('➕ Inserting new record...');
-        try {
-          final id = await remediationDao.insert(model, coverPageId);
-          _log('✅ Remediation data inserted successfully with ID: $id');
-        } catch (e) {
-          _log('❌ Error inserting remediation data', error: e);
-          rethrow;
+      // Validate coverPageId
+      if (effectiveCoverPageId <= 0) {
+        _log('Error: Invalid or missing coverPageId: $effectiveCoverPageId');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error: Missing or invalid survey ID. Please start a new survey.'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
+        return false;
       }
-      
-      _log('🎉 Successfully saved remediation data');
-      
-      // Close the loading dialog if it was shown
-      if (isDialogShown == true && mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+
+      // Validate form
+      if (!validateForm()) {
+        _log('Form validation failed');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please complete all required fields'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
       }
+
+      _log('Starting save with coverPageId: $effectiveCoverPageId');
+
+      // Create the remediation model with current form data
+      final remediationData = RemediationModel(
+        id: widget.remediationModel?.id, // Keep existing ID if updating
+        coverPageId: effectiveCoverPageId,
+        hasSchoolFees: hasSchoolFees,
+        childProtectionEducation: childProtectionEducation,
+        schoolKitsSupport: schoolKitsSupport,
+        igaSupport: igaSupport,
+        otherSupport: otherSupport,
+        otherSupportDetails: otherSupport && _otherSupportController.text.trim().isNotEmpty
+            ? _otherSupportController.text.trim()
+            : null,
+        communityAction: communityAction,
+        otherCommunityActionDetails: communityAction == 'Other (please specify)' && 
+            _otherCommunityActionController.text.trim().isNotEmpty
+            ? _otherCommunityActionController.text.trim()
+            : null,
+      );
+
+      _log('Data to save: ${remediationData.toMap()}');
+
+      // Save to database using DAO
+      final dao = RemediationDao(dbHelper: HouseholdDBHelper.instance);
+      final id = await dao.insert(remediationData, effectiveCoverPageId);
       
-      // Show success message but DON'T navigate automatically
+      _log('Saved successfully with ID: $id');
+
+      // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Remediation data saved successfully'),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Remediation data saved successfully'),
+              ],
+            ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
         );
       }
-      
+
       return true;
-      
     } catch (e, stackTrace) {
-      final errorMsg = '❌ Error saving remediation data: $e';
-      _log(errorMsg, error: e, stackTrace: stackTrace);
+      _log('Error saving: $e', stackTrace: stackTrace);
       
-      // Close the loading dialog if it was shown
-      if (isDialogShown == true && mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-      
-      // Show error message
       if (mounted) {
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text('Failed to save data: ${e.toString()}'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving remediation data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
       
       return false;
     }
+  }
+
+  /// Saves the current form data to the database
+  @Deprecated('Use saveData() instead')
+  Future<bool> saveFormData(int coverPageId) async {
+    return saveData(coverPageId);
   }
 
   // Validate required field
@@ -509,6 +520,7 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
     _log('Building RemediationPage UI. Form valid: $_isFormValid');
     
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       body: Form(
         key: _formKey,
         autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -518,6 +530,9 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
         },
         child: Column(
           children: [
+            // Header Section
+    
+            
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -532,12 +547,12 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
                           Text(
                             'Do you owe fees for the school of the children living in your household?',
                             style: GoogleFonts.poppins(
-                              fontSize: 14,
+                              fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                           Wrap(
                             spacing: 20,
                             children: [
@@ -576,12 +591,12 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
                             Text(
                               'What should be done for the parent to stop involving their children in child labour?',
                               style: GoogleFonts.poppins(
-                                fontSize: 14,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.black87,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             Column(
                               children: [
                                 _buildCheckboxOption(
@@ -633,7 +648,9 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
                                 controller: _otherSupportController,
                                 hintText: 'Enter details of other support needed',
                                 isRequired: true,
-                                validator: (value) => _validateRequired(value, 'other support details'),
+                                validator: (value) => _otherSupport && (value == null || value.isEmpty) 
+                                    ? 'Please provide details for other support'
+                                    : null,
                               ),
                             ],
                           ],
@@ -645,8 +662,7 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
                         (_childProtectionEducation ||
                             _schoolKitsSupport ||
                             _igaSupport ||
-                            (_otherSupport &&
-                                _otherSupportController.text.isNotEmpty)))
+                            _otherSupport))
                       _buildQuestionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,7 +675,7 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
                                 color: Colors.black87,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             Column(
                               children: [
                                 _buildRadioOption(
@@ -721,14 +737,17 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
                                 controller: _otherCommunityActionController,
                                 hintText: 'Enter details of other community action',
                                 isRequired: true,
-                                validator: (value) => _validateRequired(value, 'community action details'),
+                                validator: (value) => _communityAction == 'Other (please specify)' && (value == null || value.isEmpty)
+                                    ? 'Please provide details for other community action'
+                                    : null,
                               ),
                             ],
                           ],
                         ),
                       ),
 
-                    const SizedBox(height: 24),
+                  
+
                     const SizedBox(height: 80), // Space for bottom button
                   ],
                 ),
@@ -737,6 +756,8 @@ class RemediationPageState extends State<RemediationPage> with WidgetsBindingObs
           ],
         ),
       ),
+      
+    
     );
   }
 }

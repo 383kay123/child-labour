@@ -18,4 +18,5 @@ class TableNames {
   static const String sensitizationTBL = 'sensitization';
   static const String sensitizationQuestionsTBL = 'sensitization_questions';
   static const String endOfCollectionTBL = 'end_of_collection';
+  static const String farmersTBL = 'farmers_from_server';
 }

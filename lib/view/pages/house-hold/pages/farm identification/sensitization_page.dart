@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
-import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 import 'package:human_rights_monitor/controller/db/daos/sensitization_dao.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
-
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 
 /// A reusable widget that displays a section title with consistent styling.
 class SectionTitle extends StatelessWidget {
@@ -59,13 +58,25 @@ class SensitizationPage extends StatefulWidget {
   /// The current sensitization data.
   final SensitizationData sensitizationData;
 
+  /// The ID of the cover page this sensitization is associated with.
+  final int coverPageId;
+
   /// Callback when the user acknowledges the information.
   final ValueChanged<SensitizationData> onSensitizationChanged;
+
+   /// Callback when moving to the next page.
+  final VoidCallback? onNext;
+
+  /// Callback when moving to the previous page.
+  final VoidCallback? onPrevious;
 
   const SensitizationPage({
     Key? key,
     required this.sensitizationData,
+    required this.coverPageId,
     required this.onSensitizationChanged,
+     this.onNext,
+    this.onPrevious,
   }) : super(key: key);
 
   @override
@@ -93,155 +104,114 @@ abstract class SensitizationPageState extends State<SensitizationPage> {
 class _SensitizationPageState extends SensitizationPageState {
   late bool _isAcknowledged;
   bool _isCheckboxValid = true;
-  
-  // Expose a method to validate the form
-  bool validate() {
-    setState(() {
-      _isCheckboxValid = _isAcknowledged;
-    });
-    return _isCheckboxValid;
-  }
-
-  /// Saves the sensitization acknowledgment data to the database
-  /// [farmIdentificationId] - The ID of the farm identification record to associate with this data
-  Future<bool> saveData(int farmIdentificationId) async {
-    try {
-      debugPrint('💾 Starting to save sensitization data...');
-      debugPrint('📝 Acknowledgment status: $_isAcknowledged');
-      
-      // Always save the current state, even if not acknowledged
-      // This ensures we can track the user's response
-
-      // Get the database helper instance
-      final db = LocalDBHelper.instance;
-      final sensitizationDao = SensitizationDao(dbHelper: db);
-      
-      // First check if we already have a record for this farm
-      final existingData = await sensitizationDao.getByFarmIdentificationId(farmIdentificationId);
-      
-      // Create or update the SensitizationData
-      final now = DateTime.now();
-      final sensitizationData = existingData?.copyWith(
-        isAcknowledged: _isAcknowledged,
-        acknowledgedAt: _isAcknowledged ? now : existingData.acknowledgedAt,
-        updatedAt: now,
-        isSynced: false,
-      ) ?? SensitizationData(
-        isAcknowledged: _isAcknowledged,
-        acknowledgedAt: _isAcknowledged ? now : null,
-        updatedAt: now,
-        isSynced: false,
-      );
-      
-      debugPrint('📋 Sensitization data to save: $sensitizationData');
-      
-      try {
-        // Save the data
-        if (existingData == null) {
-          await sensitizationDao.insert(
-            sensitizationData, 
-            0, // coverPageId - passing 0 as a placeholder, you may want to pass the actual cover page ID
-            farmIdentificationId: farmIdentificationId,
-          );
-        } else {
-          await sensitizationDao.update(sensitizationData, existingData.id!);
-        }
-        
-        debugPrint('✅ Sensitization data saved successfully');
-        
-        // Update the parent widget's state
-        widget.onSensitizationChanged(sensitizationData);
-        return true;
-      } catch (e, stackTrace) {
-        debugPrint('❌ Error saving sensitization data: $e');
-        debugPrint('📌 Stack trace: $stackTrace');
-        
-        // Try to get more information about the database state
-        try {
-          final dbInstance = await db.database;
-          final tables = await dbInstance.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
-          debugPrint('Available tables: ${tables.map((t) => t['name']).toList()}');
-          
-          // Check if sensitization table exists
-          final sensitizationTable = tables.firstWhere(
-            (t) => t['name'] == 'sensitization',
-            orElse: () => {},
-          );
-          
-          if (sensitizationTable.isEmpty) {
-            debugPrint('❌ Sensitization table does not exist in the database');
-            // Try to create the table directly
-            try {
-              final householdDbHelper = HouseholdDBHelper.instance;
-              await householdDbHelper.diagnoseAndFixSensitizationTable();
-              debugPrint('🔄 Created sensitization table, retrying save...');
-              
-              // Try one more time after fixing the table
-              if (existingData == null) {
-                await sensitizationDao.insert(
-                  sensitizationData, 
-                  0, // coverPageId - passing 0 as a placeholder
-                  farmIdentificationId: farmIdentificationId,
-                );
-              } else {
-                await sensitizationDao.update(sensitizationData, existingData.id!);
-              }
-              widget.onSensitizationChanged(sensitizationData);
-              debugPrint('✅ Sensitization data saved successfully after table creation');
-              return true;
-            } catch (e) {
-              debugPrint('❌ Failed to save after table creation: $e');
-              return false;
-            }
-          }
-        } catch (e) {
-          debugPrint('❌ Could not check database tables: $e');
-        }
-        
-        return false;
-      }
-    } catch (e, stackTrace) {
-      debugPrint('❌ Error saving sensitization data: $e');
-      debugPrint('📌 Stack trace: $stackTrace');
-      
-      // Try to get more information about the error
-      try {
-        final db = await LocalDBHelper.instance.database;
-        final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
-        debugPrint('Available tables: ${tables.map((t) => t['name']).toList()}');
-      } catch (e) {
-        debugPrint('Could not list tables: $e');
-      }
-      
-      return false;
-    }
-  }
 
   @override
   void initState() {
     super.initState();
+    _isAcknowledged = widget.sensitizationData.isAcknowledged;
     _loadSensitizationData();
   }
 
+  @override
+  bool validate() {
+    final isValid = _isAcknowledged;
+    if (mounted) {
+      setState(() {
+        _isCheckboxValid = isValid;
+      });
+    }
+    
+    if (!isValid) {
+      _showErrorSnackBar('Please acknowledge that you have read and understood the information');
+    }
+    
+    return isValid;
+  }
+
+  /// Shows an error message to the user
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  /// Saves the sensitization data to the database
+ @override
+Future<bool> saveData(int coverPageId) async {
+  try {
+    debugPrint('💾 Saving sensitization acknowledgment...');
+    
+    if (!validate()) {
+      return false;
+    }
+
+    final now = DateTime.now();
+    
+    // Validate coverPageId
+    if (coverPageId == null) {
+      throw ArgumentError('coverPageId cannot be null when saving sensitization');
+    }
+    
+    // Create updated sensitization data with the current state
+    final sensitizationData = SensitizationData(
+      id: widget.sensitizationData.id,
+      coverPageId: coverPageId, // Ensure coverPageId is set
+      isAcknowledged: _isAcknowledged,
+      acknowledgedAt: _isAcknowledged ? now : null,
+      createdAt: widget.sensitizationData.createdAt ?? now,
+      updatedAt: now,
+      isSynced: false,
+      syncStatus: 0,
+    );
+
+    debugPrint('📋 Sensitization data to save: ${sensitizationData.toMap()}');
+
+    // Save to database using the helper method
+    final dbHelper = HouseholdDBHelper.instance;
+    final id = await dbHelper.insertSensitization(sensitizationData);
+    debugPrint('✅ Saved sensitization record with ID: $id');
+    
+    // Update parent
+    if (mounted) {
+      widget.onSensitizationChanged(sensitizationData);
+    }
+    return true;
+    
+  } catch (e, stackTrace) {
+    debugPrint('❌ Error saving sensitization acknowledgment: $e');
+    debugPrint('Stack trace: $stackTrace');
+    
+    if (mounted) {
+      _showErrorSnackBar('Failed to save acknowledgment. Please try again.');
+    }
+    return false;
+  }
+}
   /// Loads the sensitization data from the database
   Future<void> _loadSensitizationData() async {
     try {
       final db = LocalDBHelper.instance;
       final sensitizationDao = SensitizationDao(dbHelper: db);
       
-      // Get the farm identification ID from the parent widget
-      final farmId = widget.sensitizationData.id;
-      if (farmId != null) {
-        final existingData = await sensitizationDao.getByFarmIdentificationId(farmId);
-        if (existingData != null && mounted) {
-          setState(() {
-            _isAcknowledged = existingData.isAcknowledged;
-          });
-          // Update the parent widget with the loaded data
-          widget.onSensitizationChanged(existingData);
-        }
-      } else {
-        // If no farm ID, use the data passed in
+      // Use the coverPageId to load the data
+      final existingData = await sensitizationDao.getByCoverPageId(widget.coverPageId);
+      if (existingData != null && mounted) {
+        setState(() {
+          _isAcknowledged = existingData.isAcknowledged;
+        });
+        // Update the parent widget with the loaded data
+        widget.onSensitizationChanged(existingData);
+        return;
+      }
+      
+      // If no data found by coverPageId, fall back to the data passed in
+      if (mounted) {
         setState(() {
           _isAcknowledged = widget.sensitizationData.isAcknowledged;
         });
@@ -316,52 +286,38 @@ class _SensitizationPageState extends SensitizationPageState {
 
             const SizedBox(height: 24),
 
-            // Checkbox with validation
-            Container(
-              decoration: BoxDecoration(
-                color:
-                    _isCheckboxValid ? Colors.transparent : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: _isCheckboxValid
-                    ? null
-                    : Border.all(color: Colors.red, width: 1),
-              ),
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: _isAcknowledged,
-                    onChanged: (bool? value) {
-                      _onCheckboxChanged(value ?? false);
-                    },
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'I have read and understood the above information',
-                          style: TextStyle(
-                            color: _isCheckboxValid ? null : Colors.red,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (!_isCheckboxValid)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(
-                              'This acknowledgement is required to continue',
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
+            // Acknowledgment checkbox
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: _isAcknowledged,
+                  onChanged: (value) => _onCheckboxChanged(value ?? false),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'I acknowledge that I have read and understood the information above',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      if (!_isCheckboxValid)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            'Please acknowledge the information to continue',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),

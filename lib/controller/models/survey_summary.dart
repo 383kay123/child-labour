@@ -18,6 +18,7 @@ class SurveySummary {
   final bool hasEndOfCollectionData;
   final String? surveyType;
   final Map<String, dynamic>? additionalData;
+  final bool isSubmitted;
 
   const SurveySummary({
     this.id,
@@ -37,6 +38,7 @@ class SurveySummary {
     required this.hasEndOfCollectionData,
     this.surveyType = 'Survey',
     this.additionalData,
+    this.isSubmitted = false,
   });
 
   factory SurveySummary.fromMap(Map<String, dynamic> map) {
@@ -46,6 +48,7 @@ class SurveySummary {
       ghanaCardNumber: map['ghana_card_number'] as String? ?? 'N/A',
       contactNumber: map['contact_number'] as String? ?? '',
       community: map['community'] as String? ?? '',
+      isSubmitted: map['is_submitted'] == 1 || map['is_submitted'] == true,
       submissionDate: map['created_at'] != null 
           ? DateTime.parse(map['created_at'] as String)
           : DateTime.now(),
@@ -81,6 +84,7 @@ class SurveySummary {
       'has_sensitization_questions_data': hasSensitizationQuestionsData ? 1 : 0,
       'has_end_of_collection_data': hasEndOfCollectionData ? 1 : 0,
       'survey_type': surveyType,
+      'is_submitted': isSubmitted ? 1 : 0,
       ...?additionalData,
     };
   }

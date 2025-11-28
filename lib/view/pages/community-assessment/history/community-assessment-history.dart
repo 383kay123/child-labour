@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -35,92 +36,139 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
     _loadAssessments();
   }
 
-  Future<void> _loadAssessments() async {
-    if (!mounted) return;
+ Future<void> _loadAssessments() async {
+  if (!mounted) return;
 
-    setState(() => _isLoading = true);
-    try {
-      final allAssessments = await _dbHelper.getAllCommunityAssessments();
+  setState(() => _isLoading = true);
+  try {
+    final allAssessments = await _dbHelper.getAllCommunityAssessments();
+    print('All assessments from DB:');
+    allAssessments.forEach((a) {
+      print('ID: ${a['id']}, Community: ${a['community_name']}, Status: ${a['status']}, Raw data: ${a['raw_data']}');
+    });
 
-      final pending =
-          allAssessments.where((a) => (a['status'] ?? 0) == 0).map((e) {
-        final communityName = e['communityName'] ??
-            e['community_name'] ??
-            e['village'] ??
-            e['parish'] ??
-            e['sub_county'] ??
-            'Community Assessment';
-
-        return CommunityAssessmentModel.fromMap({
-          'id': e['id'],
-          'communityName': communityName,
-          'communityScore': e['communityScore'] ?? 0,
-          'status': e['status'] ?? 0,
-          'q1': e['q1'] ?? e['region'] ?? '',
-          'q2': e['q2'] ?? e['total_population']?.toString() ?? '',
-          'q3': e['q3'] ?? e['total_children']?.toString() ?? '',
-          'q4': e['q4'] ?? e['primary_schools_count']?.toString() ?? '',
-          'q5': e['q5'] ?? (e['has_protected_water'] == 1 ? 'Yes' : 'No'),
-          'q6': e['q6'] ?? (e['hires_adult_labor'] == 1 ? 'Yes' : 'No'),
-          'q7a': e['q7a'] ?? (e['child_labor_awareness'] == 1 ? 1 : 0),
-          'q7b': e['q7b'] ?? '',
-          'q7c': e['q7c'] ?? '',
-          'q8': e['q8'] ?? (e['has_women_leaders'] == 1 ? 'Yes' : 'No'),
-          'q9': e['q9'] ?? '',
-          'q10': e['q10'] ?? '',
-          'date_created': e['date_created'] ?? DateTime.now().toIso8601String(),
-        });
-      }).toList();
-
-      final submitted =
-          allAssessments.where((a) => (a['status'] ?? 0) == 1).map((e) {
-        final communityName = e['communityName'] ??
-            e['community_name'] ??
-            e['village'] ??
-            e['parish'] ??
-            e['sub_county'] ??
-            'Community Assessment';
-
-        return CommunityAssessmentModel.fromMap({
-          'id': e['id'],
-          'communityName': communityName,
-          'communityScore': e['communityScore'] ?? 0,
-          'status': e['status'] ?? 1,
-          'q1': e['q1'] ?? e['region'] ?? '',
-          'q2': e['q2'] ?? e['total_population']?.toString() ?? '',
-          'q3': e['q3'] ?? e['total_children']?.toString() ?? '',
-          'q4': e['q4'] ?? e['primary_schools_count']?.toString() ?? '',
-          'q5': e['q5'] ?? (e['has_protected_water'] == 1 ? 'Yes' : 'No'),
-          'q6': e['q6'] ?? (e['hires_adult_labor'] == 1 ? 'Yes' : 'No'),
-          'q7a': e['q7a'] ?? (e['child_labor_awareness'] == 1 ? 1 : 0),
-          'q7b': e['q7b'] ?? '',
-          'q7c': e['q7c'] ?? '',
-          'q8': e['q8'] ?? (e['has_women_leaders'] == 1 ? 'Yes' : 'No'),
-          'q9': e['q9'] ?? '',
-          'q10': e['q10'] ?? '',
-          'date_created': e['date_created'] ?? DateTime.now().toIso8601String(),
-        });
-      }).toList();
-
-      if (mounted) {
-        setState(() {
-          _pendingAssessments = pending;
-          _submittedAssessments = submitted;
-          _isLoading = false;
-        });
+    final pending = allAssessments.where((a) => (a['status'] ?? 0) == 0).map((e) {
+      // FIXED: Properly extract community name with better fallback logic
+      String? communityName = e['community_name'];
+      
+      // If community_name is null or empty, try to extract from raw_data
+      if (communityName == null || communityName.isEmpty) {
+        try {
+          final rawData = e['raw_data'];
+          if (rawData != null && rawData is String && rawData.isNotEmpty) {
+            final parsedData = jsonDecode(rawData);
+            if (parsedData is Map) {
+              communityName = parsedData['community'] ?? 
+                             parsedData['communityName'] ?? 
+                             parsedData['community_name'];
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing raw_data: $e');
+        }
       }
-    } catch (e) {
-      debugPrint('Error loading assessments: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load assessments: $e',
-        backgroundColor: AppTheme.errorColor,
-        colorText: Colors.white,
-      );
-      setState(() => _isLoading = false);
-    }
-  }
+      
+      // Final fallback
+      communityName = communityName ?? 'Community Assessment';
 
+      return CommunityAssessmentModel.fromMap({
+        'id': e['id'],
+        'community_name': communityName, // FIXED: Use snake_case key
+        'community_score': e['community_score'] ?? e['communityScore'] ?? 0,
+        'status': e['status'] ?? 0,
+        'region': e['region'],
+        'total_population': e['total_population'],
+        'total_children': e['total_children'],
+        'primary_schools_count': e['primary_schools_count'],
+        'has_protected_water': e['has_protected_water'],
+        'hires_adult_labor': e['hires_adult_labor'],
+        'child_labor_awareness': e['child_labor_awareness'],
+        'has_women_leaders': e['has_women_leaders'],
+        'q1': e['q1'],
+        'q2': e['q2'],
+        'q3': e['q3'],
+        'q4': e['q4'],
+        'q5': e['q5'],
+        'q6': e['q6'],
+        'q7a': e['q7a'],
+        'q7b': e['q7b'],
+        'q7c': e['q7c'],
+        'q8': e['q8'],
+        'q9': e['q9'],
+        'q10': e['q10'],
+        'date_created': e['date_created'],
+      });
+    }).toList();
+
+    final submitted = allAssessments.where((a) => (a['status'] ?? 0) == 1).map((e) {
+      // FIXED: Same logic for submitted assessments
+      String? communityName = e['community_name'];
+      
+      if (communityName == null || communityName.isEmpty) {
+        try {
+          final rawData = e['raw_data'];
+          if (rawData != null && rawData is String && rawData.isNotEmpty) {
+            final parsedData = jsonDecode(rawData);
+            if (parsedData is Map) {
+              communityName = parsedData['community'] ?? 
+                             parsedData['communityName'] ?? 
+                             parsedData['community_name'];
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing raw_data: $e');
+        }
+      }
+      
+      communityName = communityName ?? 'Community Assessment';
+
+      return CommunityAssessmentModel.fromMap({
+        'id': e['id'],
+        'community_name': communityName, // FIXED: Use snake_case key
+        'community_score': e['community_score'] ?? e['communityScore'] ?? 0,
+        'status': e['status'] ?? 1,
+        'region': e['region'],
+        'total_population': e['total_population'],
+        'total_children': e['total_children'],
+        'primary_schools_count': e['primary_schools_count'],
+        'has_protected_water': e['has_protected_water'],
+        'hires_adult_labor': e['hires_adult_labor'],
+        'child_labor_awareness': e['child_labor_awareness'],
+        'has_women_leaders': e['has_women_leaders'],
+        'q1': e['q1'],
+        'q2': e['q2'],
+        'q3': e['q3'],
+        'q4': e['q4'],
+        'q5': e['q5'],
+        'q6': e['q6'],
+        'q7a': e['q7a'],
+        'q7b': e['q7b'],
+        'q7c': e['q7c'],
+        'q8': e['q8'],
+        'q9': e['q9'],
+        'q10': e['q10'],
+        'date_created': e['date_created'],
+      });
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _pendingAssessments = pending;
+        _submittedAssessments = submitted;
+        _isLoading = false;
+      });
+    }
+  } catch (e) {
+    debugPrint('Error loading assessments: $e');
+    Get.snackbar(
+      'Error',
+      'Failed to load assessments: $e',
+      backgroundColor: AppTheme.errorColor,
+      colorText: Colors.white,
+    );
+    setState(() => _isLoading = false);
+  }
+}
   @override
   void dispose() {
     _tabController.dispose();
@@ -137,7 +185,7 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.w600,
-            fontSize: 18,
+            fontSize: 15,
           ),
         ),
         backgroundColor: AppTheme.primaryColor,
@@ -883,19 +931,11 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
         assessment.q3?.isNotEmpty == true;
   }
 
-  // Helper method to get the most specific available location name
+  // Get the community name
   String _getDisplayName(CommunityAssessmentModel assessment) {
     return assessment.communityName?.trim().isNotEmpty == true
         ? assessment.communityName!
-        : assessment.village?.trim().isNotEmpty == true
-            ? assessment.village!
-            : assessment.parish?.trim().isNotEmpty == true
-                ? '${assessment.parish} Parish'
-                : assessment.subCounty?.trim().isNotEmpty == true
-                    ? '${assessment.subCounty} Sub-county'
-                    : assessment.district?.trim().isNotEmpty == true
-                        ? '${assessment.district} District'
-                        : 'Unnamed Community';
+        : 'Community Assessment';
   }
 
   Widget _buildDetailItem(String emoji, String label, String value) {

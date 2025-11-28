@@ -26,7 +26,7 @@ class _Spacing {
 }
 
 class CombinedFarmIdentificationPage extends StatefulWidget {
-  // Cover page ID is not required as it's handled by the CoverPage
+  final int coverPageId; 
   final int initialPageIndex;
   final ValueChanged<int> onPageChanged;
   final VoidCallback? onPrevious;
@@ -37,6 +37,7 @@ class CombinedFarmIdentificationPage extends StatefulWidget {
   const CombinedFarmIdentificationPage({
     super.key,
     this.initialPageIndex = 0,
+    required this.coverPageId, 
     required this.onPageChanged,
     this.onPrevious,
     this.onNext,
@@ -46,7 +47,7 @@ class CombinedFarmIdentificationPage extends StatefulWidget {
 
   @override
   State<CombinedFarmIdentificationPage> createState() =>
-      CombinedFarmIdentificationPageState();
+      CombinedFarmIdentificationPageState(coverPageId: coverPageId);
 }
 
 class _IdentificationOfOwnerContent extends StatelessWidget {
@@ -84,8 +85,8 @@ class _IdentificationOfOwnerContent extends StatelessWidget {
   }
 
   Widget _buildRadioOption({
-    required BuildContext context,
     required String value,
+    required BuildContext context,
     required String? groupValue,
     required String label,
     required ValueChanged<String?> onChanged,
@@ -1648,6 +1649,7 @@ class _WorkersInFarmContentState extends State<_WorkersInFarmContent> {
 // MAIN STATE CLASS - ONLY ONE DEFINITION
 class CombinedFarmIdentificationPageState
     extends State<CombinedFarmIdentificationPage> {
+  final int coverPageId; // coverPageId is required and cannot be null
   late PageController _pageController;
   
   // Form keys for each subpage
@@ -1672,18 +1674,37 @@ class CombinedFarmIdentificationPageState
   AdultsInformationData get adultsData => _adultsData;
   int get currentPageIndex => _currentPageIndex;
   
-  /// Returns a map containing all the form data from all pages
-  Map<String, dynamic> getCombinedData() {
-    return {
-      'visit_information': _visitInfoData.toMap(),
-      'owner_information': _ownerData.toMap(),
-      'workers_in_farm': _workersData.toMap(),
-      'adults_information': _adultsData.toMap(),
-    };
+ /// Returns a CombinedFarmerIdentificationModel with all the form data from all pages
+  CombinedFarmerIdentificationModel? getCombinedData() {
+    try {
+      debugPrint('🔍 [CombinedFarm] Creating combined data model');
+      debugPrint('   - Visit Info: ${_visitInfoData != null}');
+      debugPrint('   - Owner Info: ${_ownerData != null}');
+      debugPrint('   - Workers Info: ${_workersData != null}');
+      debugPrint('   - Adults Info: ${_adultsData != null}');
+      
+      return CombinedFarmerIdentificationModel(
+        coverPageId: coverPageId,
+        visitInformation: _visitInfoData,
+        ownerInformation: _ownerData,
+        workersInFarm: _workersData,
+        adultsInformation: _adultsData,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        isSynced: false,
+        syncStatus: 0,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ [CombinedFarm] Error creating combined model: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
+      return null;
+    }
   }
 
   // Validation state
   final Map<int, List<String>> _validationErrors = {};
+
+  CombinedFarmIdentificationPageState({required this.coverPageId});
 
   @override
   void initState() {
@@ -1714,142 +1735,83 @@ class CombinedFarmIdentificationPageState
     widget.onCanProceedChanged?.call(_isCurrentPageComplete);
   }
 
-  Future<void> _saveCurrentPageData() async {
+  Future<void> _saveCurrentPageData({required int coverPageId}) async {
     try {
       final db = await HouseholdDBHelper.instance.database;
-      
-      // Verify there's a cover page in the database
-      final coverPages = await db.query(
-        TableNames.coverPageTBL,
-        orderBy: 'id DESC',
-        limit: 1,
-      );
-      
-      if (coverPages.isEmpty) {
-        debugPrint('⚠️ No cover page found. Attempting to create one...');
-        // Try to create a default cover page if none exists
-        final coverPageId = await db.insert(TableNames.coverPageTBL, {
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-          'is_synced': 0,
-          'sync_status': 0,
-        });
-        debugPrint('✅ Created default cover page with ID: $coverPageId');
-      }
-      
-      // Get the latest cover page ID
-      final latestCoverPage = await db.query(
-        TableNames.coverPageTBL,
-        orderBy: 'id DESC',
-        limit: 1,
-      );
-      
-      if (latestCoverPage.isEmpty) {
-        throw Exception('Failed to create or find a cover page');
-      }
-      
-      final coverPageId = latestCoverPage.first['id'] as int;
-      debugPrint('ℹ️ Using cover page ID: $coverPageId');
-      
       final now = DateTime.now().toIso8601String();
       
-      // Ensure all data is up to date before saving
-      if (_currentPageIndex == 0) {
-        // Create a new instance with properly formatted time
-        _visitInfoData = VisitInformationData(
-       
-          location: _visitInfoData.location,
-          gpsCoordinates: _visitInfoData.gpsCoordinates,
-          respondentNameCorrect: _visitInfoData.respondentNameCorrect is bool 
-              ? _visitInfoData.respondentNameCorrect 
-              : _visitInfoData.respondentNameCorrect == 'Yes',
-          correctedRespondentName: _visitInfoData.correctedRespondentName?.trim(),
-          respondentOtherNames: _visitInfoData.respondentOtherNames?.trim(),
-          respondentNationality: _visitInfoData.respondentNationality?.trim(),
-          countryOfOrigin: _visitInfoData.countryOfOrigin?.trim(),
-          otherCountry: _visitInfoData.otherCountry?.trim(),
-          isFarmOwner: _visitInfoData.isFarmOwner,
-          farmOwnershipType: _visitInfoData.farmOwnershipType,
-        );
+      debugPrint('💾 [CombinedFarm] Saving data for page $_currentPageIndex with coverPageId: $coverPageId');
+      
+      // Helper function to safely convert data to JSON string
+      String safeJsonEncode(dynamic data) {
+        if (data == null) return '{}';
+        try {
+          if (data is Map) {
+            return jsonEncode(data);
+          } else if (data.toMap != null) {
+            return jsonEncode(data.toMap());
+          }
+          return '{}';
+        } catch (e) {
+          debugPrint('⚠️ Error encoding data: $e');
+          return '{}';
+        }
       }
       
-      // Convert all data to maps with proper error handling
-      Map<String, dynamic> visitInfoMap;
-      try {
-        // First convert to map
-        visitInfoMap = _visitInfoData.toMap();
-        
-       
-      } catch (e) {
-        debugPrint('⚠️ Error preparing visit info: $e');
-        visitInfoMap = {};
-      }
+      // Prepare all data sections
+      final visitInfoJson = safeJsonEncode(_visitInfoData);
+      final ownerInfoJson = safeJsonEncode(_ownerData);
+      final workersInfoJson = safeJsonEncode(_workersData);
+      final adultsInfoJson = safeJsonEncode(_adultsData);
       
-      // Create a map with all current data
+      debugPrint('📊 [CombinedFarm] Data prepared:');
+      debugPrint('   - Visit Info: ${visitInfoJson.length} chars');
+      debugPrint('   - Owner Info: ${ownerInfoJson.length} chars');
+      debugPrint('   - Workers Info: ${workersInfoJson.length} chars');
+      debugPrint('   - Adults Info: ${adultsInfoJson.length} chars');
+      
+      // Create the complete data map
       final data = <String, dynamic>{
-        'id': coverPageId,
         'cover_page_id': coverPageId,
-        'visit_information': jsonEncode(visitInfoMap),
+        'visit_information': visitInfoJson,
+        'owner_information': ownerInfoJson,
+        'workers_in_farm': workersInfoJson,
+        'adults_information': adultsInfoJson,
         'created_at': now,
         'updated_at': now,
         'is_synced': 0,
         'sync_status': 0,
       };
       
-      // Safely add other data sections
-      try {
-        data['owner_information'] = jsonEncode(_ownerData.toMap());
-      } catch (e) {
-        debugPrint('⚠️ Error serializing owner information: $e');
-        data['owner_information'] = '{}';
-      }
-      
-      try {
-        data['workers_in_farm'] = jsonEncode(_workersData.toMap());
-      } catch (e) {
-        debugPrint('⚠️ Error serializing workers information: $e');
-        data['workers_in_farm'] = '{}';
-      }
-      
-      try {
-        data['adults_information'] = jsonEncode(_adultsData.toMap());
-      } catch (e) {
-        debugPrint('⚠️ Error serializing adults information: $e');
-        data['adults_information'] = '{}';
-      }
-      
-      debugPrint('ℹ️ Saving data for page $_currentPageIndex with coverPageId: $coverPageId');
-      
       // First try to update existing record
       final updated = await db.update(
         TableNames.combinedFarmIdentificationTBL,
+      data,
+      where: 'cover_page_id = ?',
+      whereArgs: [coverPageId],
+    );
+    
+    // If no rows were updated, insert a new record
+    if (updated == 0) {
+      await db.insert(
+        TableNames.combinedFarmIdentificationTBL,
         data,
-        where: 'id = ?',
-        whereArgs: [coverPageId],
+        conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      
-      // If no rows were updated, insert a new record
-      if (updated == 0) {
-        await db.insert(
-          TableNames.combinedFarmIdentificationTBL,
-          data,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-        debugPrint('✅ Inserted new combined farm data');
-      } else {
-        debugPrint('✅ Updated existing combined farm data');
-      }
-      
-    } catch (e, stackTrace) {
-      debugPrint('❌ Error in _saveCurrentPageData: $e');
-      debugPrint('Stack trace: $stackTrace');
-      rethrow;
+      debugPrint('✅ Inserted new combined farm data with coverPageId: $coverPageId');
+    } else {
+      debugPrint('✅ Updated existing combined farm data with coverPageId: $coverPageId');
     }
+    
+  } catch (e, stackTrace) {
+    debugPrint('❌ Error in _saveCurrentPageData: $e');
+    debugPrint('Stack trace: $stackTrace');
+    rethrow;
   }
-
+}
   Future<void> _handlePageChanged(int index) async {
     // Save current page data before navigation
-    await _saveCurrentPageData();
+    await _saveCurrentPageData(coverPageId: coverPageId);
     
     // Validate current page before allowing navigation
     if (!_isCurrentPageComplete) {
@@ -1880,43 +1842,64 @@ class CombinedFarmIdentificationPageState
     _notifyCanProceed();
   }
 
-  void _goToNextPage() async {
+  Future<void> _goToNextPage() async {
     // Validate current page first
     if (!validateCurrentPage()) {
       return;
     }
     
-    // Save current page data before navigating
-    await _saveCurrentPageData();
-    
-    // If we have more sub-pages, go to the next one
-    if (_currentPageIndex < _totalPages - 1) {
-      final nextPageIndex = _currentPageIndex + 1;
+    try {
+      // Save current page data before navigating with validation
+      final saved = await saveData(validateAllPages: false);
       
-      // Update the current page index
-      setState(() {
-        _currentPageIndex = nextPageIndex;
-        // Clear validation errors for the new page
-        _validationErrors[nextPageIndex] = [];
-      });
+      if (!saved) {
+        debugPrint('❌ Failed to save data before navigation');
+        return;
+      }
       
-      // Animate to the next page
-      await _pageController.animateToPage(
-        nextPageIndex,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      // If we have more sub-pages, go to the next one
+      if (_currentPageIndex < _totalPages - 1) {
+        final nextPageIndex = _currentPageIndex + 1;
+        
+        // Update the current page index
+        if (mounted) {
+          setState(() {
+            _currentPageIndex = nextPageIndex;
+            // Clear validation errors for the new page
+            _validationErrors[nextPageIndex] = [];
+          });
+        }
+        
+        // Animate to the next page
+        if (_pageController.hasClients) {
+          await _pageController.animateToPage(
+            nextPageIndex,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+        
+        // Notify parent widget about the page change
+        if (mounted) {
+          widget.onPageChanged(nextPageIndex);
+        }
+      } 
+      // Only call onNext if we're on the last sub-page and there's a next page to go to
+      else if (widget.onNext != null && _currentPageIndex >= _totalPages - 1) {
+        // This is the last page, call the onNext callback
+        widget.onNext!();
+      }
       
-      // Notify parent widget about the page change
-      widget.onPageChanged(nextPageIndex);
-    } 
-    // Only call onNext if we're on the last sub-page and there's a next page to go to
-    else if (widget.onNext != null && _currentPageIndex >= _totalPages - 1) {
-      // This is the last page, call the onNext callback
-      widget.onNext!();
+      if (mounted) {
+        _notifyCanProceed();
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in _goToNextPage: $e');
+      debugPrint('Stack trace: $stackTrace');
+      if (mounted) {
+        _showValidationError('Error saving data. Please try again.');
+      }
     }
-    
-    _notifyCanProceed();
   }
 
   void _goToPreviousPage() async {
@@ -1929,8 +1912,7 @@ class CombinedFarmIdentificationPageState
       final previousPageIndex = _currentPageIndex - 1;
       
       // Save current page data before navigating
-      await _saveCurrentPageData();
-      
+     await _saveCurrentPageData(coverPageId: coverPageId);
       // Update the current page index
       setState(() {
         _currentPageIndex = previousPageIndex;
@@ -1962,8 +1944,15 @@ class CombinedFarmIdentificationPageState
     try {
       debugPrint('\n=== ATTEMPTING TO SAVE FORM DATA ===');
       
+      // Validate coverPageId is not null
+      if (coverPageId == null) {
+        debugPrint('❌ Error: coverPageId is null when saving combined farmer data');
+        _showValidationError('Error: Missing cover page reference. Please go back to the cover page and try again.');
+        return false;
+      }
+      
       // First, save the current page data without validation
-      await _saveCurrentPageData();
+      await _saveCurrentPageData(coverPageId: coverPageId!);
       
       if (validateAllPages) {
         // Validate all pages if explicitly requested
@@ -1988,7 +1977,7 @@ class CombinedFarmIdentificationPageState
       debugPrint('✅ All validations passed, saving data...');
       
       // Save all data again to ensure everything is up to date
-      await _saveCurrentPageData();
+      await _saveCurrentPageData(coverPageId: coverPageId!);
       
       debugPrint('✅ All form data saved successfully');
       return true;

@@ -174,57 +174,76 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
     });
   }
 
-  Future<void> _saveChanges() async {
-    if (!_formKey.currentState!.validate()) return;
-    
-    // Create a copy of the assessment with updated timestamps
-    final now = DateTime.now().toIso8601String();
-    final updatedAssessment = _editableAssessment.copyWith(
-      dateModified: now,
-      // Only update date_created if this is a new assessment
-      dateCreated: _editableAssessment.dateCreated ?? now,
-    );
-    
-    // Debug log the data being saved
-    debugPrint('Saving assessment data: ${updatedAssessment.toMap()}');
-    
-    try {
-      // Save to database
-      final dbHelper = CommunityDBHelper.instance;
-      final result = await dbHelper.updateCommunityAssessment(updatedAssessment.toMap());
-      
-      if (result > 0) {
-        // Show success animation
-        if (mounted) {
-          _showSuccess();
-        }
-        
-        // Update UI and close edit mode
-        setState(() {
-          _editableAssessment = updatedAssessment;
-          _isEditing = false;
-        });
-        
-        // Notify parent widget to refresh if needed
-        if (mounted) {
-          Navigator.of(context).pop(updatedAssessment);
-        }
-      } else {
-        throw Exception('Failed to save assessment: No rows affected');
-      }
-    } catch (e) {
-      debugPrint('Error saving assessment: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving assessment: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+ Future<void> _saveChanges() async {
+  // First validate the form
+  if (_formKey.currentState != null && !_formKey.currentState!.validate()) {
+    return;
   }
 
+  // Save the form state
+  _formKey.currentState?.save();
+
+  // Create a copy of the assessment with updated timestamps
+  final now = DateTime.now().toIso8601String();
+  final updatedAssessment = _editableAssessment.copyWith(
+    dateModified: now,
+    modifiedBy: 'current_user', // You might want to get this from your auth system
+  );
+
+  // Debug log the data being saved
+  debugPrint('Saving assessment data:');
+  debugPrint('  ID: ${updatedAssessment.id}');
+  debugPrint('  Community Name: ${updatedAssessment.communityName}');
+  debugPrint('  Q1: ${updatedAssessment.q1}');
+  debugPrint('  Q2: ${updatedAssessment.q2}');
+  debugPrint('  Status: ${updatedAssessment.status}');
+
+  try {
+    // Save to database
+    final dbHelper = CommunityDBHelper.instance;
+    
+    // Use insert or update based on whether this is a new assessment
+    int result;
+    if (updatedAssessment.id == null) {
+      // New assessment - insert
+      result = await dbHelper.insertCommunityAssessment(updatedAssessment.toDatabaseMap());
+    } else {
+      // Existing assessment - update
+      result = await dbHelper.updateCommunityAssessment(updatedAssessment.toDatabaseMap());
+    }
+
+    if (result > 0) {
+      // Show success animation
+      if (mounted) {
+        _showSuccess();
+      }
+
+      // Update UI and close edit mode
+      setState(() {
+        _editableAssessment = updatedAssessment;
+        _isEditing = false;
+      });
+
+      // Notify parent widget to refresh if needed
+      if (mounted) {
+        Navigator.of(context).pop(updatedAssessment);
+      }
+    } else {
+      throw Exception('Failed to save assessment: No rows affected');
+    }
+  } catch (e) {
+    debugPrint('Error saving assessment: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving assessment: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+}
   @override
   Widget build(BuildContext context) {
     // Ensure we have a valid build context
@@ -347,9 +366,9 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Card
-                    _buildHeaderCard(context, score, correctAnswers, totalQuestions, assessment),
-                    const SizedBox(height: 24),
+                    // // Header Card
+                    // _buildHeaderCard(context, score, correctAnswers, totalQuestions, assessment),
+                    // const SizedBox(height: 24),
                     
                     // Assessment Overview
                     _buildSectionTitle('Assessment Overview'),

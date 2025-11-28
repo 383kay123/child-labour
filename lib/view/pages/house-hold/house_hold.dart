@@ -3,6 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/controller/db/daos/sensitization_questions_dao.dart';
+import 'package:human_rights_monitor/controller/db/daos/remediation_dao.dart';
+import 'package:human_rights_monitor/controller/db/daos/sensitization_questions_dao.dart';
+import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 import 'package:human_rights_monitor/controller/db/table_names.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
@@ -44,13 +50,13 @@ class SurveyState {
 }
 
 class HouseHold extends StatefulWidget {
-  final int farmIdentificationId;
   final VoidCallback? onComplete;
+  final int coverPageId;
 
   const HouseHold({
     Key? key,
-    required this.farmIdentificationId,
     this.onComplete,
+    required this.coverPageId,
   }) : super(key: key);
 
   @override
@@ -58,7 +64,7 @@ class HouseHold extends StatefulWidget {
 
   static Widget withNewId() {
     return HouseHold(
-      farmIdentificationId: DateTime.now().millisecondsSinceEpoch,
+      coverPageId: DateTime.now().millisecondsSinceEpoch,
     );
   }
 }
@@ -94,12 +100,12 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   // State
   bool _isSaving = false;
+  bool _isSavingComplete = false;
   bool _isSensitizationChecked = false;
   int _farmIdentificationId = 0;
   
   // Tracking variables
   final Map<String, dynamic> _savedData = {};
-  bool _isSavingComplete = false;
 
   // Children
   int _currentChildNumber = 1;
@@ -109,13 +115,32 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   // Data
   final SurveyState _surveyState = SurveyState();
   CoverPageData _coverData = CoverPageData.empty();
+  
+  // Validation fields
+  bool? hasSensitizedHousehold;
+  bool? hasSensitizedOnProtection;
+  bool? hasSensitizedOnSafeLabour;
+  final TextEditingController _femaleAdultsController = TextEditingController();
+  final TextEditingController _maleAdultsController = TextEditingController();
+  bool? _consentForPicture;
+  final TextEditingController _consentReasonController = TextEditingController();
+  final TextEditingController _reactionController = TextEditingController();
+  dynamic _sensitizationImage;
+  dynamic _householdWithUserImage;
   ConsentData? _consentData;
-  late FarmerIdentificationData _farmerData;
+  FarmerIdentificationData _farmerData = FarmerIdentificationData(
+    hasGhanaCard: 0,
+    childrenCount: 0,
+    children: [],
+  );
+
+  // Remediation data
+  RemediationModel? remediationData;
 
   // Getters
   bool get _isOnCombinedPage => _currentPageIndex == 3;
   double get _progress => (_currentPageIndex + 1) / _totalPages;
-  bool get _canUseContext => _isMounted && !_isDisposed && (mounted == true);
+  bool get _canUseContext => _isMounted && !_isDisposed && mounted;
 
   @override
   void initState() {
@@ -124,9 +149,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     _pageController = PageController();
-    _initFarmerData();
     _coverData = _coverData.copyWith(
-      id: widget.farmIdentificationId,
       selectedTownCode: CoverDummyData.dummyTowns.isNotEmpty
           ? CoverDummyData.dummyTowns.first.code
           : null,
@@ -134,21 +157,47 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       farmers: CoverDummyData.getDummyFarmers(CoverDummyData.dummyTowns.firstOrNull?.code),
     );
 
+    // Initialize with the provided coverPageId
+    if (widget.coverPageId != 0) {
+      _coverData = _coverData.copyWith(id: widget.coverPageId);
+    }
+    
+    _initFarmerData();
     _loadSavedState();
   }
 
   void _initFarmerData() {
     _farmerData = FarmerIdentificationData(
-      ghanaCardNumberController: TextEditingController(),
-      idNumberController: TextEditingController(),
-      contactNumberController: TextEditingController(),
-      childrenCountController: TextEditingController(),
-      noConsentReasonController: TextEditingController(),
+      coverPageId: _coverData.id,
+      hasGhanaCard: 0,
+      childrenCount: 0,
+      idPictureConsent: 0,
+      isSynced: 0,
+      syncStatus: 0,
     );
+    
+    // Initialize controllers with existing values if they exist
+    if (_farmerData.ghanaCardNumber != null) {
+      _farmerData.ghanaCardNumberController.text = _farmerData.ghanaCardNumber!;
+    }
+    if (_farmerData.idNumber != null) {
+      _farmerData.idNumberController.text = _farmerData.idNumber!;
+    }
+    if (_farmerData.contactNumber != null) {
+      _farmerData.contactNumberController.text = _farmerData.contactNumber!;
+    }
+    if (_farmerData.noConsentReason != null) {
+      _farmerData.noConsentReasonController.text = _farmerData.noConsentReason!;
+    }
+    _farmerData.childrenCountController.text = _farmerData.childrenCount.toString();
+    
+    debugPrint('ℹ️ Initialized farmer data with coverPageId: ${_coverData.id}');
   }
 
   void safeSetState(VoidCallback fn) {
-    if (_canUseContext) setState(fn);
+    if (_canUseContext) {
+      setState(fn);
+    }
   }
 
   // Location
@@ -215,7 +264,9 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           locationStatus: 'Captured',
         );
       });
-      _onConsentDataChanged(_consentData!);
+      if (_consentData != null) {
+        _onConsentDataChanged(_consentData!);
+      }
     } catch (e) {
       safeSetState(() {
         _surveyState.locationStatus = 'Error: $e';
@@ -240,27 +291,10 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     safeSetState(() => _consentData = newData);
   }
 
-  void _onFarmerDataChanged(FarmerIdentificationData newData) async {
+  void _onFarmerDataChanged(FarmerIdentificationData newData) {
     safeSetState(() => _farmerData = newData);
-    
-    try {
-      final db = HouseholdDBHelper.instance;
-      if (newData.id == null) {
-        // Insert new record
-        final id = await db.insertFarmerIdentification(newData);
-        safeSetState(() {
-          _farmerData = newData.copyWith(id: id);
-        });
-      } else {
-        // Update existing record
-        await db.updateFarmerIdentification(newData);
-      }
-      debugPrint('✅ Farmer information saved successfully');
-    } catch (e) {
-      debugPrint('❌ Error saving farmer information: $e');
-    }
   }
-
+ 
   void _onSurveyEnd() {
     showDialog(
       context: context,
@@ -268,7 +302,10 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         title: const Text('End Survey'),
         content: const Text('All unsaved data will be lost.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () => Navigator.pop(context), 
+            child: const Text('CANCEL')
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -327,23 +364,20 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         return false;
       }
       
-      final coverPageId = await _saveCoverPageData();
-      if (coverPageId == null) {
-        _showSnackBar('Failed to save cover page data');
-        return false;
+      // If we don't have an ID yet, create one
+      if (_coverData.id == null) {
+        final coverPageId = await _saveCoverPageData();
+        if (coverPageId == null) {
+          _showSnackBar('Failed to save cover page data');
+          return false;
+        }
+        safeSetState(() {
+          _coverData = _coverData.copyWith(id: coverPageId);
+        });
       }
       
       _savedData['cover_page'] = _coverData.toMap();
       _showSnackBar('Cover page saved successfully', backgroundColor: Colors.green);
-      
-      // Update cover data with the new ID
-      safeSetState(() {
-        _coverData = _coverData.copyWith(id: coverPageId);
-        // Initialize consent data with cover page ID
-        _consentData = (_consentData ?? ConsentData.empty()).copyWith(
-          coverPageId: coverPageId,
-        );
-      });
       
       return true;
     } catch (e) {
@@ -355,6 +389,12 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   Future<bool> _saveConsent() async {
     try {
+      // Ensure cover page is saved first
+      if (_coverData.id == null) {
+        final success = await _saveCoverPage();
+        if (!success) return false;
+      }
+
       final validationError = _consentPageKey.currentState?.validateForm();
       if (validationError != null) {
         _showSnackBar(validationError);
@@ -367,8 +407,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         return false;
       }
       
-      _savedData['consent'] = _consentData?.toMap();
-      debugPrint('✅ Consent saved: ${_consentData?.toMap()}');
+      _savedData['consent'] = 'saved';
       return true;
     } catch (e) {
       debugPrint('❌ Error saving consent: $e');
@@ -385,16 +424,21 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       }
       
       safeSetState(() => _isSaving = true);
-      final data = _farmerPageKey.currentState!.widget.data;
+      
+      // Ensure cover page ID is set
+      final dataWithCoverPageId = _farmerData.copyWith(
+        coverPageId: _coverData.id,
+      );
+      
       final db = HouseholdDBHelper.instance;
-      final id = data.id ?? await db.insertFarmerIdentification(data);
+      final id = await db.insertFarmerIdentification(dataWithCoverPageId);
       
       safeSetState(() {
-        _farmerData = data.copyWith(id: id);
+        _farmerData = dataWithCoverPageId.copyWith(id: id);
         _farmIdentificationId = id;
       });
       
-      _savedData['farmer_identification'] = data.toMap();
+      _savedData['farmer_identification'] = dataWithCoverPageId.toMap();
       debugPrint('✅ Farmer identification saved with ID: $id');
       return true;
     } catch (e) {
@@ -408,19 +452,54 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   Future<bool> _saveCombinedFarm() async {
     try {
-      final saved = await _combinedPageKey.currentState!.saveData(validateAllPages: false);
+      debugPrint('🔄 [Combined Farm] Starting save process...');
+      
+      final state = _combinedPageKey.currentState;
+      if (state == null) {
+        debugPrint('❌ [Combined Farm] State is null');
+        _showSnackBar('Combined farm page not initialized');
+        return false;
+      }
+
+      // Save current page data
+      final saved = await state.saveData(validateAllPages: false);
       if (!saved) {
         _showSnackBar('Please complete the required fields on this page');
         return false;
       }
+
+      // Get combined data
+      final combinedData = state.getCombinedData();
+      if (combinedData == null) {
+        debugPrint('❌ [Combined Farm] Failed to get combined data');
+        _showSnackBar('Failed to retrieve farm data');
+        return false;
+      }
+
+      // Ensure cover page ID is set
+      final dataWithCoverId = combinedData.copyWith(
+        coverPageId: _coverData.id,
+        createdAt: combinedData.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // Save to database
+      final db = HouseholdDBHelper.instance;
+      final farmId = await db.insertCombinedFarmerIdentification(dataWithCoverId);
       
-      // Get the data from the combined page
-      final combinedData = _combinedPageKey.currentState!.getCombinedData();
-      _savedData['combined_farm'] = combinedData;
-      debugPrint('✅ Combined farm data saved');
+      debugPrint('✅ [Combined Farm] Saved with ID: $farmId');
+      
+      _savedData['combined_farm'] = {
+        'id': farmId,
+        'cover_page_id': _coverData.id,
+        'saved_at': DateTime.now().toIso8601String(),
+      };
+      
+      _showSnackBar('Farm information saved successfully', backgroundColor: Colors.green);
       return true;
-    } catch (e) {
-      debugPrint('❌ Error saving combined farm: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ [Combined Farm] Error: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
       _showSnackBar('Error saving farm data: $e');
       return false;
     }
@@ -463,22 +542,45 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   Future<bool> _saveRemediation() async {
     try {
+      debugPrint('🔄 [Remediation] Starting save process...');
+      
       final state = _remediationPageKey.currentState;
-      if (state == null || !state.validateForm()) {
-        _showSnackBar('Complete remediation');
+      if (state == null) {
+        debugPrint('❌ [Remediation] State is null');
+        _showSnackBar('Remediation page not initialized');
         return false;
       }
-      final saved = await state.saveData();
+
+      if (!state.validateForm()) {
+        _showSnackBar('Please complete all required remediation fields');
+        return false;
+      }
+
+      // Get the remediation data from the state
+      final remediationFormData = state.getFormData();
+      
+      final saved = await state.saveData(_coverData.id!);
       if (!saved) {
-        _showSnackBar('Failed to save remediation');
+        _showSnackBar('Failed to save remediation data');
         return false;
       }
       
-      _savedData['remediation'] = 'saved';
-      debugPrint('✅ Remediation data saved');
+      // Store the remediation data
+      remediationData = await _getRemediationByCoverPageId(_coverData.id!);
+      
+      _savedData['remediation'] = {
+        'saved': true,
+        'cover_page_id': _coverData.id,
+        'data': remediationFormData,
+        'timestamp': DateTime.now().toIso8601String()
+      };
+      
+      debugPrint('✅ [Remediation] Saved successfully');
+      _showSnackBar('Remediation data saved successfully', backgroundColor: Colors.green);
       return true;
-    } catch (e) {
-      debugPrint('❌ Error saving remediation: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ [Remediation] Error: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
       _showSnackBar('Error saving remediation: $e');
       return false;
     }
@@ -486,22 +588,56 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   Future<bool> _saveSensitization() async {
     try {
+      debugPrint('🔄 [Sensitization] Starting save process...');
+      
       if (!_isSensitizationChecked) {
-        _showSnackBar('Acknowledge sensitization');
+        _showSnackBar('Please acknowledge the sensitization information');
         return false;
       }
       
-      final saved = await _sensitizationPageKey.currentState?.saveData(_farmIdentificationId) ?? false;
-      if (!saved) {
-        _showSnackBar('Failed to save sensitization');
-        return false;
+      final state = _sensitizationPageKey.currentState;
+      if (state == null) {
+        // Create sensitization data directly
+        final sensitizationData = SensitizationData(
+          coverPageId: _coverData.id!,
+          isAcknowledged: _isSensitizationChecked,
+          acknowledgedAt: DateTime.now(),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          isSynced: false,
+          syncStatus: 0,
+        );
+        
+        final db = HouseholdDBHelper.instance;
+        final id = await db.insertSensitization(sensitizationData);
+        
+        debugPrint('✅ [Sensitization] Direct save successful with ID: $id');
+        
+        _savedData['sensitization'] = {
+          'id': id,
+          'cover_page_id': _coverData.id,
+          'is_acknowledged': true,
+        };
+      } else {
+        // Use state to save
+        final saved = await state.saveData(_coverData.id!);
+        if (!saved) {
+          debugPrint('❌ [Sensitization] State save failed');
+          _showSnackBar('Failed to save sensitization');
+          return false;
+        }
+        
+        _savedData['sensitization'] = {
+          'cover_page_id': _coverData.id,
+          'is_acknowledged': true,
+        };
       }
       
-      _savedData['sensitization'] = 'saved';
-      debugPrint('✅ Sensitization data saved');
+      _showSnackBar('Sensitization saved successfully', backgroundColor: Colors.green);
       return true;
-    } catch (e) {
-      debugPrint('❌ Error saving sensitization: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ [Sensitization] Error: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
       _showSnackBar('Error saving sensitization: $e');
       return false;
     }
@@ -509,39 +645,114 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   Future<bool> _saveSensitizationQuestions() async {
     try {
-      final saved = await _sensitizationQuestionsKey.currentState?.saveData(_farmIdentificationId) ?? false;
+      debugPrint('🔄 [Sensitization Questions] Saving with coverPageId: ${_coverData.id}');
+
+      final state = _sensitizationQuestionsKey.currentState;
+      if (state == null) {
+        debugPrint('❌ [Sensitization Questions] State is null');
+        _showSnackBar('Sensitization questions page not initialized');
+        return false;
+      }
+
+      // Save using cover page ID instead of farm identification ID
+      final saved = await state.saveData(_coverData.id!);
       if (!saved) {
-        _showSnackBar('Complete sensitization questions');
+        _showSnackBar('Please complete all sensitization questions');
         return false;
       }
       
-      _savedData['sensitization_questions'] = 'saved';
-      debugPrint('✅ Sensitization questions saved');
+      _savedData['sensitization_questions'] = {
+        'cover_page_id': _coverData.id,
+        'saved_at': DateTime.now().toIso8601String(),
+      };
+      
+      debugPrint('✅ [Sensitization Questions] Saved successfully');
+      _showSnackBar('Sensitization questions saved successfully', backgroundColor: Colors.green);
       return true;
-    } catch (e) {
-      debugPrint('❌ Error saving sensitization questions: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ [Sensitization Questions] Error: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
       _showSnackBar('Error saving questions: $e');
       return false;
     }
   }
 
   Future<bool> _saveEndOfCollection() async {
-    try {
-      if (!_endOfCollectionKey.currentState!.isFormComplete) {
-        _showSnackBar('Complete end of collection');
-        return false;
-      }
-      
-      _savedData['end_of_collection'] = 'saved';
-      debugPrint('✅ End of collection data saved');
-      return true;
-    } catch (e) {
-      debugPrint('❌ Error saving end of collection: $e');
-      _showSnackBar('Error saving final data: $e');
+  try {
+    debugPrint('🔄 [EndOfCollection] Starting save process...');
+    
+    final state = _endOfCollectionKey.currentState;
+    if (state == null) {
+      debugPrint('❌ [EndOfCollection] State is null');
+      _showSnackBar('End of collection page not initialized');
       return false;
     }
-  }
 
+    // Check if form is complete
+    if (!state.isFormComplete) {
+      _showSnackBar('Please complete all required fields in End of Collection');
+      return false;
+    }
+
+    // Get the form data
+    final formData = state.getData();
+    if (formData == null) {
+      debugPrint('❌ [EndOfCollection] No data returned from form');
+      _showSnackBar('Failed to retrieve end of collection data');
+      return false;
+    }
+
+    debugPrint('📝 [EndOfCollection] Form data: $formData');
+
+    // Create EndOfCollectionModel
+    final endOfCollectionData = EndOfCollectionModel(
+      coverPageId: _coverData.id,
+      respondentImagePath: formData['respondentImagePath'],
+      producerSignaturePath: formData['producerSignaturePath'],
+      gpsCoordinates: formData['gpsCoordinates'],
+      latitude: formData['latitude'],
+      longitude: formData['longitude'],
+      endTime: formData['endTime'] != null 
+          ? DateTime.parse(formData['endTime'])
+          : null,
+      remarks: formData['remarks'],
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isSynced: false,
+      syncStatus: 0,
+    );
+
+    debugPrint('💾 [EndOfCollection] Saving to database...');
+    
+    // Save to database
+    final db = HouseholdDBHelper.instance;
+    final id = await db.saveEndOfCollection(endOfCollectionData);
+    
+    if (id > 0) {
+      _savedData['end_of_collection'] = {
+        'id': id,
+        'cover_page_id': _coverData.id,
+        'saved_at': DateTime.now().toIso8601String(),
+        'has_respondent_image': endOfCollectionData.respondentImagePath != null,
+        'has_signature': endOfCollectionData.producerSignaturePath != null,
+        'has_gps': endOfCollectionData.gpsCoordinates != null,
+      };
+      
+      debugPrint('✅ [EndOfCollection] Saved successfully with ID: $id');
+      _showSnackBar('End of collection data saved successfully', backgroundColor: Colors.green);
+      return true;
+    } else {
+      debugPrint('❌ [EndOfCollection] Failed to save - returned ID: $id');
+      _showSnackBar('Failed to save end of collection data');
+      return false;
+    }
+  } catch (e, stackTrace) {
+    debugPrint('❌ [EndOfCollection] Error: $e');
+    debugPrint('📜 Stack trace: $stackTrace');
+    _showSnackBar('Error saving end of collection: $e');
+    return false;
+  }
+}
   Future<void> _saveCurrentChildData() async {
     await _childDetailsPageKey.currentState?.saveData();
   }
@@ -557,6 +768,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
     try {
       bool saveSuccess = false;
+      bool shouldNavigate = true;
       
       switch (_currentPageIndex) {
         case 0: // Cover Page
@@ -576,11 +788,12 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           if (saveSuccess) {
             final count = int.tryParse(_farmerData.childrenCountController.text) ?? 0;
             if (count > 0) {
-              await _navigateToPage(5);
+              await _navigateToPage(5); // Go to child details
+              shouldNavigate = false; // Don't do default navigation
             } else {
-              await _navigateToPage(6);
+              await _navigateToPage(6); // Skip to remediation
+              shouldNavigate = false; // Don't do default navigation
             }
-            return;
           }
           break;
         case 5: // Child Details
@@ -589,10 +802,11 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
             if (_currentChildNumber < _totalChildren5To17) {
               safeSetState(() => _currentChildNumber++);
               _refreshChildDetailsPage();
+              shouldNavigate = false; // Stay on same page, just update child number
             } else {
-              await _navigateToPage(6);
+              await _navigateToPage(6); // Go to remediation after all children
+              shouldNavigate = false; // Don't do default navigation
             }
-            return;
           }
           break;
         case 6: // Remediation
@@ -608,18 +822,23 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           saveSuccess = await _saveEndOfCollection();
           if (saveSuccess) {
             await _completeSurvey();
-            return;
+            shouldNavigate = false; // Don't navigate after completion
           }
           break;
       }
 
-      if (saveSuccess && _currentPageIndex < _totalPages - 1) {
+      // Only navigate if save was successful and we're not handling navigation manually
+      if (saveSuccess && shouldNavigate && _currentPageIndex < _totalPages - 1) {
         await _navigateToPage(_currentPageIndex + 1);
       }
       
       // Log current saved data state
       _logSavedData();
       
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in _onNext: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
+      _showSnackBar('Navigation error: $e');
     } finally {
       _isProcessingNavigation = false;
     }
@@ -634,42 +853,195 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     debugPrint('   - Total pages completed: ${_savedData.length}/$_totalPages\n');
   }
 
+  Future<RemediationModel?> _getRemediationByCoverPageId(int coverPageId) async {
+    try {
+      final dao = RemediationDao(dbHelper: HouseholdDBHelper.instance);
+      return await dao.getByCoverPageId(coverPageId);
+    } catch (e) {
+      debugPrint('❌ Error getting remediation by cover page ID: $e');
+      return null;
+    }
+  }
+
   // Complete survey and save everything
   Future<void> _completeSurvey() async {
     try {
       safeSetState(() => _isSavingComplete = true);
       
-      // Get all the data from the form
-      final combinedFarmData = _combinedPageKey.currentState is Map<String, dynamic> ? 
-    _combinedPageKey.currentState : _combinedPageKey.currentState?.getCombinedData();
-          
-      final childrenHouseholdData = _childrenHouseholdKey.currentState is Map<String, dynamic> ?
-          _childrenHouseholdKey.currentState : _childrenHouseholdKey.currentState?.getHouseholdData();
-          
-      final remediationData = _remediationPageKey.currentState is Map<String, dynamic> ?
-          _remediationPageKey.currentState : await _remediationPageKey.currentState?.getFormData();
-          
-      // Get the sensitization data from the state
-      final sensitizationData = _sensitizationPageKey.currentState is Map<String, dynamic> 
-          ? _sensitizationPageKey.currentState 
-          : {
-              'isAcknowledged': _isSensitizationChecked,
-              'acknowledgedAt': DateTime.now().toIso8601String(),
-            };
+      debugPrint('🔄 Starting complete survey save...');
+      debugPrint('📋 Cover Page ID: ${_coverData.id}');
       
-      // Save the sensitization data
-      if (_sensitizationPageKey.currentState is! Map<String, dynamic>) {
-        await SensitizationPage.of(_sensitizationPageKey)?.saveData(widget.farmIdentificationId);
+      // 1. Get Combined Farm Data
+      if (_coverData.id == null) {
+        debugPrint('❌ Error: Cover page ID is null');
+        _showSnackBar('Error: Missing cover page ID. Please save the cover page first.');
+        safeSetState(() => _isSavingComplete = false);
+        return;
       }
-      final sensitizationQuestionsData = _sensitizationQuestionsKey.currentState is Map<String, dynamic> ?
-          _sensitizationQuestionsKey.currentState : await _sensitizationQuestionsKey.currentState?.getData();
-          
-      final endOfCollectionData = _endOfCollectionKey.currentState is Map<String, dynamic> ?
-          _endOfCollectionKey.currentState : await _endOfCollectionKey.currentState?.getData();
       
-      // Log the data for debugging
-      debugPrint('📋 SAVING SURVEY DATA:');
-      debugPrint('   • Cover Page: ${_coverData != null ? '✅' : '❌'}');
+      CombinedFarmerIdentificationModel? combinedFarmData;
+      try {
+        final householdDB = HouseholdDBHelper.instance;
+        combinedFarmData = await householdDB.getCombinedFarmByCoverPageId(_coverData.id!);
+  
+  // If no data exists, try to get from current state
+  if (combinedFarmData == null) {
+    final combinedState = _combinedPageKey.currentState;
+    if (combinedState != null) {
+      final rawData = combinedState.getCombinedData();
+      if (rawData != null) {
+        combinedFarmData = rawData.copyWith(
+          coverPageId: _coverData.id,
+          createdAt: rawData.createdAt ?? DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        debugPrint('✅ Combined farm data retrieved from form state');
+      }
+    }
+  } else {
+    debugPrint('✅ Combined farm data loaded from database: ${combinedFarmData.id}');
+  }
+  
+  // Debug what we have
+  if (combinedFarmData != null) {
+    debugPrint('📊 Combined Farm Data:');
+    debugPrint('   - Visit Info: ${combinedFarmData.visitInformation != null}');
+    debugPrint('   - Owner Info: ${combinedFarmData.ownerInformation != null}');
+    debugPrint('   - Workers Info: ${combinedFarmData.workersInFarm != null}');
+    debugPrint('   - Adults Info: ${combinedFarmData.adultsInformation != null}');
+  } else {
+    debugPrint('⚠️ No combined farm data available');
+  }
+} catch (e) {
+  debugPrint('❌ Error getting combined farm data: $e');
+}
+      // 2. Get Children Household Data
+      ChildrenHouseholdModel? childrenHouseholdData;
+      try {
+        final childrenState = _childrenHouseholdKey.currentState;
+        if (childrenState != null) {
+          final rawData = childrenState.getHouseholdData();
+          if (rawData != null) {
+            childrenHouseholdData = ChildrenHouseholdModel.fromMap(
+              rawData is Map<String, dynamic> ? rawData : (rawData as dynamic).toMap()
+            ).copyWith(
+              coverPageId: _coverData.id,
+              timestamp: DateTime.now(),
+            );
+            debugPrint('✅ Children household data retrieved');
+          }
+        }
+      } catch (e) {
+        debugPrint('❌ Error getting children household data: $e');
+      }
+      
+      // 3. Get Remediation Data
+      if (remediationData == null && _coverData.id != null) {
+        try {
+          final savedRemediation = await _getRemediationByCoverPageId(_coverData.id!);
+          if (savedRemediation != null) {
+            remediationData = savedRemediation;
+            debugPrint('✅ Loaded saved remediation data: ${remediationData!.id}');
+          } else {
+            debugPrint('⚠️ No remediation data found for cover page ID: ${_coverData.id}');
+          }
+        } catch (e) {
+          debugPrint('❌ Error getting remediation data: $e');
+        }
+      }
+
+      // 4. Get Sensitization Data
+      SensitizationData? sensitizationData;
+      try {
+        sensitizationData = SensitizationData(
+          coverPageId: _coverData.id,
+          isAcknowledged: _isSensitizationChecked,
+          acknowledgedAt: DateTime.now(),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          isSynced: false,
+          syncStatus: 0,
+        );
+        debugPrint('✅ Sensitization data created');
+      } catch (e) {
+        debugPrint('❌ Error creating sensitization data: $e');
+      }
+      
+      // 5. Get Sensitization Questions Data
+    // 5. Get Sensitization Questions Data - FIXED VERSION
+List<SensitizationQuestionsData>? sensitizationQuestionsData;
+try {
+  // Try to load existing data first
+  final db = HouseholdDBHelper.instance;
+  final questionsDao = SensitizationQuestionsDao(dbHelper: LocalDBHelper.instance);
+  final existingQuestions = await questionsDao.getByCoverPageId(_coverData.id!);
+  
+  if (existingQuestions != null) {
+    sensitizationQuestionsData = [existingQuestions];
+    debugPrint('✅ Loaded saved sensitization questions: ${existingQuestions.id}');
+  } else {
+    // If no existing data, try to get from current state
+    final questionsState = _sensitizationQuestionsKey.currentState;
+    if (questionsState != null) {
+      final saved = await questionsState.saveData(_coverData.id!);
+      if (saved) {
+        // Reload the data after saving
+        final reloadedQuestions = await questionsDao.getByCoverPageId(_coverData.id!);
+        if (reloadedQuestions != null) {
+          sensitizationQuestionsData = [reloadedQuestions];
+          debugPrint('✅ Saved and loaded sensitization questions');
+        }
+      }
+    }
+  }
+} catch (e) {
+  debugPrint('❌ Error getting sensitization questions: $e');
+}  
+       // 6. Get End of Collection Data - ENHANCED VERSION
+    EndOfCollectionModel? endOfCollectionData;
+    try {
+      final db = HouseholdDBHelper.instance;
+      // Try to load existing end of collection data first
+      if (_coverData.id != null) {
+        endOfCollectionData = await db.getEndOfCollection(_coverData.id!);
+      }
+      
+      // If no data exists or we need to update, get from current state
+      if (endOfCollectionData == null) {
+        final endState = _endOfCollectionKey.currentState;
+        if (endState != null) {
+          final rawData = endState.getData();
+          if (rawData != null && rawData is Map<String, dynamic>) {
+            endOfCollectionData = EndOfCollectionModel.fromMap(rawData).copyWith(
+              coverPageId: _coverData.id,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+            debugPrint('✅ End of collection data retrieved from form state');
+          }
+        }
+      } else {
+        debugPrint('✅ End of collection data loaded from database: ${endOfCollectionData.id}');
+      }
+      
+      // Debug log what we have
+      if (endOfCollectionData != null) {
+        debugPrint('📊 End of Collection Data:');
+        debugPrint('   - Respondent Image: ${endOfCollectionData.respondentImagePath}');
+        debugPrint('   - Signature: ${endOfCollectionData.producerSignaturePath}');
+        debugPrint('   - GPS: ${endOfCollectionData.gpsCoordinates}');
+        debugPrint('   - End Time: ${endOfCollectionData.endTime}');
+      } else {
+        debugPrint('⚠️ No end of collection data available');
+      }
+    } catch (e) {
+      debugPrint('❌ Error getting end of collection data: $e');
+    }
+  
+      
+      // 7. Log what we have
+      debugPrint('\n📊 FINAL DATA SUMMARY:');
+      debugPrint('   • Cover Page: ${_coverData.id != null ? '✅' : '❌'}');
       debugPrint('   • Consent: ${_consentData != null ? '✅' : '❌'}');
       debugPrint('   • Farmer: ${_farmerData != null ? '✅' : '❌'}');
       debugPrint('   • Combined Farm: ${combinedFarmData != null ? '✅' : '❌'}');
@@ -684,75 +1056,16 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         coverPage: _coverData,
         consent: _consentData!,
         farmer: _farmerData,
-       combinedFarm: combinedFarmData != null 
-    ? CombinedFarmerIdentificationModel.fromMap(
-        (combinedFarmData is Map<String, dynamic> 
-            ? combinedFarmData 
-            : (combinedFarmData as dynamic).toMap())
-      )
-    : null,
-                
-        childrenHousehold: childrenHouseholdData != null
-            ? ChildrenHouseholdModel.fromMap(
-                childrenHouseholdData is Map<String, dynamic> 
-                    ? childrenHouseholdData 
-                    : (childrenHouseholdData as dynamic).toMap()
-              ) 
-            : null,
-                
-        remediation: remediationData != null
-    ? (remediationData is Map<String, dynamic>
-        ? RemediationModel.fromMap(remediationData)
-        : (remediationData is RemediationModel 
-            ? remediationData 
-            : null))
-    : null,
-                
-        // Get the farm ID safely
-        sensitization: () {
-          // First, safely extract the farm ID
-          int? farmId;
-          if (combinedFarmData is Map<String, dynamic>) {
-            farmId = (combinedFarmData as Map<String, dynamic>)['id'] as int?;
-          } else if (combinedFarmData is CombinedFarmerIdentificationModel) {
-            farmId = (combinedFarmData as CombinedFarmerIdentificationModel).id;
-          }
-          
-          // Then create the SensitizationData with the farm ID
-          if (sensitizationData is bool) {
-            return SensitizationData(
-              coverPageId: _coverData.id,
-              farmIdentificationId: farmId,
-              isAcknowledged: sensitizationData as bool,
-            );
-          } else if (sensitizationData is Map<String, dynamic>) {
-            final data = Map<String, dynamic>.from(sensitizationData as Map<String, dynamic>);
-            data['farm_identification_id'] = farmId;
-            return SensitizationData.fromMap(data);
-          }
-          return null;
-        }(),
-            
-        sensitizationQuestions: sensitizationQuestionsData != null ?
-            (sensitizationQuestionsData is List ?
-                sensitizationQuestionsData.map((e) => e is Map<String, dynamic> ?
-                    SensitizationQuestionsData.fromMap(e) :
-                    e is SensitizationQuestionsData ? e : SensitizationQuestionsData()
-                ).toList() :
-                [SensitizationQuestionsData.fromMap(sensitizationQuestionsData is Map<String, dynamic> ?
-                    sensitizationQuestionsData : {})]
-            ) : null,
-            
-        endOfCollection: endOfCollectionData != null ?
-            EndOfCollectionModel.fromMap(endOfCollectionData is Map<String, dynamic> ?
-                endOfCollectionData : endOfCollectionData is EndOfCollectionModel ? 
-                endOfCollectionData.toMap() : {}) : null,
+        combinedFarm: combinedFarmData,
+        childrenHousehold: childrenHouseholdData,
+        remediation: remediationData,
+        sensitization: sensitizationData,
+        sensitizationQuestions: sensitizationQuestionsData,
+        endOfCollection: endOfCollectionData,
       );
       
       if (success) {
         _showSnackBar('Survey completed and saved successfully!', backgroundColor: Colors.green);
-        
-        // Show summary of saved data
         _showSaveSummary();
         
         widget.onComplete?.call();
@@ -762,8 +1075,9 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       } else {
         _showSnackBar('Failed to save survey data');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Error completing survey: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
       _showSnackBar('Error completing survey: $e');
     } finally {
       safeSetState(() => _isSavingComplete = false);
@@ -860,24 +1174,233 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   String _getPageTitle(int index) {
     final titles = [
-      'Cover Page', 'Consent Form', 'Farmer Identification', 'Farm Details',
-      'Children in Household', 'Child $_currentChildNumber of $_totalChildren5To17 Details',
-      'Remediation', 'Sensitization', 'Sensitization Questions', 'End of Collection'
+      'Cover Page', 
+      'Consent Form', 
+      'Farmer Identification', 
+      'Farm Details',
+      'Children in Household', 
+      'Child $_currentChildNumber of $_totalChildren5To17 Details',
+      'Remediation', 
+      'Sensitization', 
+      'Sensitization Questions', 
+      'End of Collection'
     ];
     return titles[index];
   }
 
   void _showSnackBar(String msg, {Color? backgroundColor, SnackBarAction? action}) {
-    if (!_canUseContext) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    if (_isDisposed) return;
+    
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
         content: Text(msg),
-        backgroundColor: backgroundColor ?? Colors.red,
-        behavior: SnackBarBehavior.floating,
+        backgroundColor: backgroundColor,
         action: action,
-      ));
-    });
+      ),
+    );
+  }
+  
+  void _showErrorSnackBar(String message) {
+    _showSnackBar(
+      message,
+      backgroundColor: Colors.red[700],
+    );
+  }
+  
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  /// Debug method to check the current state of form data
+  void _debugCheckData() {
+    debugPrint('\n🔍 DEBUG DATA CHECK:');
+    debugPrint('Cover Page ID: ${_coverData.id}');
+    
+    // Check combined farm
+    final combinedState = _combinedPageKey.currentState;
+    if (combinedState != null) {
+      final combinedData = combinedState.getCombinedData();
+      debugPrint('Combined Farm State: ${combinedData != null}');
+      if (combinedData != null) {
+        debugPrint('  - Visit Info: ${combinedData.visitInformation != null}');
+        debugPrint('  - Owner Info: ${combinedData.ownerInformation != null}');
+        debugPrint('  - Workers Info: ${combinedData.workersInFarm != null}');
+        debugPrint('  - Adults Info: ${combinedData.adultsInformation != null}');
+      }
+    }
+    
+    // Check sensitization questions
+    final questionsState = _sensitizationQuestionsKey.currentState;
+    if (questionsState != null) {
+      debugPrint('Sensitization Questions State: ${questionsState.validateForm(silent: true)}');
+    }
+  }
+  
+  /// Validates the form with comprehensive error tracking
+  bool validateForm({bool silent = false}) {
+    final errors = getValidationErrors();
+    
+    // Show first error if not in silent mode
+    if (!silent && errors.isNotEmpty) {
+      _showErrorSnackBar(errors.first);
+      // Also log all errors for debugging
+      debugPrint('🔍 Validation errors: $errors');
+    }
+    
+    return errors.isEmpty;
+  }
+
+  /// Helper method to get validation errors without showing snackbar
+  List<String> getValidationErrors() {
+    final errors = <String>[];
+    
+    // Track exactly which fields are missing
+    if (hasSensitizedHousehold == null) {
+      errors.add('Please indicate if you have sensitized the household members');
+    }
+    
+    if (hasSensitizedOnProtection == null) {
+      errors.add('Please indicate if you have sensitized on protection');
+    }
+    
+    if (hasSensitizedOnSafeLabour == null) {
+      errors.add('Please indicate if you have sensitized on safe labor');
+    }
+    
+    // Make adult counts optional or provide default values
+    final femaleCount = _femaleAdultsController.text.trim().isEmpty 
+        ? 0 
+        : int.tryParse(_femaleAdultsController.text.trim()) ?? 0;
+    final maleCount = _maleAdultsController.text.trim().isEmpty 
+        ? 0 
+        : int.tryParse(_maleAdultsController.text.trim()) ?? 0;
+    
+    if (femaleCount < 0) {
+      errors.add('Please enter a valid number for female adults');
+    }
+    
+    if (maleCount < 0) {
+      errors.add('Please enter a valid number for male adults');
+    }
+    
+    if (_consentForPicture == null) {
+      errors.add('Please indicate if consent for picture was given');
+    } else if (_consentForPicture == false && _consentReasonController.text.trim().isEmpty) {
+      errors.add('Please provide a reason for not giving consent');
+    }
+    
+    // Image validation only if consent was given AND sensitization was done
+    if (_consentForPicture == true && hasSensitizedHousehold == true) {
+      if (_sensitizationImage == null) {
+        errors.add('Please take a sensitization session picture');
+      }
+      
+      if (_householdWithUserImage == null) {
+        errors.add('Please take a picture with the household');
+      }
+    }
+    
+    if (_reactionController.text.trim().isEmpty) {
+      errors.add('Please provide your observations about parents\' reactions');
+    }
+    
+    return errors;
+  }
+
+  /// Enhanced save method with better error handling
+  Future<bool> saveData([int? coverPageId]) async {
+    if (_isDisposed || _isSaving) {
+      debugPrint('⚠️ Save operation prevented - already saving or disposed');
+      return false;
+    }
+    
+    _isSaving = true;
+    
+    try {
+      final effectiveCoverPageId = coverPageId ?? _coverData.id;
+      
+      if (effectiveCoverPageId == null) {
+        _showErrorSnackBar('Error: Missing cover page ID');
+        return false;
+      }
+
+      // Validate form before saving - use silent mode to avoid duplicate messages
+      if (!validateForm(silent: true)) {
+        final errors = getValidationErrors();
+        if (errors.isNotEmpty) {
+          _showErrorSnackBar(errors.first);
+        }
+        return false;
+      }
+
+     final questionsDao = SensitizationQuestionsDao(dbHelper: LocalDBHelper.instance);
+      final now = DateTime.now();
+      
+      // Check if record exists
+      final existingRecord = await questionsDao.getByCoverPageId(effectiveCoverPageId);
+      
+      // Use default values for empty fields
+      final femaleCount = _femaleAdultsController.text.trim().isEmpty 
+          ? "0" 
+          : _femaleAdultsController.text.trim();
+      final maleCount = _maleAdultsController.text.trim().isEmpty 
+          ? "0" 
+          : _maleAdultsController.text.trim();
+      
+      // Create the model with ALL required fields
+      final model = SensitizationQuestionsData(
+        id: existingRecord?.id,
+        coverPageId: effectiveCoverPageId,
+        hasSensitizedHousehold: hasSensitizedHousehold ?? false,
+        hasSensitizedOnProtection: hasSensitizedOnProtection ?? false,
+        hasSensitizedOnSafeLabour: hasSensitizedOnSafeLabour ?? false,
+        femaleAdultsCount: femaleCount,
+        maleAdultsCount: maleCount,
+        consentForPicture: _consentForPicture ?? false,
+        consentReason: _consentForPicture == true ? 'Consent given' : _consentReasonController.text.trim(),
+        sensitizationImagePath: _sensitizationImage?.path,
+        householdWithUserImagePath: _householdWithUserImage?.path,
+        parentsReaction: _reactionController.text.trim(),
+        submittedAt: existingRecord?.submittedAt ?? now,
+        createdAt: existingRecord?.createdAt ?? now,
+        updatedAt: now,
+        isSynced: false,
+        syncStatus: 0,
+      );
+
+      debugPrint('� Saving sensitization questions: ${model.toMap()}');
+
+      // Save to database
+      int result;
+      if (existingRecord == null) {
+        result = await questionsDao.insert(model, effectiveCoverPageId);
+        debugPrint('✅ Inserted new sensitization questions with ID: $result');
+      } else {
+        result = await questionsDao.update(model, effectiveCoverPageId);
+        debugPrint('✅ Updated sensitization questions, rows affected: $result');
+      }
+      
+      _showSuccessSnackBar('Sensitization questions saved successfully!');
+      return result > 0;
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error saving sensitization questions: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
+      _showErrorSnackBar('Failed to save sensitization questions. Please try again.');
+      return false;
+    } finally {
+      _isSaving = false;
+    }
   }
 
   Future<void> _resetFormData() async {
@@ -900,6 +1423,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       _isSensitizationChecked = false;
       _farmIdentificationId = 0;
       _savedData.clear();
+      remediationData = null;
     });
 
     SharedPreferences.getInstance().then((p) {
@@ -908,8 +1432,67 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     });
   }
 
+  // Helper method to update both cover data and farmer data
+  void _updateCoverData(CoverPageData newCoverData) {
+    safeSetState(() {
+      _coverData = newCoverData;
+      if (newCoverData.id != null) {
+        _farmerData = _farmerData.copyWith(coverPageId: newCoverData.id);
+      }
+    });
+  }
+
   Future<void> _loadSavedState() async {
-    // Load from DB if needed
+    try {
+      if (widget.coverPageId != 0) {
+        // If we have a coverPageId from the widget, use it
+        debugPrint('Using coverPageId from widget: ${widget.coverPageId}');
+        _updateCoverData(_coverData.copyWith(id: widget.coverPageId));
+        _initFarmerData(); // Initialize farmer data after setting cover page ID
+        return;
+      }
+
+      // If no coverPageId is provided, create a new one
+      final db = await HouseholdDBHelper.instance.database;
+      
+      // Create a new cover page entry with default values
+      final coverPage = CoverPageData(
+        id: null, // Let the database auto-generate the ID
+        selectedTownCode: _coverData.selectedTownCode,
+        towns: _coverData.towns,
+        farmers: _coverData.farmers,
+        hasUnsavedChanges: true, // Mark as having unsaved changes
+      );
+      
+      // Save the cover page to get an ID
+      final coverPageId = await db.insert(
+        TableNames.coverPageTBL,
+        coverPage.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      
+      if (mounted) {
+        _updateCoverData(_coverData.copyWith(id: coverPageId));
+        _initFarmerData(); // Initialize farmer data after setting cover page ID
+      }
+      
+      debugPrint('Created new cover page with ID: $coverPageId');
+    } catch (e) {
+      debugPrint('Error in _loadSavedState: $e');
+    }
+  }
+
+  Widget _buildLoadingPage(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(message),
+        ],
+      ),
+    );
   }
 
   @override
@@ -918,6 +1501,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     _isDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
+
     _farmerData.ghanaCardNumberController.dispose();
     _farmerData.idNumberController.dispose();
     _farmerData.contactNumberController.dispose();
@@ -1012,11 +1596,11 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
                     onDataChanged: (d) => safeSetState(() => _coverData = d), 
                     onNext: _onNext
                   ),
+                  // Only show consent if cover page has been saved
                   _coverData.id != null
                       ? ConsentPage(
                           key: _consentPageKey,
                           data: _consentData ?? ConsentData.empty().copyWith(coverPageId: _coverData.id),
-                          coverPageId: _coverData.id,
                           onDataChanged: _onConsentDataChanged,
                           onRecordTime: _recordInterviewTime,
                           onGetLocation: _getCurrentLocation,
@@ -1024,21 +1608,25 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
                           onPrevious: _onPrevious,
                           onSurveyEnd: _onSurveyEnd,
                         )
-                      : const Center(child: CircularProgressIndicator()),
+                      : _buildLoadingPage('Preparing Consent Form...'),
                   FarmerIdentification1Page(
                     key: _farmerPageKey,
                     data: _farmerData,
                     onDataChanged: _onFarmerDataChanged,
                     onNext: _onNext,
                   ),
-                  CombinedFarmIdentificationPage(
-                    key: _combinedPageKey,
-                    initialPageIndex: _combinedPageSubIndex,
-                    onPageChanged: (i) => safeSetState(() => _combinedPageSubIndex = i),
-                    onPrevious: _onPrevious,
-                    onNext: _onNext,
-                    onSubmit: _handleCombinedPageSubmit,
-                  ),
+                  // Combined farm page requires cover page ID
+                  _coverData.id != null
+                      ? CombinedFarmIdentificationPage(
+                          key: _combinedPageKey,
+                          coverPageId: _coverData.id!,
+                          initialPageIndex: _combinedPageSubIndex,
+                          onPageChanged: (i) => safeSetState(() => _combinedPageSubIndex = i),
+                          onPrevious: _onPrevious,
+                          onNext: _onNext,
+                          onSubmit: _handleCombinedPageSubmit,
+                        )
+                      : _buildLoadingPage('Loading Farm Details...'),
                   ChildrenHouseholdPage(
                     key: _childrenHouseholdKey,
                     formKey: _childrenHouseholdFormKey,
@@ -1048,16 +1636,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
                     },
                     children5To17Controller: _farmerData.childrenCountController,
                     onPrevious: _onPrevious,
-                    onNext: () {
-                      if (_childrenHouseholdFormKey.currentState?.validate() ?? false) {
-                        final count = int.tryParse(_farmerData.childrenCountController.text) ?? 0;
-                        safeSetState(() {
-                          _totalChildren5To17 = count;
-                          _currentChildNumber = 1;
-                        });
-                        _navigateToPage(count > 0 ? 5 : 6);
-                      }
-                    },
+                    onNext: _onNext,
                   ),
                   ChildDetailsPage(
                     key: _childDetailsPageKey,
@@ -1078,27 +1657,37 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
                     key: _remediationPageKey,
                     onPrevious: _onPrevious,
                     onNext: _onNext,
-                    coverPageId: _farmIdentificationId,
+                    coverPageId: _coverData.id ?? 0,
                   ),
-                  SensitizationPage(
-                    key: _sensitizationPageKey,
-                    sensitizationData: SensitizationData(isAcknowledged: _isSensitizationChecked),
-                    onSensitizationChanged: (d) => safeSetState(() => _isSensitizationChecked = d.isAcknowledged),
-                  ),
+                // Replace the SensitizationPage in your PageView children:
+SensitizationPage(
+  key: _sensitizationPageKey,
+  coverPageId: _coverData.id ?? 0,
+  sensitizationData: SensitizationData(
+    coverPageId: _coverData.id,
+    isAcknowledged: _isSensitizationChecked,
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+  ),
+  onSensitizationChanged: (SensitizationData newData) {
+    safeSetState(() {
+      _isSensitizationChecked = newData.isAcknowledged;
+    });
+  },
+  onNext: _onNext, // Add navigation callbacks
+  onPrevious: _onPrevious,
+),
                   SensitizationQuestionsPage(
                     key: _sensitizationQuestionsKey,
                     onNext: _onNext,
                     onPrevious: _onPrevious,
-                    coverPageId: _farmIdentificationId,
+                    coverPageId: _coverData.id ?? 0,
                   ),
                   EndOfCollectionPage(
                     key: _endOfCollectionKey,
+                    householdDBHelper: HouseholdDBHelper.instance,
                     onPrevious: _onPrevious,
-                    onComplete: () async {
-                      if (_endOfCollectionKey.currentState!.isFormComplete) {
-                        await _completeSurvey();
-                      }
-                    },
+                    onComplete: _onNext,
                   ),
                 ],
               ),

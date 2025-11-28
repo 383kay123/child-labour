@@ -33,8 +33,8 @@ class SensitizationDao {
           debugPrint('✅ Sensitization table created successfully');
         } catch (e) {
           debugPrint('❌ Failed to create sensitization table: $e');
-          // Try the household helper as fallback
-          await _householdDbHelper.diagnoseAndFixSensitizationTable();
+          // // Try the household helper as fallback
+          // await _householdDbHelper.diagnoseAndFixSensitizationTable();
         }
       } else {
         debugPrint('✅ Sensitization table exists');
@@ -64,64 +64,64 @@ class SensitizationDao {
       await db.execute('DROP TABLE IF EXISTS ${TableNames.sensitizationTBL}');
       
       // Create the table with proper schema
-      await db.execute('''
-        CREATE TABLE ${TableNames.sensitizationTBL} (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          cover_page_id INTEGER NOT NULL,
-          farm_identification_id INTEGER NOT NULL,
-          is_acknowledged INTEGER DEFAULT 0,
-          acknowledged_at TEXT,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL,
-          is_synced INTEGER DEFAULT 0,
-          sync_status INTEGER DEFAULT 0,
-          FOREIGN KEY (cover_page_id) REFERENCES ${TableNames.coverPageTBL} (id) ON DELETE CASCADE,
-          FOREIGN KEY (farm_identification_id) REFERENCES ${TableNames.combinedFarmIdentificationTBL} (id) ON DELETE CASCADE
-        )
-      ''');
+     await db.execute('''
+  CREATE TABLE ${TableNames.sensitizationTBL} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cover_page_id INTEGER NOT NULL,
+    is_acknowledged INTEGER DEFAULT 0,
+    acknowledged_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    is_synced INTEGER DEFAULT 0,
+    sync_status INTEGER DEFAULT 0,
+    FOREIGN KEY (cover_page_id) REFERENCES ${TableNames.coverPageTBL} (id) ON DELETE CASCADE
+  )
+''');
+
+// Remove the index on farm_identification_id
+await db.execute('''
+  CREATE INDEX IF NOT EXISTS idx_sensitization_cover_page_id 
+  ON ${TableNames.sensitizationTBL} (cover_page_id)
+''');
       
       // Create index for better performance
       await db.execute('''
-        CREATE INDEX IF NOT EXISTS idx_sensitization_farm_identification_id 
-        ON ${TableNames.sensitizationTBL} (farm_identification_id)
-      ''');
-      debugPrint('✅ Sensitization table created with proper schema');
-    } catch (e, stackTrace) {
-      debugPrint('❌ Error creating sensitization table directly: $e');
-      debugPrint('Stack trace: $stackTrace');
-      rethrow;
-    }
+  CREATE INDEX IF NOT EXISTS idx_sensitization_cover_page_id 
+  ON ${TableNames.sensitizationTBL} (cover_page_id)
+''');
+
+debugPrint('✅ Sensitization table created with proper schema');
+} catch (e, stackTrace) {
+  debugPrint('❌ Error creating sensitization table directly: $e');
+  debugPrint('Stack trace: $stackTrace');
+  rethrow;
+}
   }
 
   /// Inserts a new sensitization record
-  Future<int> insert(SensitizationData model, int coverPageId, {int? farmIdentificationId}) async {
-    try {
-      await _ensureTableExists();
-      final db = await dbHelper.database;
-      
-      if (farmIdentificationId == null) {
-        throw ArgumentError('farmIdentificationId is required for sensitization record');
-      }
-      
-      final data = model.copyWith(
-        updatedAt: DateTime.now(),
-        isSynced: false,
-      ).toMap()
-      ..addAll({
-        'cover_page_id': coverPageId,
-        'farm_identification_id': farmIdentificationId,
-        'created_at': DateTime.now().toIso8601String(),
-      });
+ Future<int> insert(SensitizationData model, int coverPageId) async {
+  try {
+    await _ensureTableExists();
+    final db = await dbHelper.database;
+    
+    final data = model.copyWith(
+      updatedAt: DateTime.now(),
+      isSynced: false,
+    ).toMap()
+    ..addAll({
+      'cover_page_id': coverPageId,
+      'created_at': DateTime.now().toIso8601String(),
+    });
 
-      final id = await db.insert(
-        TableNames.sensitizationTBL,
-        data,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      
-      if (kDebugMode) {
-        log('✅ Inserted sensitization record with ID: $id');
-      }
+    final id = await db.insert(
+      TableNames.sensitizationTBL,
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    
+    if (kDebugMode) {
+      log('✅ Inserted sensitization record with ID: $id');
+    }
       
       return id;
     } catch (e, stackTrace) {
@@ -153,7 +153,7 @@ class SensitizationDao {
       // Remove fields that shouldn't be updated
       data.remove('id');
       data.remove('created_at');
-      data.remove('farm_identification_id');
+   
 
       final count = await db.update(
         TableNames.sensitizationTBL,
@@ -216,29 +216,29 @@ class SensitizationDao {
     }
   }
 
-  /// Gets a sensitization record by farm identification ID
-  Future<SensitizationData?> getByFarmIdentificationId(int farmId) async {
+  /// Gets a sensitization record by cover page ID
+  Future<SensitizationData?> getByCoverPageId(int coverPageId) async {
     try {
       await _ensureTableExists();
       final db = await dbHelper.database;
       final List<Map<String, dynamic>> maps = await db.query(
         TableNames.sensitizationTBL,
-        where: 'farm_identification_id = ?',
-        whereArgs: [farmId],
+        where: 'cover_page_id = ?',
+        whereArgs: [coverPageId],
         orderBy: 'id DESC',
         limit: 1,
       );
 
       if (maps.isEmpty) {
         if (kDebugMode) {
-          log('ℹ️ No sensitization record found for farm ID: $farmId');
+          log('ℹ️ No sensitization record found for cover page ID: $coverPageId');
         }
         return null;
       }
       
       return _fromMap(maps.first);
     } catch (e, stackTrace) {
-      log('❌ Error getting sensitization record by farm ID: $farmId', 
+      log('❌ Error getting sensitization record by cover page ID: $coverPageId', 
           error: e, 
           stackTrace: stackTrace);
           
@@ -253,6 +253,44 @@ class SensitizationDao {
       rethrow;
     }
   }
+
+  // /// Gets a sensitization record by farm identification ID
+  // Future<SensitizationData?> getByFarmIdentificationId(int farmId) async {
+  //   try {
+  //     await _ensureTableExists();
+  //     final db = await dbHelper.database;
+  //     final List<Map<String, dynamic>> maps = await db.query(
+  //       TableNames.sensitizationTBL,
+  //       where: 'farm_identification_id = ?',
+  //       whereArgs: [farmId],
+  //       orderBy: 'id DESC',
+  //       limit: 1,
+  //     );
+
+  //     if (maps.isEmpty) {
+  //       if (kDebugMode) {
+  //         log('ℹ️ No sensitization record found for farm ID: $farmId');
+  //       }
+  //       return null;
+  //     }
+      
+  //     return _fromMap(maps.first);
+  //   } catch (e, stackTrace) {
+  //     log('❌ Error getting sensitization record by farm ID: $farmId', 
+  //         error: e, 
+  //         stackTrace: stackTrace);
+          
+  //     // If query fails due to missing table, recreate and return null
+  //     if (e.toString().contains('no such table')) {
+  //       debugPrint('🔄 Table missing, recreating...');
+  //       final db = await dbHelper.database;
+  //       await _createTableDirectly(db);
+  //       return null;
+  //     }
+      
+  //     rethrow;
+  //   }
+  // }
 
   /// Gets all sensitization records
   Future<List<SensitizationData>> getAll() async {
@@ -314,58 +352,58 @@ class SensitizationDao {
     }
   }
 
-  /// Acknowledges sensitization for a farm identification
-  /// This will create a new record if none exists, or update the existing one
-  /// Returns true if successful, false otherwise
-  Future<bool> acknowledge(int farmIdentificationId) async {
-    try {
-      await _ensureTableExists();
-      final existing = await getByFarmIdentificationId(farmIdentificationId);
-      final now = DateTime.now();
+  // /// Acknowledges sensitization for a farm identification
+  // /// This will create a new record if none exists, or update the existing one
+  // /// Returns true if successful, false otherwise
+  // Future<bool> acknowledge(int farmIdentificationId) async {
+  //   try {
+  //     await _ensureTableExists();
+  //     final existing = await getByFarmIdentificationId(farmIdentificationId);
+  //     final now = DateTime.now();
       
-      if (kDebugMode) {
-        log('🔄 Acknowledging sensitization for farm ID: $farmIdentificationId');
-        log(existing == null 
-            ? 'No existing record found, creating new one' 
-            : 'Updating existing record ID: ${existing.id}');
-      }
+  //     if (kDebugMode) {
+  //       log('🔄 Acknowledging sensitization for farm ID: $farmIdentificationId');
+  //       log(existing == null 
+  //           ? 'No existing record found, creating new one' 
+  //           : 'Updating existing record ID: ${existing.id}');
+  //     }
       
-      final data = SensitizationData(
-        id: existing?.id,
-        isAcknowledged: true,
-        acknowledgedAt: now,
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now,
-        isSynced: existing?.isSynced ?? false,
-      );
+  //     final data = SensitizationData(
+  //       id: existing?.id,
+  //       isAcknowledged: true,
+  //       acknowledgedAt: now,
+  //       createdAt: existing?.createdAt ?? now,
+  //       updatedAt: now,
+  //       isSynced: existing?.isSynced ?? false,
+  //     );
 
-      if (existing == null) {
-        await insert(data, farmIdentificationId);
-      } else {
-        await update(data, existing.id!);
-      }
+  //     if (existing == null) {
+  //       await insert(data, farmIdentificationId);
+  //     } else {
+  //       await update(data, existing.id!);
+  //     }
       
-      if (kDebugMode) {
-        log('✅ Successfully acknowledged sensitization for farm ID: $farmIdentificationId');
-      }
+  //     if (kDebugMode) {
+  //       log('✅ Successfully acknowledged sensitization for farm ID: $farmIdentificationId');
+  //     }
       
-      return true;
-    } catch (e, stackTrace) {
-      log('❌ Error acknowledging sensitization for farm ID: $farmIdentificationId',
-          error: e,
-          stackTrace: stackTrace);
+  //     return true;
+  //   } catch (e, stackTrace) {
+  //     log('❌ Error acknowledging sensitization for farm ID: $farmIdentificationId',
+  //         error: e,
+  //         stackTrace: stackTrace);
           
-      // If acknowledge fails due to missing table, recreate and retry once
-      if (e.toString().contains('no such table')) {
-        debugPrint('🔄 Table missing, recreating and retrying...');
-        final db = await dbHelper.database;
-        await _createTableDirectly(db);
-        return await acknowledge(farmIdentificationId); // Retry
-      }
+  //     // If acknowledge fails due to missing table, recreate and retry once
+  //     if (e.toString().contains('no such table')) {
+  //       debugPrint('🔄 Table missing, recreating and retrying...');
+  //       final db = await dbHelper.database;
+  //       await _createTableDirectly(db);
+  //       return await acknowledge(farmIdentificationId); // Retry
+  //     }
       
-      rethrow;
-    }
-  }
+  //     rethrow;
+  //   }
+  // }
 
   /// Converts a database map to a SensitizationData
   SensitizationData _fromMap(Map<String, dynamic> map) {

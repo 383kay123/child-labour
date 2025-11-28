@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
-import 'package:human_rights_monitor/view/screen_wrapper/screen_wrapper.dart';
+
 import 'package:human_rights_monitor/view/splash/splash_screen.dart';
 import 'package:human_rights_monitor/view/theme/app_theme.dart';
 
@@ -15,14 +14,21 @@ void main() async {
     debugPrint('Caught error: ${details.exception}');
   };
 
-  // Only clear data in debug mode for development
-  if (kDebugMode) {
+  // REMOVED: Automatic database clearing on startup
+  // This was causing all your data to be deleted every time the app restarts
+  
+  // Optional: Only for specific debugging scenarios
+  // Uncomment and use manually when needed for testing
+  /*
+  if (kDebugMode && false) { // Set to true only when you want to clear data
     try {
+      debugPrint('🔄 Manually clearing database for testing...');
       await HouseholdDBHelper.instance.clearAllSurveyData();
     } catch (e) {
-      debugPrint('Error clearing database on startup: $e');
+      debugPrint('Error clearing database: $e');
     }
   }
+  */
 
   runApp(const HumanRightsMonitor());
 }

@@ -30,6 +30,33 @@ class LocalDBHelper {
         status INTEGER
       )
     ''');
+
+
+        await db.execute('''
+      CREATE TABLE ${TableNames.farmersTBL}(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        farmer_code TEXT UNIQUE NOT NULL,
+        society_name INTEGER NOT NULL,
+        national_id_no TEXT UNIQUE NOT NULL,
+        contact TEXT NOT NULL,
+        id_type TEXT NOT NULL,
+        id_expiry_date TEXT NOT NULL,
+        no_of_cocoa_farms INTEGER NOT NULL,
+        no_of_certified_crop INTEGER NOT NULL,
+        total_cocoa_bags_harvested_previous_year INTEGER NOT NULL,
+        total_cocoa_bags_sold_group_previous_year INTEGER NOT NULL,
+        current_year_yeild_estimate INTEGER NOT NULL,
+        staffTbl_foreignkey INTEGER NOT NULL,
+        uuid TEXT UNIQUE NOT NULL,
+        farmer_photo TEXT,
+        cal_no_mapped_farms INTEGER NOT NULL,
+        mapped_status TEXT NOT NULL,
+        new_farmer_code TEXT UNIQUE NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
   }
 
   Future<Database> _initDB(String filePath) async {

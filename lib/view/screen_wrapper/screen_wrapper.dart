@@ -18,7 +18,7 @@ class _ScreenWrapperState extends State<ScreenWrapper> {
 
   final List<Widget> _screens = const [
     Homepage(),
-    FarmerListScreen(),
+    FarmersListScreen(),
     // CommunityListScreen(),
     ProfileScreen(),
   ];
@@ -50,10 +50,12 @@ class _ScreenWrapperState extends State<ScreenWrapper> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onItemTapped,
-        backgroundColor: theme.primaryColor,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // keeps labels always visible
+        backgroundColor: theme.cardColor,
+        selectedItemColor: theme.primaryColor,
+        unselectedItemColor: theme.unselectedWidgetColor,
+        selectedLabelStyle: theme.textTheme.labelSmall,
+        unselectedLabelStyle: theme.textTheme.labelSmall,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),

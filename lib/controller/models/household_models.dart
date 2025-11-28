@@ -17,6 +17,12 @@ export 'dropdown_item_model.dart';
 class CoverPageData {
   /// Database ID
   final int? id;
+  
+  /// Sync status (0 = not synced, 1 = synced)
+  final int isSynced;
+  
+  /// Last update timestamp
+  final DateTime? updatedAt;
 
   /// Creates an empty CoverPageData instance with default values
   factory CoverPageData.empty() => CoverPageData(
@@ -31,6 +37,8 @@ class CoverPageData {
         isLoadingFarmers: false,
         hasUnsavedChanges: false,
         member: null,
+        isSynced: 0, // Default to not synced
+        updatedAt: null,
       );
       
   /// Creates a CoverPageData from a database map
@@ -125,6 +133,8 @@ class CoverPageData {
       'isLoadingTowns': isLoadingTowns ? 1 : 0,
       'isLoadingFarmers': isLoadingFarmers ? 1 : 0,
       'hasUnsavedChanges': hasUnsavedChanges ? 1 : 0,
+      'is_synced': isSynced,
+      'updated_at': updatedAt?.toIso8601String(),
       'member': member,
     };
   }
@@ -141,6 +151,8 @@ class CoverPageData {
     this.member,
     bool? isLoadingFarmers,
     bool? hasUnsavedChanges,
+    int? isSynced,
+    this.updatedAt,
   })  : _selectedTownCode = selectedTownCode,
         _selectedFarmerCode = selectedFarmerCode,
         _towns = towns ?? [],
@@ -149,7 +161,8 @@ class CoverPageData {
         _farmerError = farmerError,
         _isLoadingTowns = isLoadingTowns ?? false,
         _isLoadingFarmers = isLoadingFarmers ?? false,
-        hasUnsavedChanges = hasUnsavedChanges ?? false;
+        hasUnsavedChanges = hasUnsavedChanges ?? false,
+        isSynced = isSynced ?? 0;
 
   /// Update town selection
   CoverPageData selectTown(String? townCode) {
@@ -186,6 +199,8 @@ class CoverPageData {
     bool? isLoadingTowns,
     bool? isLoadingFarmers,
     bool? hasUnsavedChanges,
+    int? isSynced,
+    DateTime? updatedAt,
     Map<String, dynamic>? member,
   }) {
     return CoverPageData(
@@ -199,6 +214,8 @@ class CoverPageData {
       isLoadingTowns: isLoadingTowns ?? _isLoadingTowns,
       isLoadingFarmers: isLoadingFarmers ?? _isLoadingFarmers,
       hasUnsavedChanges: hasUnsavedChanges ?? this.hasUnsavedChanges,
+      isSynced: isSynced ?? this.isSynced,
+      updatedAt: updatedAt ?? this.updatedAt,
       member: member ?? this.member,
     );
   }
@@ -238,7 +255,6 @@ class CoverPageData {
     );
   }
 }
-
 
 /// Model for Consent Page data
 class ConsentData {
@@ -293,7 +309,7 @@ class ConsentData {
   // Create a copyWith method to update fields
   ConsentData copyWith({
     int? id,
-    int? coverPageId, // Update copyWith method to handle coverPageId updates
+    int? coverPageId,
     String? communityType,
     String? residesInCommunityConsent,
     String? farmerAvailable,
@@ -316,7 +332,7 @@ class ConsentData {
   }) {
     return ConsentData(
       id: id ?? this.id,
-      coverPageId: coverPageId,
+      coverPageId: coverPageId ?? this.coverPageId,
       communityType: communityType ?? this.communityType,
       residesInCommunityConsent: residesInCommunityConsent ?? this.residesInCommunityConsent,
       farmerAvailable: farmerAvailable ?? this.farmerAvailable,
@@ -343,7 +359,7 @@ class ConsentData {
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'id': id,
-      'cover_page_id': coverPageId, // Foreign key to cover page
+      'cover_page_id': coverPageId,
       'consent_given': consentGiven == true ? 1 : 0,
       'declined_consent': declinedConsent == true ? 1 : 0,
       'refusal_reason': refusalReason,
@@ -700,6 +716,7 @@ class FarmerChild {
     return 'FarmerChild(childNumber: $childNumber, firstName: $firstName, surname: $surname)';
   }
 }
+
 class FarmerIdentificationData {
   final int? id;
   final int? coverPageId;
@@ -807,9 +824,25 @@ class FarmerIdentificationData {
 
   /// Create empty instance
   factory FarmerIdentificationData.empty() {
-    return FarmerIdentificationData();
+    return FarmerIdentificationData(
+      id: null,
+      coverPageId: null,
+      hasGhanaCard: null,
+      ghanaCardNumber: null,
+      selectedIdType: null,
+      idNumber: null,
+      idPictureConsent: null,
+      noConsentReason: null,
+      idImagePath: null,
+      contactNumber: null,
+      childrenCount: 0,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isSynced: 0,
+      syncStatus: 0,
+      children: const [],
+    );
   }
-
   /// Update Ghana Card selection and clear related fields when needed
   FarmerIdentificationData updateGhanaCard(int? value) {
     return copyWith(
@@ -831,10 +864,16 @@ class FarmerIdentificationData {
   }
 
   FarmerIdentificationData updatePictureConsent(String? value) {
+    // If value is null, set consent to null (not answered)
+    // If value is 'Yes', set consent to 1
+    // If value is 'No', set consent to 0
     final consentValue = value == null ? null : (value == 'Yes' ? 1 : 0);
     return copyWith(
       idPictureConsent: consentValue,
+      // Only clear the image path if consent is explicitly 'No'
       idImagePath: consentValue == 0 ? null : idImagePath,
+      // Clear no consent reason if consent is not 'No'
+      noConsentReason: consentValue != 0 ? null : noConsentReason,
       preserveControllers: true,
     );
   }
@@ -1169,7 +1208,7 @@ class ChildrenHouseholdModel {
     return ChildrenHouseholdModel(
       hasChildrenInHousehold: null,
       numberOfChildren: 0,
-      children5To17: 0,
+      children5To17 : 0,
       childrenDetails: [],
       timestamp: DateTime.now(),
     );
@@ -1223,7 +1262,7 @@ class ChildrenHouseholdModel {
     final now = DateTime.now().toIso8601String();
     return {
       'id': id,
-      'farm_identification_id': coverPageId,
+      'cover_page_id': coverPageId,
       'has_children_in_household': hasChildrenInHousehold,
       'number_of_children': numberOfChildren,
       'children_5_to_17': children5To17,
@@ -1369,45 +1408,113 @@ class CombinedFarmerIdentificationModel {
   // Convert to Map for database storage
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id,
-      
-      // Nested models
-      'visitInformation': visitInformation?.toMap(),
-      'ownerInformation': ownerInformation?.toMap(),
-      'workersInFarm': workersInFarm?.toMap(),
-      'adultsInformation': adultsInformation?.toMap(),
-      
-      // Metadata
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-      'isSynced': isSynced ? 1 : 0,
+      'id': id,
+      'cover_page_id': coverPageId,
+      'visit_information': visitInformation?.toMap(),
+      'owner_information': ownerInformation?.toMap(),
+      'workers_in_farm': workersInFarm?.toMap(),
+      'adults_information': adultsInformation?.toMap(),
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'is_synced': isSynced ? 1 : 0,
+      'sync_status': syncStatus ?? 0,
     };
   }
 
   // Create from Map (for database retrieval)
   factory CombinedFarmerIdentificationModel.fromMap(Map<String, dynamic> map) {
-    return CombinedFarmerIdentificationModel(
-      id: map['id'],
+    // Helper function to safely parse JSON strings to maps
+    Map<String, dynamic>? parseJsonField(dynamic value) {
+      if (value == null) return null;
       
-      // Nested models
-      visitInformation: map['visitInformation'] != null 
-          ? VisitInformationData.fromMap(Map<String, dynamic>.from(map['visitInformation']))
-          : null,
-      ownerInformation: map['ownerInformation'] != null
-          ? IdentificationOfOwnerData.fromMap(Map<String, dynamic>.from(map['ownerInformation']))
-          : null,
-      workersInFarm: map['workersInFarm'] != null
-          ? WorkersInFarmData.fromMap(Map<String, dynamic>.from(map['workersInFarm']))
-          : null,
-      adultsInformation: map['adultsInformation'] != null
-          ? AdultsInformationData.fromMap(Map<String, dynamic>.from(map['adultsInformation']))
-          : null,
+      // If it's already a Map, return it directly
+      if (value is Map) return Map<String, dynamic>.from(value);
       
-      // Metadata
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
-      isSynced: map['isSynced'] == 1,
-    );
+      // If it's a String, try to parse it as JSON
+      if (value is String) {
+        try {
+          // First, try to parse as JSON
+          final parsed = jsonDecode(value);
+          // If the parsed result is a Map, return it
+          if (parsed is Map) {
+            return Map<String, dynamic>.from(parsed);
+          }
+          return {'value': parsed}; // Wrap non-map values in a map
+        } catch (e) {
+          debugPrint('Error parsing JSON field: $e');
+          // If parsing fails, try to handle the string as a raw value
+          return {'value': value};
+        }
+      }
+      
+      // For any other type, try to convert to a map
+      try {
+        return Map<String, dynamic>.from(value);
+      } catch (e) {
+        debugPrint('Error converting to map: $e');
+        return null;
+      }
+    }
+
+    // Debug print the incoming map
+    debugPrint('🔍 [CombinedFarm] Raw map data: $map');
+
+    try {
+      // Debug print the type of each field
+      map.forEach((key, value) {
+        if (value != null) {
+          debugPrint('🔍 [CombinedFarm] Field $key has type: ${value.runtimeType}');
+          if (value is String) {
+            debugPrint('🔍 [CombinedFarm] Field $key value: $value');
+          }
+        }
+      });
+
+      final result = CombinedFarmerIdentificationModel(
+        id: map['id'] is int ? map['id'] : int.tryParse(map['id']?.toString() ?? ''),
+        coverPageId: map['cover_page_id'] is int 
+            ? map['cover_page_id'] 
+            : int.tryParse(map['cover_page_id']?.toString() ?? ''),
+        
+        // Nested models with JSON parsing
+        visitInformation: map['visit_information'] != null 
+            ? VisitInformationData.fromMap(parseJsonField(map['visit_information']) ?? {})
+            : null,
+        ownerInformation: map['owner_information'] != null
+            ? IdentificationOfOwnerData.fromMap(parseJsonField(map['owner_information']) ?? {})
+            : null,
+        workersInFarm: map['workers_in_farm'] != null
+            ? WorkersInFarmData.fromMap(parseJsonField(map['workers_in_farm']) ?? {})
+            : null,
+        adultsInformation: map['adults_information'] != null
+            ? AdultsInformationData.fromMap(parseJsonField(map['adults_information']) ?? {})
+            : null,
+        
+        // Metadata
+        createdAt: map['created_at'] != null 
+            ? (map['created_at'] is DateTime 
+                ? map['created_at'] 
+                : DateTime.tryParse(map['created_at'].toString()))
+            : null,
+        updatedAt: map['updated_at'] != null 
+            ? (map['updated_at'] is DateTime 
+                ? map['updated_at'] 
+                : DateTime.tryParse(map['updated_at'].toString()))
+            : null,
+        isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
+        syncStatus: map['sync_status'] is int 
+            ? map['sync_status'] 
+            : int.tryParse(map['sync_status']?.toString() ?? '0'),
+      );
+      
+      debugPrint('✅ [CombinedFarm] Successfully parsed model: $result');
+      return result;
+    } catch (e, stackTrace) {
+      debugPrint('❌ [CombinedFarm] Error creating CombinedFarmerIdentificationModel: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
+      // Return an empty model with default values
+      return CombinedFarmerIdentificationModel.empty();
+    }
   }
 
   // Create a copy with updated fields
@@ -1939,23 +2046,31 @@ class RemediationModel {
     this.otherCommunityActionDetails,
   });
 
-  // Convert to Map for database storage
+  /// Convert to Map for database storage
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'cover_page_id': coverPageId,
-      'hasSchoolFees': hasSchoolFees == null ? null : (hasSchoolFees! ? 1 : 0),
-      'childProtectionEducation': childProtectionEducation ? 1 : 0,
-      'schoolKitsSupport': schoolKitsSupport ? 1 : 0,
-      'igaSupport': igaSupport ? 1 : 0,
-      'otherSupport': otherSupport ? 1 : 0,
-      'otherSupportDetails': otherSupportDetails,
-      'communityAction': communityAction,
-      'otherCommunityActionDetails': otherCommunityActionDetails,
+      'has_school_fees': hasSchoolFees == null ? null : (hasSchoolFees! ? 1 : 0),
+      'child_protection_education': childProtectionEducation ? 1 : 0,
+      'school_kits_support': schoolKitsSupport ? 1 : 0,
+      'iga_support': igaSupport ? 1 : 0,
+      'other_support': otherSupport ? 1 : 0,
+      'other_support_details': otherSupportDetails,
+      'community_action': communityAction,
+      'other_community_action_details': otherCommunityActionDetails,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+      'is_synced': 0,
+      'sync_status': 0,
     };
     
+    // Add ID if it exists
     if (id != null) {
       map['id'] = id;
     }
+    
+    // Remove null values to prevent SQL errors
+    map.removeWhere((key, value) => value == null);
     
     return map;
   }
@@ -1965,16 +2080,16 @@ class RemediationModel {
     return RemediationModel(
       id: map['id'] as int?,
       coverPageId: map['cover_page_id'] as int?,
-      hasSchoolFees: map['hasSchoolFees'] == null 
+      hasSchoolFees: map['has_school_fees'] == null 
           ? null 
-          : map['hasSchoolFees'] == 1,
-      childProtectionEducation: map['childProtectionEducation'] == 1,
-      schoolKitsSupport: map['schoolKitsSupport'] == 1,
-      igaSupport: map['igaSupport'] == 1,
-      otherSupport: map['otherSupport'] == 1,
-      otherSupportDetails: map['otherSupportDetails'],
-      communityAction: map['communityAction'],
-      otherCommunityActionDetails: map['otherCommunityActionDetails'],
+          : (map['has_school_fees'] == 1 || map['has_school_fees'] == true),
+      childProtectionEducation: (map['child_protection_education'] == 1 || map['child_protection_education'] == true),
+      schoolKitsSupport: (map['school_kits_support'] == 1 || map['school_kits_support'] == true),
+      igaSupport: (map['iga_support'] == 1 || map['iga_support'] == true),
+      otherSupport: (map['other_support'] == 1 || map['other_support'] == true),
+      otherSupportDetails: map['other_support_details'],
+      communityAction: map['community_action'],
+      otherCommunityActionDetails: map['other_community_action_details'],
     );
   }
 
@@ -2026,8 +2141,7 @@ class RemediationModel {
 /// Represents the user's acknowledgment of sensitization information.
 class SensitizationData {
   final int? id;
-  final int? coverPageId;  // Reference to the cover page this sensitization belongs to
-  final int? farmIdentificationId;  // Reference to the farm identification record
+  final int? coverPageId;
   final bool isAcknowledged;
   final DateTime? acknowledgedAt;
   final DateTime? createdAt;
@@ -2036,20 +2150,9 @@ class SensitizationData {
   final int? syncStatus;
 
   /// Creates a new [SensitizationData] instance.
-  ///
-  /// - [id]: The unique identifier for this record.
-  /// - [coverPageId]: The ID of the cover page this sensitization belongs to.
-  /// - [farmIdentificationId]: The ID of the farm identification record.
-  /// - [isAcknowledged]: Whether the user has acknowledged the information.
-  /// - [acknowledgedAt]: When the acknowledgment was made.
-  /// - [createdAt]: When this record was created.
-  /// - [updatedAt]: When this record was last updated.
-  /// - [isSynced]: Whether this record has been synced with the server.
-  /// - [syncStatus]: The sync status of this record.
   const SensitizationData({
     this.id,
     this.coverPageId,
-    this.farmIdentificationId,
     this.isAcknowledged = false,
     this.acknowledgedAt,
     this.createdAt,
@@ -2063,19 +2166,18 @@ class SensitizationData {
     return SensitizationData(
       id: map['id'],
       coverPageId: map['cover_page_id'],
-      farmIdentificationId: map['farm_identification_id'],
-      isAcknowledged: map['is_acknowledged'] == 1,
-      acknowledgedAt: map['acknowledged_at'] != null 
-          ? DateTime.parse(map['acknowledged_at']) 
-          : null,
-      createdAt: map['created_at'] != null 
-          ? DateTime.parse(map['created_at'])
-          : null,
-      updatedAt: map['updated_at'] != null 
-          ? DateTime.parse(map['updated_at'])
-          : null,
-      isSynced: map['is_synced'] == 1,
-      syncStatus: map['sync_status'] as int? ?? 0,
+      isAcknowledged: map['is_acknowledged'] == 1 || map['is_acknowledged'] == true,
+      acknowledgedAt: map['acknowledged_at'] is String 
+          ? DateTime.tryParse(map['acknowledged_at']) 
+          : map['acknowledged_at'],
+      createdAt: map['created_at'] is String 
+          ? DateTime.tryParse(map['created_at'])
+          : map['created_at'],
+      updatedAt: map['updated_at'] is String 
+          ? DateTime.tryParse(map['updated_at'])
+          : map['updated_at'],
+      isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
+      syncStatus: map['sync_status'] is int ? map['sync_status'] : 0,
     );
   }
 
@@ -2083,7 +2185,6 @@ class SensitizationData {
   SensitizationData copyWith({
     int? id,
     int? coverPageId,
-    int? farmIdentificationId,
     bool? isAcknowledged,
     DateTime? acknowledgedAt,
     DateTime? createdAt,
@@ -2094,7 +2195,6 @@ class SensitizationData {
     return SensitizationData(
       id: id ?? this.id,
       coverPageId: coverPageId ?? this.coverPageId,
-      farmIdentificationId: farmIdentificationId ?? this.farmIdentificationId,
       isAcknowledged: isAcknowledged ?? this.isAcknowledged,
       acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
       createdAt: createdAt ?? this.createdAt,
@@ -2109,7 +2209,6 @@ class SensitizationData {
     return {
       'id': id,
       'cover_page_id': coverPageId,
-      'farm_identification_id': farmIdentificationId,
       'is_acknowledged': isAcknowledged ? 1 : 0,
       'acknowledged_at': acknowledgedAt?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
@@ -2202,7 +2301,6 @@ class SensitizationContent {
       'Please take a moment to understand the dangers and impact of child labour and to promote child protection and education.';
 }
 
-/// Represents the data collected from the Sensitization Questions form.
 /// Represents the data collected from the Sensitization Questions form.
 class SensitizationQuestionsData {
   /// Database primary key
@@ -2329,7 +2427,7 @@ class SensitizationQuestionsData {
     
     // Only include non-null values
     if (id != null) map['id'] = id;
-    if (coverPageId != null) map['farm_identification_id'] = coverPageId;
+    if (coverPageId != null) map['cover_page_id'] = coverPageId;
     
     if (hasSensitizedHousehold != null) {
       map['has_sensitized_household'] = hasSensitizedHousehold! ? 1 : 0;
@@ -2381,24 +2479,28 @@ class SensitizationQuestionsData {
   factory SensitizationQuestionsData.fromMap(Map<String, dynamic> map) {
     return SensitizationQuestionsData(
       id: map['id'],
-      coverPageId: map['farm_identification_id'],
-      hasSensitizedHousehold: map['has_sensitized_household'] == 1,
-      hasSensitizedOnProtection: map['has_sensitized_on_protection'] == 1,
-      hasSensitizedOnSafeLabour: map['has_sensitized_on_safe_labour'] == 1,
-      femaleAdultsCount: map['female_adults_count'] ?? '',
-      maleAdultsCount: map['male_adults_count'] ?? '',
-      consentForPicture: map['consent_for_picture'] == 1,
-      consentReason: map['consent_reason'] ?? '',
-      sensitizationImagePath: map['sensitization_image_path'],
-      householdWithUserImagePath: map['household_with_user_image_path'],
-      parentsReaction: map['parents_reaction'] ?? '',
-      submittedAt: map['submitted_at'] != null 
-          ? DateTime.parse(map['submitted_at']) 
-          : DateTime.now(),
-      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : null,
-      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
-      isSynced: map['is_synced'] == 1,
-      syncStatus: map['sync_status'] ?? 0,
+      coverPageId: map['cover_page_id'],
+      hasSensitizedHousehold: map['has_sensitized_household'] == 1 || map['has_sensitized_household'] == true,
+      hasSensitizedOnProtection: map['has_sensitized_on_protection'] == 1 || map['has_sensitized_on_protection'] == true,
+      hasSensitizedOnSafeLabour: map['has_sensitized_on_safe_labour'] == 1 || map['has_sensitized_on_safe_labour'] == true,
+      femaleAdultsCount: map['female_adults_count']?.toString() ?? '',
+      maleAdultsCount: map['male_adults_count']?.toString() ?? '',
+      consentForPicture: map['consent_for_picture'] == 1 || map['consent_for_picture'] == true,
+      consentReason: map['consent_reason']?.toString() ?? '',
+      sensitizationImagePath: map['sensitization_image_path']?.toString(),
+      householdWithUserImagePath: map['household_with_user_image_path']?.toString(),
+      parentsReaction: map['parents_reaction']?.toString() ?? '',
+      submittedAt: map['submitted_at'] is String 
+          ? DateTime.tryParse(map['submitted_at']) ?? DateTime.now()
+          : map['submitted_at'] ?? DateTime.now(),
+      createdAt: map['created_at'] is String 
+          ? DateTime.tryParse(map['created_at'])
+          : map['created_at'],
+      updatedAt: map['updated_at'] is String 
+          ? DateTime.tryParse(map['updated_at'])
+          : map['updated_at'],
+      isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
+      syncStatus: map['sync_status'] is int ? map['sync_status'] : 0,
     );
   }
 
@@ -2457,10 +2559,10 @@ class SensitizationQuestionsData {
         ')';
   }
 }
+
 class EndOfCollectionModel {
-  final int? id; // For database primary key
-  final int? coverPageId; // Reference to the cover page
-  final int? farmIdentificationId; // Reference to the farmer identification
+  final int? id;
+  final int? coverPageId;
   
   // Image paths (stored as file paths in local storage)
   final String? respondentImagePath;
@@ -2479,11 +2581,11 @@ class EndOfCollectionModel {
   // Additional information
   final String? remarks;
   final bool isSynced; // Track if synced with server
+  final int syncStatus;
 
   const EndOfCollectionModel({
     this.id,
     this.coverPageId,
-    this.farmIdentificationId,
     this.respondentImagePath, 
     this.producerSignaturePath,
     this.latitude,
@@ -2494,52 +2596,133 @@ class EndOfCollectionModel {
     this.updatedAt,
     this.remarks,
     this.isSynced = false,
+    this.syncStatus = 0,
   });
 
   // Convert to Map for database storage
   Map<String, dynamic> toMap() {
-    return {
-      if (id != null) 'id': id,
-      'cover_page_id': coverPageId, // This was missing!
-      'farm_identification_id': coverPageId, // Or use farmerId if different
-      'respondent_image_path': respondentImagePath,
-      'producer_signature_path': producerSignaturePath,
-      'latitude': latitude,
-      'longitude': longitude,
-      'gps_coordinates': gpsCoordinates,
-      'end_time': endTime?.toIso8601String(),
-      'remarks': remarks,
-      'created_at': createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
-      'updated_at': DateTime.now().toIso8601String(),
-      'is_synced': isSynced ? 1 : 0,
-      'sync_status': 0, // Default sync status
-    };
+    final map = <String, dynamic>{};
+    
+    if (id != null) map['id'] = id;
+    map['cover_page_id'] = coverPageId;
+    map['respondent_image_path'] = respondentImagePath;
+    map['producer_signature_path'] = producerSignaturePath;
+    map['latitude'] = latitude;
+    map['longitude'] = longitude;
+    map['gps_coordinates'] = gpsCoordinates;
+    map['end_time'] = endTime?.toIso8601String();
+    map['remarks'] = remarks;
+    map['created_at'] = createdAt?.toIso8601String() ?? DateTime.now().toIso8601String();
+    map['updated_at'] = updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String();
+    map['is_synced'] = isSynced ? 1 : 0;
+    map['sync_status'] = syncStatus;
+    
+    // Remove null values to prevent SQL errors
+    map.removeWhere((key, value) => value == null);
+    
+    return map;
   }
 
-  // Create from Map (for database retrieval)
+  // Create from Map (for database retrieval) - IMPROVED VERSION
   factory EndOfCollectionModel.fromMap(Map<String, dynamic> map) {
-    return EndOfCollectionModel(
-      id: map['id'] as int?,
-      coverPageId: map['cover_page_id'] as int?,
-      farmIdentificationId: map['farm_identification_id'] as int?,
-      respondentImagePath: map['respondent_image_path'] as String?,
-      producerSignaturePath: map['producer_signature_path'] as String?,
-      latitude: map['latitude'] != null ? (map['latitude'] is double ? map['latitude'] : (map['latitude'] as num).toDouble()) : null,
-      longitude: map['longitude'] != null ? (map['longitude'] is double ? map['longitude'] : (map['longitude'] as num).toDouble()) : null,
-      gpsCoordinates: map['gps_coordinates'] as String?,
-      endTime: map['end_time'] != null ? DateTime.parse(map['end_time'] as String) : null,
-      remarks: map['remarks'] as String?,
-      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'] as String) : null,
-      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'] as String) : null,
-      isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
-    );
+    try {
+      debugPrint('🔍 [EndOfCollection] Parsing from map: $map');
+      
+      // Parse coordinates with better error handling
+      double? parseCoordinate(dynamic value) {
+        if (value == null) return null;
+        try {
+          if (value is double) return value;
+          if (value is int) return value.toDouble();
+          if (value is String) {
+            final parsed = double.tryParse(value);
+            if (parsed != null) return parsed;
+          }
+          return null;
+        } catch (e) {
+          debugPrint('❌ Error parsing coordinate: $value, error: $e');
+          return null;
+        }
+      }
+
+      // Parse DateTime with better error handling
+      DateTime? parseDateTime(dynamic value) {
+        if (value == null) return null;
+        try {
+          if (value is DateTime) return value;
+          if (value is String) return DateTime.tryParse(value);
+          return null;
+        } catch (e) {
+          debugPrint('❌ Error parsing datetime: $value, error: $e');
+          return null;
+        }
+      }
+
+      // Parse GPS coordinates - handle both string and direct lat/lng
+      String? gpsCoordinates = map['gps_coordinates']?.toString();
+      double? latitude = parseCoordinate(map['latitude']);
+      double? longitude = parseCoordinate(map['longitude']);
+      
+      // If we have lat/lng but no gps_coordinates string, create one
+      if (gpsCoordinates == null && latitude != null && longitude != null) {
+        gpsCoordinates = '$latitude, $longitude';
+      }
+      // If we have gps_coordinates string but no lat/lng, parse them
+      else if (gpsCoordinates != null && (latitude == null || longitude == null)) {
+        try {
+          final parts = gpsCoordinates.split(',');
+          if (parts.length == 2) {
+            latitude = double.tryParse(parts[0].trim());
+            longitude = double.tryParse(parts[1].trim());
+          }
+        } catch (e) {
+          debugPrint('❌ Error parsing GPS coordinates: $gpsCoordinates, error: $e');
+        }
+      }
+
+      final model = EndOfCollectionModel(
+        id: map['id'] is int ? map['id'] : int.tryParse(map['id']?.toString() ?? ''),
+        coverPageId: map['cover_page_id'] is int 
+            ? map['cover_page_id'] 
+            : int.tryParse(map['cover_page_id']?.toString() ?? ''),
+        respondentImagePath: map['respondent_image_path']?.toString(),
+        producerSignaturePath: map['producer_signature_path']?.toString(),
+        latitude: latitude,
+        longitude: longitude,
+        gpsCoordinates: gpsCoordinates,
+        endTime: parseDateTime(map['end_time']),
+        remarks: map['remarks']?.toString(),
+        createdAt: parseDateTime(map['created_at']),
+        updatedAt: parseDateTime(map['updated_at']),
+        isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
+        syncStatus: map['sync_status'] is int 
+            ? map['sync_status'] 
+            : int.tryParse(map['sync_status']?.toString() ?? '0') ?? 0,
+      );
+
+      debugPrint('✅ [EndOfCollection] Successfully parsed model:');
+      debugPrint('   - Respondent Image: ${model.respondentImagePath}');
+      debugPrint('   - Signature: ${model.producerSignaturePath}');
+      debugPrint('   - GPS: ${model.gpsCoordinates}');
+      debugPrint('   - Lat/Lng: ${model.latitude}, ${model.longitude}');
+      debugPrint('   - End Time: ${model.endTime}');
+      
+      return model;
+    } catch (e, stackTrace) {
+      debugPrint('❌ [EndOfCollection] Error creating EndOfCollectionModel: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
+      // Return a default model instead of throwing
+      return EndOfCollectionModel(
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
   }
 
   // Create a copy with some fields updated
   EndOfCollectionModel copyWith({
     int? id,
     int? coverPageId,
-    int? farmIdentificationId,  // Add farmIdentificationId parameter
     String? respondentImagePath,
     String? producerSignaturePath,
     double? latitude,
@@ -2550,11 +2733,11 @@ class EndOfCollectionModel {
     DateTime? updatedAt,
     String? remarks,
     bool? isSynced,
+    int? syncStatus,
   }) {
     return EndOfCollectionModel(
       id: id ?? this.id,
       coverPageId: coverPageId ?? this.coverPageId,
-      farmIdentificationId: farmIdentificationId ?? this.farmIdentificationId,  // Use the parameter
       respondentImagePath: respondentImagePath ?? this.respondentImagePath,
       producerSignaturePath: producerSignaturePath ?? this.producerSignaturePath,
       latitude: latitude ?? this.latitude,
@@ -2565,17 +2748,36 @@ class EndOfCollectionModel {
       updatedAt: updatedAt ?? this.updatedAt,
       remarks: remarks ?? this.remarks,
       isSynced: isSynced ?? this.isSynced,
+      syncStatus: syncStatus ?? this.syncStatus,
     );
   }
 
   // Create an empty instance
-  static EndOfCollectionModel empty() => const EndOfCollectionModel();
+  factory EndOfCollectionModel.empty() => EndOfCollectionModel(
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-  // Check if the model is empty
-  bool get isEmpty => this == empty();
+  // Check if the model has any data
+  bool get hasData {
+    return respondentImagePath != null ||
+        producerSignaturePath != null ||
+        gpsCoordinates != null ||
+        endTime != null ||
+        remarks != null;
+  }
 
-  // Check if the model is not empty
-  bool get isNotEmpty => this != empty();
+  // Check if images are available
+  bool get hasImages {
+    return (respondentImagePath?.isNotEmpty == true) ||
+        (producerSignaturePath?.isNotEmpty == true);
+  }
+
+  // Check if location data is available
+  bool get hasLocation {
+    return gpsCoordinates?.isNotEmpty == true ||
+        (latitude != null && longitude != null);
+  }
 
   @override
   String toString() {
@@ -2591,8 +2793,40 @@ class EndOfCollectionModel {
            '  remarks: $remarks,\n'
            '  createdAt: $createdAt,\n'
            '  updatedAt: $updatedAt,\n'
-           '  isSynced: $isSynced\n'
+           '  isSynced: $isSynced,\n'
+           '  syncStatus: $syncStatus\n'
            '}';
   }
-}
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is EndOfCollectionModel &&
+        other.id == id &&
+        other.coverPageId == coverPageId &&
+        other.respondentImagePath == respondentImagePath &&
+        other.producerSignaturePath == producerSignaturePath &&
+        other.latitude == latitude &&
+        other.longitude == longitude &&
+        other.gpsCoordinates == gpsCoordinates &&
+        other.endTime == endTime &&
+        other.remarks == remarks &&
+        other.isSynced == isSynced;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      coverPageId,
+      respondentImagePath,
+      producerSignaturePath,
+      latitude,
+      longitude,
+      gpsCoordinates,
+      endTime,
+      remarks,
+      isSynced,
+    );
+  }
+}

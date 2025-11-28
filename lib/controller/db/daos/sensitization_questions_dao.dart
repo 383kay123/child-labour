@@ -387,9 +387,12 @@ class SensitizationQuestionsDao {
     return SensitizationQuestionsData(
       id: map['id'],
       coverPageId: map['farm_identification_id'],
-      hasSensitizedHousehold: map['has_sensitized_household'] == 1,
-      hasSensitizedOnProtection: map['has_sensitized_on_protection'] == 1,
-      hasSensitizedOnSafeLabour: map['has_sensitized_on_safe_labour'] == 1,
+      hasSensitizedHousehold: map['has_sensitized_household'] == 1 ? true : 
+                            (map['has_sensitized_household'] == null ? null : false),
+      hasSensitizedOnProtection: map['has_sensitized_on_protection'] == 1 ? true : 
+                               (map['has_sensitized_on_protection'] == null ? null : false),
+      hasSensitizedOnSafeLabour: map['has_sensitized_on_safe_labour'] == 1 ? true : 
+                               (map['has_sensitized_on_safe_labour'] == null ? null : false),
       femaleAdultsCount: map['female_adults_count'] ?? '',
       maleAdultsCount: map['male_adults_count'] ?? '',
       consentForPicture: map['consent_for_picture'] == 1,

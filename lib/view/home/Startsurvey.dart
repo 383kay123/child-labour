@@ -84,7 +84,7 @@ class _StartSurveyPageState extends State<StartSurveyPage> {
               return false;
             },
             child: HouseHold(
-              farmIdentificationId: DateTime.now().millisecondsSinceEpoch,
+              coverPageId: DateTime.now().millisecondsSinceEpoch,
               onComplete: () {
                 // Navigate to the ScreenWrapper which contains the home screen
                 Navigator.pushAndRemoveUntil(
