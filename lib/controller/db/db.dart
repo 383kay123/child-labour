@@ -11,7 +11,7 @@ import '../../view/models/monitoring_model.dart';
 // Import all table classes
 
 import 'db_tables/monitoring_table.dart';
-import 'db_columns/society_data_columns.dart';
+// import 'db_columns/society_data_columns.dart';
 
 class LocalDBHelper {
   static final LocalDBHelper instance = LocalDBHelper._init();
@@ -71,25 +71,25 @@ class LocalDBHelper {
       )
     ''');
 
-     await db.execute('''
-  CREATE TABLE ${SocietyDataColumns.tableName} (
-    ${SocietyDataColumns.id} INTEGER PRIMARY KEY AUTOINCREMENT,
-    ${SocietyDataColumns.enumerator} INTEGER NOT NULL,
-    ${SocietyDataColumns.society} INTEGER NOT NULL,
-    ${SocietyDataColumns.accessToProtectedWater} REAL NOT NULL,
-    ${SocietyDataColumns.hireAdultLabourers} REAL NOT NULL,
-    ${SocietyDataColumns.awarenessRaisingSession} REAL NOT NULL,
-    ${SocietyDataColumns.womenLeaders} REAL NOT NULL,
-    ${SocietyDataColumns.preSchool} REAL NOT NULL,
-    ${SocietyDataColumns.primarySchool} REAL NOT NULL,
-    ${SocietyDataColumns.separateToilets} REAL NOT NULL,
-    ${SocietyDataColumns.provideFood} REAL NOT NULL,
-    ${SocietyDataColumns.scholarships} REAL NOT NULL,
-    ${SocietyDataColumns.corporalPunishment} REAL NOT NULL,
-    UNIQUE(${SocietyDataColumns.enumerator}, ${SocietyDataColumns.society}) 
-    ON CONFLICT REPLACE
-  )
-''');
+//      await db.execute('''
+//   CREATE TABLE ${SocietyDataColumns.tableName} (
+//     ${SocietyDataColumns.id} INTEGER PRIMARY KEY AUTOINCREMENT,
+//     ${SocietyDataColumns.enumerator} INTEGER NOT NULL,
+//     ${SocietyDataColumns.society} INTEGER NOT NULL,
+//     ${SocietyDataColumns.accessToProtectedWater} REAL NOT NULL,
+//     ${SocietyDataColumns.hireAdultLabourers} REAL NOT NULL,
+//     ${SocietyDataColumns.awarenessRaisingSession} REAL NOT NULL,
+//     ${SocietyDataColumns.womenLeaders} REAL NOT NULL,
+//     ${SocietyDataColumns.preSchool} REAL NOT NULL,
+//     ${SocietyDataColumns.primarySchool} REAL NOT NULL,
+//     ${SocietyDataColumns.separateToilets} REAL NOT NULL,
+//     ${SocietyDataColumns.provideFood} REAL NOT NULL,
+//     ${SocietyDataColumns.scholarships} REAL NOT NULL,
+//     ${SocietyDataColumns.corporalPunishment} REAL NOT NULL,
+//     UNIQUE(${SocietyDataColumns.enumerator}, ${SocietyDataColumns.society})
+//     ON CONFLICT REPLACE
+//   )
+// ''');
   }
 
   Future<Database> _initDB(String filePath) async {
