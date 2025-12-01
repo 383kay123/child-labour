@@ -339,57 +339,58 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
   }
 
   Widget _buildCommunityDropdown() {
-    return Obx(() {
-      if (_isLoadingDistricts.value) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0),
-          child: Center(child: CircularProgressIndicator()),
-        );
-      }
-
-      if (_districts.isEmpty) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Text('No districts available. Please sync data first.'),
-        );
-      }
-
-      return DropdownButtonFormField<String>(
-        value: _selectedCommunity,
-        decoration: const InputDecoration(
-          labelText: 'Select District *',
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-        ),
-        items: _districts.map((District district) {
-          return DropdownMenuItem<String>(
-            value: district.district,
-            child: Text(district.district),
-          );
-        }).toList(),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please select a district';
-          }
-          return null;
-        },
-        onChanged: (String? newValue) {
-          if (newValue != null) {
-            setState(() {
-              _selectedCommunity = newValue;
-              _controller.communityName.value = newValue;
-              _answers["community"] = newValue;
-              // Store the selected district ID for reference if needed
-              final selectedDistrict = _districts.firstWhereOrNull((d) => d.district == newValue);
-              if (selectedDistrict != null) {
-                _answers["district_id"] = selectedDistrict.id;
-              }
-            });
-          }
-        },
+  return Obx(() {
+    if (_isLoadingDistricts.value) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.0),
+        child: Center(child: CircularProgressIndicator()),
       );
-    });
-  }
+    }
+
+    if (_districts.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8.0),
+        child: Text('No districts available. Please sync data first.'),
+      );
+    }
+
+    // Find the currently selected district
+    final selectedDistrict = _districts.firstWhereOrNull(
+      (d) => d.district == _selectedCommunity,
+    );
+
+    return DropdownButtonFormField<int>(
+      value: selectedDistrict?.id,
+      decoration: const InputDecoration(
+        labelText: 'Select District *',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      ),
+      items: _districts.map((District district) {
+        return DropdownMenuItem<int>(
+          value: district.id,
+          child: Text(district.district),
+        );
+      }).toList(),
+      validator: (value) {
+        if (value == null) {
+          return 'Please select a district';
+        }
+        return null;
+      },
+      onChanged: (int? newId) {
+        if (newId != null) {
+          final selected = _districts.firstWhere((d) => d.id == newId);
+          setState(() {
+            _selectedCommunity = selected.district;
+            _controller.communityName.value = selected.district;
+            _controller.communityId.value = selected.id;
+          });
+        }
+      },
+    );
+  });
+}
 
   List<Widget> _buildSchoolQuestions() {
     return [

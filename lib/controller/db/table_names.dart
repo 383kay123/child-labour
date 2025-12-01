@@ -20,4 +20,5 @@ class TableNames {
   static const String endOfCollectionTBL = 'end_of_collection';
   static const String farmersTBL = 'farmers_from_server';
   static const String districtsTBL = 'districts';
+   static const String societyDataTBL = 'society_data';
 }

@@ -4,14 +4,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/controller/api/get_methods.dart';
 import 'package:human_rights_monitor/controller/db/db_tables/helpers/community_db_helper.dart';
+import 'package:human_rights_monitor/controller/models/pci/pci.dart';
 import 'package:intl/intl.dart';
-import '../../../../controller/db/db_tables/community_assessment_table.dart';
-import '../../../../controller/api/api.dart';
 
 import '../../../../controller/models/community-assessment-model.dart';
 import '../../../theme/app_theme.dart';
 import '../assessment_detail_screen.dart';
+
 
 class CommunityAssessmentHistory extends StatefulWidget {
   const CommunityAssessmentHistory({super.key});
@@ -515,126 +516,108 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
   }
 
   Future<void> _submitAssessment(CommunityAssessmentModel assessment) async {
-    // Show loading indicator
+  // Show loading indicator
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Submitting assessment...'),
+        backgroundColor: Colors.blue,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  try {
+    // // Get the current user ID (you'll need to implement this)
+    // final currentUser = await _getCurrentUser();
+    // final userId = int.tryParse(currentUser?.id ?? '0') ?? 0;
+    
+    // // Get the community ID (you'll need to ensure this is set when creating the assessment)
+    // final communityId = assessment.communityId ?? 0;
+
+    // Calculate scores based on assessment answers
+    final accessToProtectedWater = assessment.q1 == 'Yes' ? 1.0 : 0.0;
+    final hireAdultLabourers = assessment.q2 == 'Yes' ? 1.0 : 0.0;
+    final awarenessRaisingSession = assessment.q3 == 'Yes' ? 1.0 : 0.0;
+    final womenLeaders = assessment.q4 == 'Yes' ? 1.0 : 0.0;
+    
+    // Calculate total index (you'll need to adjust this based on your scoring logic)
+    final totalIndex = (accessToProtectedWater + 
+                       hireAdultLabourers + 
+                       awarenessRaisingSession + 
+                       womenLeaders) / 4.0;
+
+    // Convert assessment to SocietyData
+    final societyData = SocietyData(
+      enumerator: 0,
+      society: 0,
+    
+      accessToProtectedWater: accessToProtectedWater,
+      hireAdultLabourers: hireAdultLabourers,
+      awarenessRaisingSession: awarenessRaisingSession,
+      womenLeaders: womenLeaders,
+      preSchool: assessment.q5 == 'Yes' ? 1.0 : 0.0, 
+      primarySchool: (assessment.q7a ?? 0).toDouble(),
+      separateToilets: assessment.schoolsWithToilets == 'Yes' ? 1.0 : 0.0,
+      provideFood: assessment.schoolsWithFood == 'Yes' ? 1.0 : 0.0,
+      scholarships: assessment.q9 == 'Yes' ? 1.0 : 0.0, 
+      corporalPunishment: assessment.schoolsNoCorporalPunishment == 'Yes' ? 1.0 : 0.0,
+    );
+
+    debugPrint('Submitting data: ${societyData.toJson()}');
+    
+    // Submit the data
+    final api = GetService();
+    final apiSuccess = await api.postPCIData(societyData.toJson());
+
+    if (apiSuccess) {
+      // Update local status to submitted (2)
+      await _dbHelper.updateAssessmentStatus(assessment.id!, 2);
+
+      if (mounted) {
+        setState(() {
+          _pendingAssessments.removeWhere((a) => a.id == assessment.id);
+          _submittedAssessments.add(assessment.copyWith(status: 2));
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Assessment submitted and synced successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } else {
+      throw Exception('Server returned failure status');
+    }
+  } catch (e, stackTrace) {
+    debugPrint('Error in _submitAssessment: $e');
+    debugPrint('Stack trace: $stackTrace');
+    
+    // If API fails, save as pending (status 1)
+    await _dbHelper.updateAssessmentStatus(assessment.id!, 1);
+    
     if (mounted) {
+      setState(() {
+        // Update the assessment status in the UI
+        final index = _pendingAssessments.indexWhere((a) => a.id == assessment.id);
+        if (index != -1) {
+          _pendingAssessments[index] = _pendingAssessments[index].copyWith(status: 1);
+        }
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Checking internet connection...'),
-          backgroundColor: Colors.blue,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          content: Text('Error: ${e.toString()}. Saved as draft.'),
+          backgroundColor: Colors.orange,
         ),
       );
     }
-
-    // Check internet connectivity
-    final hasInternet = await _isInternetAvailable();
-
-    if (!hasInternet) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-                'No internet connection. Please check your connection and try again.'),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
-      }
-      return;
-    }
-
-    try {
-      // Show loading indicator
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Submitting assessment...'),
-            backgroundColor: Colors.blue,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
-      }
-
-      // First try to submit to the API
-      try {
-        // // final api = ApiService();
-        // final apiSuccess = await api.submitCommunityAssessment(assessment);
-
-        // if (apiSuccess) {
-        //   // If API submission is successful, update local status to submitted (2)
-        //   await _dbHelper.updateAssessmentStatus(assessment.id!, 2);
-
-        //   if (mounted) {
-        //     setState(() {
-        //       _pendingAssessments.removeWhere((a) => a.id == assessment.id);
-        //       _submittedAssessments.add(assessment.copyWith(status: 2));
-        //     });
-
-        //     ScaffoldMessenger.of(context).showSnackBar(
-        //       SnackBar(
-        //         content: const Text('Assessment submitted and synced successfully'),
-        //         backgroundColor: Colors.green,
-        //         behavior: SnackBarBehavior.floating,
-        //         duration: const Duration(seconds: 3),
-        //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        //       ),
-        //     );
-        //   }
-        // } else {
-        //   throw Exception('Failed to submit to server');
-        // }
-      } catch (e) {
-        debugPrint('Error submitting to API: $e');
-        // If API fails, save as pending (status 1)
-        final success =
-            await _dbHelper.updateAssessmentStatus(assessment.id!, 1);
-
-        if (success && mounted) {
-          setState(() {
-            _pendingAssessments.removeWhere((a) => a.id == assessment.id);
-            _submittedAssessments.add(assessment.copyWith(status: 1));
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                  'Assessment saved locally. Will sync when online.'),
-              backgroundColor: Colors.orange,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 4),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-          );
-        } else {
-          throw Exception('Failed to save assessment locally');
-        }
-      }
-    } catch (e) {
-      debugPrint('Error in _submitAssessment: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error submitting assessment: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
-      }
-    }
   }
-
+}
   Widget _buildAssessmentCard(
       CommunityAssessmentModel assessment, BuildContext context) {
     final isSubmitted = assessment.status == 1;

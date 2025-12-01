@@ -16,6 +16,42 @@ class GetService {
   
 
 
+ 
+  Future<bool> postPCIData(Map<String, dynamic> pciData) async {
+    try {
+
+      const String apiUrl = 'http://childlabourmonitor.afarinick.com/api/v1/pci/';
+      
+      debugPrint('🚀 Sending PCI data to server...');
+      
+      // Add any authentication headers if needed
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+       
+      };
+      
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: headers,
+        body: jsonEncode(pciData),
+      );
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('✅ Successfully posted PCI data to server');
+        return true;
+      } else {
+        debugPrint('❌ Failed to post PCI data. Status code: ${response.statusCode}');
+        debugPrint('Response body: ${response.body}');
+        throw Exception('Failed to post PCI data: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in postPCIData: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+
   // Simple GET all farmers
   Future<bool> fetchFarmers() async {
     try {
@@ -130,5 +166,7 @@ class GetService {
       rethrow;
     }
   }
+
+ 
 
 }

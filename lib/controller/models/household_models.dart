@@ -721,7 +721,7 @@ class FarmerChild {
 class FarmerIdentificationData {
   final int? id;
   final int? coverPageId;
-  final int? hasGhanaCard; // null (not answered), 0 (No), or 1 (Yes)
+  final int? hasGhanaCard; 
   final String? ghanaCardNumber;
   final String? selectedIdType;
   final String? idNumber;

@@ -1,16 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:human_rights_monitor/controller/api/api.dart';
+
+import 'package:human_rights_monitor/controller/api/get_methods.dart';
 
 import 'package:human_rights_monitor/controller/db/db_tables/helpers/community_db_helper.dart';
 import 'package:human_rights_monitor/controller/models/community-assessment-model.dart';
+import 'package:human_rights_monitor/controller/models/pci/pci.dart';
 import 'package:intl/intl.dart';
 
 class CommunityAssessmentController extends GetxController {
   BuildContext? communityAssessmentContext;
-  final ApiService _api = ApiService();
+  final GetService _api = GetService();
 
+  var communityId = 0.obs;  // Added communityId observable
   var communityName = ''.obs;
   var communityScore = 0.obs;
 
@@ -87,21 +90,33 @@ class CommunityAssessmentController extends GetxController {
   /// Submit form online, fallback to offline if network fails
   Future<bool> submit(Map<String, dynamic> answers) async {
     try {
-      // Convert answers to CommunityAssessmentModel
-      final model = _createAssessmentModel(answers);
+      // Convert answers to SocietyData
+      final societyData = SocietyData(
+        enumerator: int.tryParse(answers['enumerator_id']?.toString() ?? '0') ?? 0,
+        society: int.tryParse(answers['society_id']?.toString() ?? '0') ?? 0,
+        accessToProtectedWater: (answers['access_to_protected_water'] as num?)?.toDouble() ?? 0.0,
+        hireAdultLabourers: (answers['hire_adult_labourers'] as num?)?.toDouble() ?? 0.0,
+        awarenessRaisingSession: (answers['awareness_raising_session'] as num?)?.toDouble() ?? 0.0,
+        womenLeaders: (answers['women_leaders'] as num?)?.toDouble() ?? 0.0,
+        preSchool: (answers['pre_school'] as num?)?.toDouble() ?? 0.0,
+        primarySchool: (answers['primary_school'] as num?)?.toDouble() ?? 0.0,
+        separateToilets: (answers['separate_toilets'] as num?)?.toDouble() ?? 0.0,
+        provideFood: (answers['provide_food'] as num?)?.toDouble() ?? 0.0,
+        scholarships: (answers['scholarships'] as num?)?.toDouble() ?? 0.0,
+        corporalPunishment: (answers['corporal_punishment'] as num?)?.toDouble() ?? 0.0,
+      );
+
+      // Get the API instance
+      final api = Get.find<GetService>();
       
-      // Try to submit online first
-      final success = await _api.submitCommunityAssessment(model);
+      // Submit the data online
+      final success = await api.postPCIData(societyData.toJson());
       
       if (success) {
-        // If online submission is successful, save with status 1 (submitted)
         await saveFormOffline(answers, status: 1);
-        
-        // Show success message if context is available
         _showSnackBar('Form submitted successfully');
         return true;
       } else {
-        // Fallback to offline save if online submission fails
         await saveFormOffline(answers, status: 0);
         _showSnackBar('Form saved as draft (offline)');
         return false;
@@ -114,7 +129,53 @@ class CommunityAssessmentController extends GetxController {
       return false;
     }
   }
+  
+  /// Submit Post-Collection Information (PCI) data to the server
+Future<void> _submitPCIData(Map<String, dynamic> answers) async {
+  try {
+    // Create SocietyData from answers
+    final societyData = SocietyData(
+      enumerator: int.tryParse(answers['enumerator_id']?.toString() ?? '0') ?? 0,
+      society: int.tryParse(answers['society_id']?.toString() ?? '0') ?? 0,
+      accessToProtectedWater: (answers['access_to_protected_water'] as num?)?.toDouble() ?? 0.0,
+      hireAdultLabourers: (answers['hire_adult_labourers'] as num?)?.toDouble() ?? 0.0,
+      awarenessRaisingSession: (answers['awareness_raising_session'] as num?)?.toDouble() ?? 0.0,
+      womenLeaders: (answers['women_leaders'] as num?)?.toDouble() ?? 0.0,
+      preSchool: (answers['pre_school'] as num?)?.toDouble() ?? 0.0,
+      primarySchool: (answers['primary_school'] as num?)?.toDouble() ?? 0.0,
+      separateToilets: (answers['separate_toilets'] as num?)?.toDouble() ?? 0.0,
+      provideFood: (answers['provide_food'] as num?)?.toDouble() ?? 0.0,
+      scholarships: (answers['scholarships'] as num?)?.toDouble() ?? 0.0,
+      corporalPunishment: (answers['corporal_punishment'] as num?)?.toDouble() ?? 0.0,
+    );
 
+    // Convert to PCI format
+    final pciData = {
+      'enumerator': societyData.enumerator,
+      'society': societyData.society,
+      'access_to_protected_water': societyData.accessToProtectedWater,
+      'hire_adult_labourers': societyData.hireAdultLabourers,
+      'awareness_raising_session': societyData.awarenessRaisingSession,
+      'women_leaders': societyData.womenLeaders,
+      'pre_school': societyData.preSchool,
+      'primary_school': societyData.primarySchool,
+      'separate_toilets': societyData.separateToilets,
+      'provide_food': societyData.provideFood,
+      'scholarships': societyData.scholarships,
+      'corporal_punishment': societyData.corporalPunishment,
+      'submission_date': DateTime.now().toIso8601String(),
+    };
+    
+    // Submit PCI data
+    final api = Get.find<GetService>();
+    await api.postPCIData(pciData);
+    
+    debugPrint('✅ PCI data submitted successfully');
+  } catch (e) {
+    debugPrint('❌ Error submitting PCI data: $e');
+    // Don't throw error here to not affect the main form submission
+  }
+}
   /// Save form to local database
   /// [status] 0 = draft, 1 = submitted, 2 = synced
   Future<bool> saveFormOffline(Map<String, dynamic> answers, {int status = 0}) async {
@@ -208,39 +269,39 @@ class CommunityAssessmentController extends GetxController {
     );
   }
 
-  /// Sync all pending forms (status = 0 or 1) when online
-  Future<void> syncPendingForms() async {
-    try {
-      final dbHelper = CommunityDBHelper.instance;
-      final pendingForms = await dbHelper.getAllCommunityAssessments();
+  // /// Sync all pending forms (status = 0 or 1) when online
+  // Future<void> syncPendingForms() async {
+  //   try {
+  //     final dbHelper = CommunityDBHelper.instance;
+  //     final pendingForms = await dbHelper.getAllCommunityAssessments();
       
-      for (final form in pendingForms) {
-        try {
-          // Skip already synced forms
-          if (form['status'] == 2) continue;
+  //     for (final form in pendingForms) {
+  //       try {
+  //         // Skip already synced forms
+  //         if (form['status'] == 2) continue;
           
-          // Convert to CommunityAssessmentModel
-          final model = CommunityAssessmentModel.fromMap(form);
-          final success = await _api.submitCommunityAssessment(model);
+  //         // Convert to CommunityAssessmentModel
+  //         final model = CommunityAssessmentModel.fromMap(form);
+  //         final success = await _api.submitCommunityAssessment(model);
           
-          if (success) {
-            // Mark as synced in DB
-            await dbHelper.updateCommunityAssessment({
-              ...form,
-              'status': 2, // Mark as synced
-              'date_modified': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-            });
-          }
-        } catch (e) {
-          debugPrint('Error syncing form ${form['id']}: $e');
-          continue;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error in syncPendingForms: $e');
-      rethrow;
-    }
-  }
+  //         if (success) {
+  //           // Mark as synced in DB
+  //           await dbHelper.updateCommunityAssessment({
+  //             ...form,
+  //             'status': 2, // Mark as synced
+  //             'date_modified': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+  //           });
+  //         }
+  //       } catch (e) {
+  //         debugPrint('Error syncing form ${form['id']}: $e');
+  //         continue;
+  //       }
+  //     }
+  //   } catch (e) {
+  //     debugPrint('Error in syncPendingForms: $e');
+  //     rethrow;
+  //   }
+  // }
 
   void _showSnackBar(String message) {
     if (communityAssessmentContext != null && communityAssessmentContext!.mounted) {

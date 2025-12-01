@@ -701,7 +701,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
           
           // Text styling for visibility
           style: GoogleFonts.inter(
-            fontSize: 16,
+            fontSize: 15,
             color: isDark ? Colors.white : Colors.black87,
             fontWeight: FontWeight.w400,
           ),
@@ -722,7 +722,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: GoogleFonts.inter(
-              fontSize: 16,
+              fontSize: 14,
               color: isDark ? Colors.white38 : Colors.black38,
             ),
             filled: true,
@@ -783,46 +783,49 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
   final isDark = theme.brightness == Brightness.dark;
   
   // Convert the integer to string for radio button comparison
-  final hasGhanaCard = widget.data.hasGhanaCard?.toString();
+  final hasGhanaCard = widget.data.hasGhanaCard?.toString() ?? '';
 
-  return _buildQuestionCard(
-    errorKey: 'ghanaCard',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Does the farmer have a Ghana Card?',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
-        ),
-        const SizedBox(height: _Spacing.md),
-        Column(
-          children: [
-            _buildRadioOption(
-              value: '1', // Changed to string
-              groupValue: hasGhanaCard,
-              label: 'Yes',
-              onChanged: (value) {
-                widget.onDataChanged(widget.data.updateGhanaCard(1));
-              },
-              errorKey: 'ghanaCard',
-            ),
-            _buildRadioOption(
-              value: '0', // Changed to string
-              groupValue: hasGhanaCard,
-              label: 'No',
-              onChanged: (value) {
-                widget.onDataChanged(widget.data.updateGhanaCard(0));
-              },
-              errorKey: 'ghanaCard',
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
+return _buildQuestionCard(
+  errorKey: 'ghanaCard',
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Does the farmer have a Ghana Card?',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white70 
+                      : Colors.black87,
+                  fontWeight: FontWeight.w500,
+                ),
+      ),
+      const SizedBox(height: _Spacing.md),
+      Column(
+        children: [
+          _buildRadioOption(
+            value: '1',
+            groupValue: hasGhanaCard,
+            label: 'Yes',
+            onChanged: (value) {
+              widget.onDataChanged(widget.data.updateGhanaCard(1));
+            },
+            errorKey: 'ghanaCard',
+          ),
+          _buildRadioOption(
+            value: '0',
+            groupValue: hasGhanaCard,
+            label: 'No',
+            onChanged: (value) {
+              widget.onDataChanged(widget.data.updateGhanaCard(0));
+            },
+            errorKey: 'ghanaCard',
+          ),
+        ],
+      ),
+    ],
+  ),
+);
+
 }
   Widget _buildAlternativeIdSection() {
     final theme = Theme.of(context);
@@ -999,6 +1002,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
                 label: 'Please specify reason',
                 controller: _noConsentReasonController,
                 hintText: 'Enter your reason for not providing consent',
+                
                 keyboardType: TextInputType.multiline,
                 maxLines: 3,
                 onChanged: (value) {
