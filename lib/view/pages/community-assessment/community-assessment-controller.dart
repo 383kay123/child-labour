@@ -1,129 +1,252 @@
-// import 'package:surveyflow/controller/api/api.dart';
-//
-// import '../../controller/db/db.dart';
-// import '../../controller/models/community-assessment-model.dart';
-// import '../../globals/globals.dart';
-//       Globals.showSuccess("Form saved successfully");
-//     } else {
-//       Globals.showError("Failed to save form");
-//     }
-//   }
-// }
-
-import 'package:flutter/cupertino.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:surveyflow/controller/api/api.dart';
-import '../../../controller/db/db.dart';
-import '../../../controller/models/community-assessment-model.dart';
-import '../../globals/globals.dart';
 import 'package:get/get.dart';
+import 'package:human_rights_monitor/controller/api/api.dart';
 
-class CommunityAssessmentController {
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/community_db_helper.dart';
+import 'package:human_rights_monitor/controller/models/community-assessment-model.dart';
+import 'package:intl/intl.dart';
 
+class CommunityAssessmentController extends GetxController {
   BuildContext? communityAssessmentContext;
   final ApiService _api = ApiService();
 
   var communityName = ''.obs;
-  var communityScore = 0.obs;  // Changed to int for score calculation
-  
-  // Method to update score based on answer
-  void updateScore(String questionKey, String answer) {
-    if (answer == 'Yes') {
-      communityScore++;
-    } else if (answer == 'No' && communityScore > 0) {
-      // // If changing from Yes to No, decrement if score is above 0
-      // communityScore--;
-    }
-  }
+  var communityScore = 0.obs;
+
+  // Observable variables for all questions
   var q1 = ''.obs;
   var q2 = ''.obs;
   var q3 = ''.obs;
   var q4 = ''.obs;
   var q5 = ''.obs;
   var q6 = ''.obs;
-  var q7 = ''.obs;
+  var q7a = 0.obs;
+  var q7b = ''.obs;
+  var q7c = ''.obs;
   var q8 = ''.obs;
   var q9 = ''.obs;
   var q10 = ''.obs;
 
+  // Method to update score based on answer
+  void updateScore(String questionKey, dynamic answer) {
+    // Update the specific question value
+    switch (questionKey) {
+      case 'q1':
+        q1.value = answer;
+        break;
+      case 'q2':
+        q2.value = answer;
+        break;
+      case 'q3':
+        q3.value = answer;
+        break;
+      case 'q4':
+        q4.value = answer;
+        break;
+      case 'q5':
+        q5.value = answer;
+        break;
+      case 'q6':
+        q6.value = answer;
+        break;
+      case 'q7a':
+        q7a.value = answer == 'Yes' ? 1 : 0;
+        break;
+      case 'q8':
+        q8.value = answer;
+        break;
+      case 'q9':
+        q9.value = answer;
+        break;
+      case 'q10':
+        q10.value = answer;
+        break;
+    }
+    
+    // Calculate total score
+    _calculateTotalScore();
+  }
+
+  void _calculateTotalScore() {
+    int newScore = 0;
+    if (q1.value == 'Yes') newScore++;
+    if (q2.value == 'Yes') newScore++;
+    if (q3.value == 'Yes') newScore++;
+    if (q4.value == 'Yes') newScore++;
+    if (q5.value == 'Yes') newScore++;
+    if (q6.value == 'Yes') newScore++;
+    if (q7a.value == 1) newScore++;
+    if (q8.value == 'Yes') newScore++;
+    if (q9.value == 'Yes') newScore++;
+    if (q10.value == 'Yes') newScore++;
+    
+    communityScore.value = newScore;
+  }
+
   /// Submit form online, fallback to offline if network fails
-  Future<bool> submit(Map<String, String> answers) async {
-    var response = CommunityAssessmentModel.fromMap(answers).copyWith(
-      communityScore: communityScore.value,
-      communityName: communityName.value,
-    );
-
+  Future<bool> submit(Map<String, dynamic> answers) async {
     try {
-      final success = await _api.submitCommunityAssessment(response);
+      // Convert answers to CommunityAssessmentModel
+      final model = _createAssessmentModel(answers);
+      
+      // Try to submit online first
+      final success = await _api.submitCommunityAssessment(model);
+      
       if (success) {
-        // mark as synced
-        response = response.copyWith(status: 1);
-        ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
-          SnackBar(content: Text("Form submitted successfully")),
-        );
+        // If online submission is successful, save with status 1 (submitted)
+        await saveFormOffline(answers, status: 1);
+        
+        // Show success message if context is available
+        _showSnackBar('Form submitted successfully');
         return true;
       } else {
-        // fallback: save offline
-        await saveFormOffline(answers);
-        ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
-          SnackBar(content: Text("Form saved offline")),
-        );
+        // Fallback to offline save if online submission fails
+        await saveFormOffline(answers, status: 0);
+        _showSnackBar('Form saved as draft (offline)');
         return false;
       }
     } catch (e) {
-      // fallback: save offline if API call failed
-      // await saveFormOffline(answers);
-      ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
-        SnackBar(content: Text("Form saved offline")),
-      );
-      Get.back();
+      debugPrint('Error submitting form: $e');
+      // Save offline if there's an error
+      await saveFormOffline(answers, status: 0);
+      _showSnackBar('Error submitting form. Saved as draft.');
       return false;
     }
   }
 
-  /// Save form only offline
-  Future<bool> saveFormOffline(Map<String, String> answers) async {
-    var response = CommunityAssessmentModel.fromMap(answers).copyWith(
-      communityScore: communityScore.value,
-      communityName: communityName.value,
-    );
-
-    debugPrint("Form saved offline: ${response.toMap()}");
-
+  /// Save form to local database
+  /// [status] 0 = draft, 1 = submitted, 2 = synced
+  Future<bool> saveFormOffline(Map<String, dynamic> answers, {int status = 0}) async {
     try {
-      final int id = await LocalDBHelper.instance.insertCommunityAssessment(response);
+      final now = DateTime.now();
+      final formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
+      
+      // Create the assessment model
+      final model = _createAssessmentModel(answers);
+      
+      // Prepare the data to be saved
+      final assessmentData = model.toDatabaseMap()
+        ..addAll({
+          'date_created': formattedDate,
+          'date_modified': formattedDate,
+          'status': status,
+        });
+
+      // Save to database
+      final dbHelper = CommunityDBHelper.instance;
+      final id = await dbHelper.insertCommunityAssessment(assessmentData);
+      
       if (id > 0) {
-        ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
-          SnackBar(content: Text("Form saved offline")));
+        _showSnackBar('Form saved successfully');
         return true;
       } else {
-        ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
-            SnackBar(content: Text("Failed to save form offline")));
+        _showSnackBar('Failed to save form');
         return false;
       }
     } catch (e) {
-      ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
-        SnackBar(content: Text("DB error: ${e.toString()}")));
+      debugPrint('Error saving form: $e');
+      _showSnackBar('Error saving form: ${e.toString()}');
       return false;
     }
   }
 
-  /// Sync all pending forms (status = 0) when online
-  // Future<void> syncPendingForms() async {
-  //   final pending = await LocalDBHelper.instance.getResponsesByStatus(status: 0);
-  //
-  //   for (var form in pending) {
-  //     try {
-  //       final success = await _api.submitCommunityAssessment(form);
-  //       if (success) {
-  //         // mark as synced in DB
-  //         final updated = form.copyWith(status: 1);
-  //         await LocalDBHelper.instance.updateResponse(updated);
-  //       }
-  //     } catch (_) {
-  //       // if one fails, continue with next
-  //       continue;
-  //     }
-  //   }
-  // }
+  /// Update the status of an existing assessment
+  Future<bool> updateStatus(int id, int status) async {
+    try {
+      final db = CommunityDBHelper.instance;
+      return await db.updateAssessmentStatus(id, status);
+    } catch (e) {
+      debugPrint('Error updating status: $e');
+      return false;
+    }
+  }
+
+  /// Create CommunityAssessmentModel from answers
+  CommunityAssessmentModel _createAssessmentModel(Map<String, dynamic> answers) {
+    // Parse school count
+    final schoolCount = int.tryParse(answers['q7a']?.toString() ?? '0') ?? 0;
+    
+    // Parse school lists
+    final schoolsList = answers['q7b']?.toString().split(',') ?? [];
+    final schoolsWithToilets = answers['q7c']?.toString().split(',') ?? [];
+    final schoolsWithFood = answers['q8']?.toString().split(',') ?? [];
+    final schoolsNoCorporalPunishment = answers['q10']?.toString().split(',') ?? [];
+
+    return CommunityAssessmentModel(
+      communityName: answers['community'] ?? answers['communityName'],
+      region: answers['region'],
+      district: answers['district'],
+      subCounty: answers['sub_county'] ?? answers['subCounty'],
+      parish: answers['parish'],
+      village: answers['village'],
+      gpsCoordinates: answers['gps_coordinates'] ?? answers['gpsCoordinates'],
+      totalHouseholds: int.tryParse(answers['total_households']?.toString() ?? '0') ?? 0,
+      totalPopulation: int.tryParse(answers['total_population']?.toString() ?? '0') ?? 0,
+      totalChildren: int.tryParse(answers['total_children']?.toString() ?? '0') ?? 0,
+      primarySchoolsCount: schoolCount,
+      schools: schoolsList.join(';'),
+      schoolsWithToilets: schoolsWithToilets.join(';'),
+      schoolsWithFood: schoolsWithFood.join(';'),
+      schoolsNoCorporalPunishment: schoolsNoCorporalPunishment.join(';'),
+      notes: answers['notes'],
+      rawData: jsonEncode(answers),
+      communityScore: communityScore.value,
+      q1: answers['q1'],
+      q2: answers['q2'],
+      q3: answers['q3'],
+      q4: answers['q4'],
+      q5: answers['q5'],
+      q6: answers['q6'],
+      q7a: schoolCount,
+      q7b: schoolsList.join(';'),
+      q7c: schoolsWithToilets.join(';'),
+      q8: schoolsWithFood.join(';'),
+      q9: answers['q9'],
+      q10: schoolsNoCorporalPunishment.join(';'),
+      status: answers['status'] ?? 0,
+    );
+  }
+
+  /// Sync all pending forms (status = 0 or 1) when online
+  Future<void> syncPendingForms() async {
+    try {
+      final dbHelper = CommunityDBHelper.instance;
+      final pendingForms = await dbHelper.getAllCommunityAssessments();
+      
+      for (final form in pendingForms) {
+        try {
+          // Skip already synced forms
+          if (form['status'] == 2) continue;
+          
+          // Convert to CommunityAssessmentModel
+          final model = CommunityAssessmentModel.fromMap(form);
+          final success = await _api.submitCommunityAssessment(model);
+          
+          if (success) {
+            // Mark as synced in DB
+            await dbHelper.updateCommunityAssessment({
+              ...form,
+              'status': 2, // Mark as synced
+              'date_modified': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+            });
+          }
+        } catch (e) {
+          debugPrint('Error syncing form ${form['id']}: $e');
+          continue;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in syncPendingForms: $e');
+      rethrow;
+    }
+  }
+
+  void _showSnackBar(String message) {
+    if (communityAssessmentContext != null && communityAssessmentContext!.mounted) {
+      ScaffoldMessenger.of(communityAssessmentContext!).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:surveyflow/view/pages/community/community_list_screen.dart';
-import 'package:surveyflow/view/pages/farmers/farmer_list_screen.dart';
+import 'package:human_rights_monitor/view/pages/communities/community_list_screen.dart';
+// import 'package:human_rights_monitor/view/pages/community/community_list_screen.dart';
+import 'package:human_rights_monitor/view/pages/farmers/farmer_list_screen.dart';
 
 import '../home/home.dart';
 import '../profile/profile.dart';
@@ -19,8 +19,8 @@ class _ScreenWrapperState extends State<ScreenWrapper> {
 
   final List<Widget> _screens = const [
     Homepage(),
-    FarmerListScreen(),
-    CommunityListScreen(),
+    FarmersListScreen(),
+    DistrictsListScreen(),
     ProfileScreen(),
   ];
 
@@ -51,10 +51,12 @@ class _ScreenWrapperState extends State<ScreenWrapper> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onItemTapped,
-        backgroundColor: theme.primaryColor,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed, // keeps labels always visible
+        backgroundColor: theme.cardColor,
+        selectedItemColor: theme.primaryColor,
+        unselectedItemColor: theme.unselectedWidgetColor,
+        selectedLabelStyle: theme.textTheme.labelSmall,
+        unselectedLabelStyle: theme.textTheme.labelSmall,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -66,7 +68,7 @@ class _ScreenWrapperState extends State<ScreenWrapper> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.groups),
-            label: "Communities",
+            label: "Districts",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

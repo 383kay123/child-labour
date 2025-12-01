@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/districts_repo.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/farmers_repo.dart';
+import 'package:human_rights_monitor/controller/models/districts/districts_model.dart';
+import 'package:human_rights_monitor/controller/models/farmers/farmers_model.dart';
 import 'package:intl/intl.dart';
+
+// Import the controller
+import 'monitoring_assessment_form_controller.dart';
 
 // Model to track yes/no question state
 class YesNoQuestion {
@@ -45,9 +52,8 @@ class MonitoringAssessmentForm extends StatefulWidget {
 }
 
 class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
-  final Map<String, String> _answers = {};
-  final RxInt _monitoringScore = 0.obs;
   final _formKey = GlobalKey<FormState>();
+  late final MonitoringAssessmentFormController _controller;
 
   // Form controllers
   final TextEditingController _childIdController = TextEditingController();
@@ -55,40 +61,29 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _communityController = TextEditingController();
   final TextEditingController _farmerIdController = TextEditingController();
-  final TextEditingController _interventionDateController =
-      TextEditingController();
-  final TextEditingController _remediationTypeController =
-      TextEditingController();
-  final TextEditingController _followUpVisitsController =
-      TextEditingController();
-  final TextEditingController _currentSchoolController =
-      TextEditingController();
-  final TextEditingController _gradeLevelController = TextEditingController();
-  final TextEditingController _attendanceRateController =
-      TextEditingController();
-  final TextEditingController _schoolPerformanceController =
-      TextEditingController();
-  final TextEditingController _challengesController = TextEditingController();
-  final TextEditingController _supportNeededController =
-      TextEditingController();
-  final TextEditingController _attendanceNotesController =
-      TextEditingController();
-  final TextEditingController _performanceNotesController =
-      TextEditingController();
-  final TextEditingController _supportNotesController = TextEditingController();
-  final TextEditingController _otherNotesController = TextEditingController();
-  final TextEditingController _recommendationsController =
-      TextEditingController();
+  final TextEditingController _interventionDateController = TextEditingController();
+  final TextEditingController _remediationTypeController = TextEditingController();
+  final TextEditingController _followUpVisitsController = TextEditingController();
+  final TextEditingController _recommendationsController = TextEditingController();
+  final TextEditingController _noBirthCertReasonController = TextEditingController();
+  final TextEditingController _additionalCommentsController = TextEditingController();
+  final TextEditingController _followUpVisitsCountController = TextEditingController();
 
+  // Selection state
   String? _selectedGender;
-  String? _selectedAttendanceStatus;
-  String? _selectedPerformanceStatus;
-  String? _selectedSupportStatus;
-  DateTime? _interventionDate;
-  // Track promotion and academic status
-  bool? _promoted =
-      null; // true = promoted, false = not promoted, null = not answered
-  bool? _academicImprovement;
+  String? _selectedCommunity;
+  String? _selectedFarmerId;
+  
+  // District repository and state
+  final DistrictRepository _districtRepo = DistrictRepository();
+  final RxList<District> _districts = <District>[].obs;
+  final RxBool _isLoadingDistricts = false.obs;
+  
+  // Farmers list
+  final FarmerRepository _farmerRepo = FarmerRepository();
+  final RxList<Farmer> _farmers = <Farmer>[].obs;
+  final RxBool _isLoadingFarmers = false.obs;
+  
 
   // Child Labour Risk section state
   String? _hazardousWork;
@@ -99,7 +94,16 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
   // Legal Documentation section state
   String? _hasBirthCertificate;
   String? _ongoingBirthCertProcess;
-  final TextEditingController _noBirthCertReasonController = TextEditingController();
+  
+  // Academic status
+  bool? _promoted;
+  bool? _academicImprovement;
+  String? _selectedCurrentGrade;
+  bool? _academicYearEnded;
+
+  // Answers map to track question responses
+  final Map<String, String> _answers = {};
+  final RxInt _monitoringScore = 0.obs;
 
   // List of all classes/grades for dropdown
   final List<String> _classLevels = [
@@ -121,36 +125,6 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
     'College/University'
   ];
   String? _selectedRemediationClass;
-  String? _selectedCurrentGrade;
-
-  // Track academic year status
-  String? _academicYearEnded;
-
-  // Education Progress Questions
-  final List<YesNoQuestion> _educationQuestions = [
-    YesNoQuestion(
-      id: 'enrolled_in_school',
-      question: '21. Is the child currently enrolled in school?',
-    ),
-    YesNoQuestion(
-      id: 'attendance_improved',
-      question: '22. Has school attendance improved since remediation?',
-    ),
-    YesNoQuestion(
-      id: 'received_materials',
-      question:
-          '23. Has the child received any school materials (uniforms, books, '
-          'etc.)?',
-    ),
-    YesNoQuestion(
-      id: 'can_read_write',
-      question: '24. Can the child now read and write basic text?',
-    ),
-    YesNoQuestion(
-      id: 'advanced_grade',
-      question: '25. Has the child advanced to the next grade level?',
-    ),
-  ];
 
   @override
   void dispose() {
@@ -162,36 +136,48 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
     _interventionDateController.dispose();
     _remediationTypeController.dispose();
     _followUpVisitsController.dispose();
-    _currentSchoolController.dispose();
-    _gradeLevelController.dispose();
-    _attendanceRateController.dispose();
-    _schoolPerformanceController.dispose();
-    _challengesController.dispose();
-    _supportNeededController.dispose();
-    _attendanceNotesController.dispose();
-    _performanceNotesController.dispose();
-    _supportNotesController.dispose();
-    _otherNotesController.dispose();
     _recommendationsController.dispose();
+    _noBirthCertReasonController.dispose();
+    _additionalCommentsController.dispose();
+    _followUpVisitsCountController.dispose();
+    _isLoadingDistricts.close();
+    _districts.close();
+    _isLoadingFarmers.close();
+    _farmers.close();
     super.dispose();
   }
 
-  // Auto-populate sample data (replace with actual data source)
-  void _autoPopulateData() {
-    // This is sample data - replace with actual data source
-    _childNameController.text = 'John Doe';
-    _ageController.text = '12';
-    _communityController.text = 'Sample Community';
-    _farmerIdController.text = 'FARM123';
-    _currentSchoolController.text = 'Sample Primary School';
-    _gradeLevelController.text = 'Class 5';
-    _attendanceRateController.text = '85';
+  // Load districts from database
+  Future<void> _loadDistricts() async {
+    _isLoadingDistricts.value = true;
+    try {
+      final districts = await _districtRepo.getAllDistricts();
+      _districts.assignAll(districts);
+    } catch (e) {
+      debugPrint('Error loading districts: $e');
+    } finally {
+      _isLoadingDistricts.value = false;
+    }
+  }
+
+  Future<void> _loadFarmers() async {
+    _isLoadingFarmers.value = true;
+    try {
+      final farmers = await _farmerRepo.getFirst10Farmers();
+      _farmers.assignAll(farmers);
+    } catch (e) {
+      debugPrint('Error loading farmers: $e');
+    } finally {
+      _isLoadingFarmers.value = false;
+    }
   }
 
   @override
   void initState() {
     super.initState();
-    _autoPopulateData();
+    _controller = Get.put(MonitoringAssessmentFormController());
+    _loadDistricts();
+    _loadFarmers();
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -201,13 +187,130 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null && picked != _interventionDate) {
+    if (picked != null) {
       setState(() {
-        _interventionDate = picked;
-        _interventionDateController.text =
-            DateFormat('yyyy-MM-dd').format(picked);
+        _interventionDateController.text = DateFormat('yyyy-MM-dd').format(picked);
       });
     }
+  }
+
+  // Update answers map when a question is answered and update controller
+  void _updateAnswers(String questionId, String answer) {
+    setState(() {
+      _answers[questionId] = answer;
+      _updateScore();
+    });
+    
+    // Update the controller based on the question
+    _updateControllerData(questionId, answer == 'Yes');
+  }
+
+  void _updateControllerData(String questionId, bool value) {
+    switch (questionId) {
+      case 'enrolled_in_school':
+        _controller.updateFormData(isEnrolledInSchool: value);
+        break;
+      case 'attendance_improved':
+        _controller.updateFormData(attendanceImproved: value);
+        break;
+      case 'received_materials':
+        _controller.updateFormData(receivedSchoolMaterials: value);
+        break;
+      case 'can_read_text':
+        _controller.updateFormData(canReadBasicText: value);
+        break;
+      case 'can_write_text':
+        _controller.updateFormData(canWriteBasicText: value);
+        break;
+      case 'can_do_calculations':
+        _controller.updateFormData(canDoCalculations: value);
+        break;
+      case 'advanced_grade_level':
+        _controller.updateFormData(advancedToNextGrade: value);
+        break;
+      case 'academic_year_ended':
+        _controller.updateFormData(academicYearEnded: value);
+        break;
+      case 'child_promoted':
+        _controller.updateFormData(promoted: value);
+        break;
+      case 'academic_improvement':
+        _controller.updateFormData(academicImprovement: value);
+        break;
+      case 'hazardous_work':
+        _controller.updateFormData(engagedInHazardousWork: value);
+        break;
+      case 'reduced_work_hours':
+        _controller.updateFormData(reducedWorkHours: value);
+        break;
+      case 'light_work_in_limits':
+        _controller.updateFormData(involvedInLightWork: value);
+        break;
+      case 'hazardous_work_free_period':
+        _controller.updateFormData(outOfHazardousWork: value);
+        break;
+      case 'has_birth_certificate':
+        _controller.updateFormData(hasBirthCertificate: value);
+        break;
+      case 'ongoing_birth_cert_process':
+        _controller.updateFormData(ongoingBirthCertProcess: value);
+        break;
+      case 'awareness_sessions':
+        _controller.updateFormData(receivedAwarenessSessions: value);
+        break;
+      case 'caregiver_understanding':
+        _controller.updateFormData(improvedUnderstanding: value);
+        break;
+      case 'school_support':
+        _controller.updateFormData(caregiversSupportSchool: value);
+        break;
+      case 'received_support':
+        _controller.updateFormData(receivedFinancialSupport: value);
+        break;
+      case 'referrals_made':
+        _controller.updateFormData(referralsMade: value);
+        break;
+      case 'follow_up_planned':
+        _controller.updateFormData(ongoingFollowUpPlanned: value);
+        break;
+      case 'remediated_status':
+        _controller.updateFormData(consideredRemediated: value);
+        break;
+      case 'visits_spaced_correctly':
+        _controller.updateFormData(visitsSpacedCorrectly: value);
+        break;
+      case 'no_child_labour_last_two_visits':
+        _controller.updateFormData(confirmedNotInChildLabour: value);
+        break;
+      case 'follow_up_cycle_complete':
+        _controller.updateFormData(followUpCycleComplete: value);
+        break;
+    }
+  }
+
+  void _updateScore() {
+    int score = 0;
+    
+    // Education Progress (questions 9-15)
+    if (_answers['enrolled_in_school'] == 'Yes') score += 10;
+    if (_answers['attendance_improved'] == 'Yes') score += 10;
+    if (_answers['received_materials'] == 'Yes') score += 10;
+    if (_answers['can_read_text'] == 'Yes') score += 10;
+    if (_answers['can_write_text'] == 'Yes') score += 10;
+    if (_answers['can_do_calculations'] == 'Yes') score += 10;
+    if (_answers['advanced_grade_level'] == 'Yes') score += 10;
+    
+    // Child Labour Risk (questions 22-25)
+    if (_answers['hazardous_work'] == 'No') score += 10;
+    if (_answers['reduced_work_hours'] == 'Yes') score += 10;
+    if (_answers['light_work_in_limits'] == 'Yes') score += 5;
+    if (_answers['hazardous_work_free_period'] == 'Yes') score += 10;
+    
+    // Legal Documentation (questions 26-28)
+    if (_answers['has_birth_certificate'] == 'Yes') score += 10;
+    if (_answers['ongoing_birth_cert_process'] == 'Yes') score += 5;
+    
+    _monitoringScore.value = score;
   }
 
   @override
@@ -215,27 +318,27 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
     final theme = Theme.of(context);
 
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('Monitoring Assessment Form'),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 16.0, top: 16.0),
-              child: Obx(
-                () => Text(
-                  'Score: ${_monitoringScore.value}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+      appBar: AppBar(
+        title: const Text('Monitoring Assessment Form'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0, top: 16.0),
+            child: Obx(
+              () => Text(
+                'Score: ${_monitoringScore.value}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
             ),
-          ],
-          backgroundColor: theme.primaryColor,
-        ),
-        body: SingleChildScrollView(
-            child: Form(
+          ),
+        ],
+        backgroundColor: theme.primaryColor,
+      ),
+      body: SingleChildScrollView(
+        child: Form(
           key: _formKey,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -252,19 +355,78 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 ),
                 const SizedBox(height: 16),
 
-                // Child ID/Code
-                _buildFormField(
-                  context: context,
-                  label: 'Child ID/Code',
-                  controller: _childIdController,
-                  hintText: 'Enter child ID/code',
-                  isRequired: true,
+                // Child ID/Code Dropdown
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '1. Child ID/Code *',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          hint: const Text('Select a child'),
+                          value: _controller.selectedChildCode.value.isEmpty ? null : _controller.selectedChildCode.value,
+                          items: [
+                            const DropdownMenuItem<String>(
+                              value: null,
+                              child: Text('Select a child'),
+                            ),
+                            ..._controller.childOptions.map((child) {
+                              return DropdownMenuItem<String>(
+                                value: child['code'],
+                                child: Text('${child['code']} - ${child['name']}'),
+                              );
+                            }).toList(),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _controller.setSelectedChild(value);
+                              if (value != null) {
+                                final selectedChild = _controller.childOptions.firstWhere(
+                                  (child) => child['code'] == value,
+                                  orElse: () => {'code': value, 'name': 'Unknown'},
+                                );
+                                _childNameController.text = selectedChild['name'] ?? '';
+                                _ageController.text = '12';
+                              } else {
+                                _childNameController.clear();
+                                _ageController.clear();
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    if (_controller.selectedChildCode.value.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0, left: 4.0),
+                        child: Text(
+                          'Please select a child',
+                          style: TextStyle(
+                            color: Colors.red[700],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
 
                 // Child Name (auto-populated)
                 _buildFormField(
                   context: context,
-                  label: 'Child Name',
+                  label: '2. Child Name',
                   controller: _childNameController,
                   hintText: 'Auto-populated',
                   enabled: false,
@@ -278,7 +440,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                       flex: 2,
                       child: _buildFormField(
                         context: context,
-                        label: 'Age',
+                        label: '3. Age',
                         controller: _ageController,
                         hintText: 'Age',
                         keyboardType: TextInputType.number,
@@ -333,8 +495,8 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                             onChanged: (String? value) {
                               setState(() {
                                 _selectedGender = value;
-                                _answers['gender'] = value ?? '';
                               });
+                              _controller.selectedGender.value = value ?? '';
                             },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -349,28 +511,200 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                   ],
                 ),
 
-                // Community
-                _buildFormField(
-                  context: context,
-                  label: 'Community',
-                  controller: _communityController,
-                  hintText: 'Enter community name',
-                  isRequired: true,
+                // Community Dropdown
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          text: '4. District',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                          children: const [
+                            TextSpan(
+                              text: ' *',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Obx(() {
+                        if (_isLoadingDistricts.value) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        if (_districts.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text('No districts available. Please sync data first.'),
+                          );
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          value: _selectedCommunity,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                            ),
+                          ),
+                          hint: const Text('Select District'),
+                          isExpanded: true,
+                          items: _districts.map<DropdownMenuItem<String>>((District district) {
+                            return DropdownMenuItem<String>(
+                              value: district.district,
+                              child: Text(district.district),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                _selectedCommunity = newValue;
+                                _communityController.text = newValue;
+                              });
+                              _controller.selectedCommunity.value = newValue;
+                              _controller.communityController.text = newValue;
+                              
+                              // Store the selected district ID for reference if needed
+                              final selectedDistrict = _districts.firstWhereOrNull(
+                                (d) => d.district == newValue
+                              );
+                              if (selectedDistrict != null) {
+                                _controller.formData.value.communityId = selectedDistrict.id;
+                              }
+                            }
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select a district';
+                            }
+                            return null;
+                          },
+                        );
+                      }),
+                    ],
+                  ),
                 ),
 
-                // Farmer ID/Code
-                _buildFormField(
-                  context: context,
-                  label: 'Farmer ID/Code',
-                  controller: _farmerIdController,
-                  hintText: 'Enter farmer ID/code',
-                  isRequired: true,
+                // Farmer ID/Code Dropdown
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          text: '5. Farmer ID/Code',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                          children: const [
+                            TextSpan(
+                              text: ' *',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Obx(() {
+                        if (_isLoadingFarmers.value) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        if (_farmers.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text('No farmers available. Please sync data first.'),
+                          );
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          value: _selectedFarmerId,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outlineVariant,
+                                width: 1.0,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outlineVariant,
+                                width: 1.0,
+                              ),
+                            ),
+                            suffixIcon: _isLoadingFarmers.value
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12.0),
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          hint: const Text('Select Farmer Code'),
+                          isExpanded: true,
+                          items: _farmers.map<DropdownMenuItem<String>>((Farmer farmer) {
+                            return DropdownMenuItem<String>(
+                              value: farmer.farmerCode,
+                              child: Text('${farmer.farmerCode} - ${farmer.firstName} ${farmer.lastName}'),
+                            );
+                          }).toList(),
+                          onChanged: _isLoadingFarmers.value
+                              ? null
+                              : (String? newValue) {
+                                  setState(() {
+                                    _selectedFarmerId = newValue;
+                                    _farmerIdController.text = newValue ?? '';
+                                  });
+                                  _controller.selectedFarmerId.value = newValue ?? '';
+                                  _controller.farmerIdController.text = newValue ?? '';
+                                },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select a farmer ID';
+                            }
+                            return null;
+                          },
+                        );
+                      }),
+                        
+                      
+                    ],
+                  ),
                 ),
 
                 // Date of first remediation intervention
                 _buildDateField(
                   context: context,
-                  label: 'Date of first remediation intervention',
+                  label: '6. Date of first remediation intervention',
                   controller: _interventionDateController,
                   onTap: () => _selectDate(context),
                 ),
@@ -378,7 +712,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Form of remediation provided
                 _buildFormField(
                   context: context,
-                  label: 'What form of remediation was provided?',
+                  label: '7. What form of remediation was provided?',
                   controller: _remediationTypeController,
                   hintText: 'Describe the remediation provided',
                   maxLines: 2,
@@ -387,14 +721,11 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Follow up visits
                 _buildFormField(
                   context: context,
-                  label:
-                      'How many follow up visits have been conducted so far?',
+                  label: '8. How many follow up visits have been conducted so far?',
                   controller: _followUpVisitsController,
                   hintText: 'Enter number of visits',
                   keyboardType: TextInputType.number,
                 ),
-
-                const SizedBox(height: 16),
 
                 const SizedBox(height: 32),
 
@@ -411,40 +742,212 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Education Progress Questions
                 _buildQuestionCard(
                   context,
-                  '1. Is the child currently enrolled in school?',
+                  '9. Is the child currently enrolled in school?',
                   'enrolled_in_school',
                 ),
                 const SizedBox(height: 12),
                 _buildQuestionCard(
                   context,
-                  '2. Has school attendance improved since remediation?',
+                  '10. Has school attendance improved since remediation?',
                   'attendance_improved',
                 ),
                 const SizedBox(height: 12),
                 _buildQuestionCard(
                   context,
-                  '3. Has the child received any school materials (uniforms, books, etc.)?',
+                  '11. Has the child received any school materials (uniforms, books, etc.)?',
                   'received_materials',
+                ),
+                const SizedBox(height: 12),
+
+                // Numeracy Assessment
+                Text(
+                  'Ask the child to perform these calculations based on their age:',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 4),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 1 + 2? (Right answer: 3) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≤ 7]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 2 + 3? (Right answer: 5) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≤ 7]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 5 - 3? (Right answer: 2) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[8 ≤ Age ≤ 13]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 9 - 4? (Right answer: 5) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[8 ≤ Age ≤ 13]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 9 + 7? (Right answer: 16) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≥ 14]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• What is 3 × 7? (Right answer: 21) ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≥ 14]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Literacy Assessment
+                Text(
+                  'Ask the child to read and write the following text:',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 4),
+                Text.rich(
+                  TextSpan(
+                    text: '• "This is Ama" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≤ 7]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "It is water" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≤ 7]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "I like to play with my friends" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[8 ≤ Age ≤ 13]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "I am going to school" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[8 ≤ Age ≤ 13]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "Kofi is crying loudly" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≥ 14]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    text: '• "I am good at playing both Basketball and football" ',
+                    style: theme.textTheme.bodyMedium,
+                    children: [
+                      TextSpan(
+                        text: '[Age ≥ 14]',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                _buildQuestionCard(
+                  context,
+                  '12. Can the child now read basic text?',
+                  'can_read_text',
                 ),
                 const SizedBox(height: 12),
                 _buildQuestionCard(
                   context,
-                  '4. Can the child now read and write basic text? ',
-                  'received_materials',
+                  '13. Can the child now write basic text?',
+                  'can_write_text',
+                ),
+                _buildQuestionCard(
+                  context,
+                  '14. Can the child now perform basic calculations?',
+                  'can_do_calculations',
                 ),
                 const SizedBox(height: 12),
                 _buildQuestionCard(
                   context,
-                  '5.Has the child advanced to the next grade level?  ',
-                  'received_materials',
+                  '15. Has the child advanced to the next grade level?',
+                  'advanced_grade_level',
                 ),
-                // 1. Class at time of remediation
+
+                // Class at time of remediation
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '14. At the time of remediation, what class was the '
-                      'child enrolled in?',
+                      '16. At the time of remediation, what class was the child enrolled in?',
                       style: theme.textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 8),
@@ -454,8 +957,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         hintText: 'Select class/grade',
                       ),
                       items: _classLevels.map((String value) {
@@ -468,12 +970,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                         setState(() {
                           _selectedRemediationClass = newValue;
                         });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please select a class/grade';
-                        }
-                        return null;
+                        _controller.selectedRemediationClass.value = newValue ?? '';
                       },
                     ),
                   ],
@@ -483,16 +980,14 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 // Academic year ended question
                 _buildQuestionCard(
                   context,
-                  '5.15.\tHas the academic year ended?',
+                  '17. Has the academic year ended?',
                   'academic_year_ended',
                   onAnswerChanged: (answer) {
                     setState(() {
-                      _academicYearEnded = answer;
-                      // Reset promotion status when academic year answer changes
+                      _academicYearEnded = answer == 'Yes';
                       if (answer != 'Yes') {
                         _promoted = null;
-                        _selectedCurrentGrade =
-                            null; // Reset grade when academic year changes
+                        _selectedCurrentGrade = null;
                       }
                     });
                   },
@@ -502,29 +997,27 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 if (_academicYearEnded == 'Yes')
                   _buildQuestionCard(
                     context,
-                    'Has the child been promoted?',
+                    '18. Has the child been promoted?',
                     'child_promoted',
                     onAnswerChanged: (answer) {
                       setState(() {
                         _promoted = answer == 'Yes';
-                        _answers['child_promoted'] = answer;
                         _academicImprovement = null;
                         if (!_promoted!) {
                           _selectedCurrentGrade = null;
                         }
                       });
                     },
-                    initialAnswer: _answers['child_promoted'],
                   ),
                 const SizedBox(height: 20),
 
-                // 4. If promoted, show current grade dropdown
+                // If promoted, show current grade dropdown
                 if (_promoted == true)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '4. What is the new grade?',
+                        '19. What is the new grade?',
                         style: theme.textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 8),
@@ -534,8 +1027,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           hintText: 'Select new grade',
                         ),
                         items: _classLevels.map((String value) {
@@ -548,23 +1040,17 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                           setState(() {
                             _selectedCurrentGrade = newValue;
                           });
-                        },
-                        validator: (value) {
-                          if (_promoted == true &&
-                              (value == null || value.isEmpty)) {
-                            return 'Please select the new grade';
-                          }
-                          return null;
+                          _controller.selectedCurrentGrade.value = newValue ?? '';
                         },
                       ),
                     ],
                   ),
 
-                // 5. If not promoted, show improvement question
+                // If not promoted, show improvement question
                 if (_promoted == false)
                   _buildQuestionCard(
                     context,
-                    'Has there been an improvement in reading, writing and calculations?',
+                    '20. Has there been an improvement in reading, writing and calculations?',
                     'academic_improvement',
                     onAnswerChanged: (answer) {
                       setState(() {
@@ -573,16 +1059,15 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                     },
                   ),
 
-                // 6. Show recommendations field only if improvement is 'No'
+                // Show recommendations field only if improvement is 'No'
                 if (_academicImprovement == false) ...[
                   const SizedBox(height: 20),
                   _buildFormField(
                     context: context,
-                    label: 'Recommendations',
+                    label: '21. What are the recommendations?',
                     controller: _recommendationsController,
                     hintText: 'Enter recommendations for improvement...',
                     maxLines: 3,
-                    isRequired: true,
                   ),
                 ],
                 const SizedBox(height: 24),
@@ -597,10 +1082,10 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 ),
                 const SizedBox(height: 16),
 
-                // 1. Hazardous work question
+                // Hazardous work question
                 _buildQuestionCard(
                   context,
-                  '1. Is the child currently engaged in any hazardous work?',
+                  '22. Is the child currently engaged in any hazardous work?',
                   'hazardous_work',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -609,10 +1094,10 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                   },
                 ),
 
-                // 2. Reduced work hours question
+                // Reduced work hours question
                 _buildQuestionCard(
                   context,
-                  '2. Has the child reduced hours spent on farm or work-related tasks?',
+                  '23. Has the child reduced hours spent on farm or work-related tasks?',
                   'reduced_work_hours',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -621,10 +1106,10 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                   },
                 ),
 
-                // 3. Light work question
+                // Light work question
                 _buildQuestionCard(
                   context,
-                  '3. Is the child involved in any permitted light work within acceptable limits?',
+                  '24. Is the child involved in any permitted light work within acceptable limits?',
                   'light_work_in_limits',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -633,10 +1118,10 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                   },
                 ),
 
-                // 4. Hazardous work free period question
+                // Hazardous work free period question
                 _buildQuestionCard(
                   context,
-                  '4. Has the child remained out of hazardous work for at least two consecutive visits?',
+                  '25. Has the child remained out of hazardous work for at least two consecutive visits?',
                   'hazardous_work_free_period',
                   onAnswerChanged: (answer) {
                     setState(() {
@@ -656,15 +1141,14 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 ),
                 const SizedBox(height: 16),
 
-                // 1. Birth certificate question
+                // Birth certificate question
                 _buildQuestionCard(
                   context,
-                  '1. Does the child now have a birth certificate?',
+                  '26. Does the child now have a birth certificate?',
                   'has_birth_certificate',
                   onAnswerChanged: (answer) {
                     setState(() {
                       _hasBirthCertificate = answer;
-                      // Reset related fields when answer changes
                       if (answer == 'Yes') {
                         _ongoingBirthCertProcess = null;
                         _noBirthCertReasonController.clear();
@@ -673,19 +1157,18 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                   },
                 ),
 
-                // 2. Ongoing process question (only shown if no birth certificate)
+                // Ongoing process question (only shown if no birth certificate)
                 if (_hasBirthCertificate == 'No')
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildQuestionCard(
                         context,
-                        'Is there an ongoing process to obtain one?',
+                        '27. Is there an ongoing process to obtain one?',
                         'ongoing_birth_cert_process',
                         onAnswerChanged: (answer) {
                           setState(() {
                             _ongoingBirthCertProcess = answer;
-                            // Clear reason if process is ongoing
                             if (answer == 'Yes') {
                               _noBirthCertReasonController.clear();
                             }
@@ -693,19 +1176,140 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                         },
                       ),
 
-                      // 3. Reason for no birth certificate (only shown if no and no ongoing process)
+                      // Reason for no birth certificate (only shown if no and no ongoing process)
                       if (_ongoingBirthCertProcess == 'No')
                         _buildFormField(
                           context: context,
-                          label: 'If no, why?',
+                          label: '28. If no, why?',
                           controller: _noBirthCertReasonController,
                           hintText: 'Enter the reason...',
                           maxLines: 2,
-                          isRequired: true,
                         ),
                       const SizedBox(height: 16),
                     ],
                   ),
+                const SizedBox(height: 24),
+
+                // Section 5: Family & Caregiver Engagement
+                Text(
+                  'Section 5: Family & Caregiver Engagement',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Family & Caregiver Engagement Questions
+                _buildQuestionCard(
+                  context,
+                  '29. Has the household received awareness-raising sessions on child labour risks?',
+                  'awareness_sessions',
+                ),
+                _buildQuestionCard(
+                  context,
+                  '30. Do caregivers demonstrate improved understanding of child protection?',
+                  'caregiver_understanding',
+                ),
+                _buildQuestionCard(
+                  context,
+                  '31. Have caregivers taken steps to keep the child in school (e.g., paying fees, providing materials)?',
+                  'school_support',
+                ),
+                const SizedBox(height: 24),
+
+                // Section 6: Additional Support Provided
+                Text(
+                  'Section 6: Additional Support Provided',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Additional Support Questions
+                _buildQuestionCard(
+                  context,
+                  '32. Has the child or household received financial or material support (cash transfer, farm input, etc.)?',
+                  'received_support',
+                ),
+                _buildQuestionCard(
+                  context,
+                  '33. Were referrals made to other services (health, legal, social)?',
+                  'referrals_made',
+                ),
+                _buildQuestionCard(
+                  context,
+                  '34. Are there ongoing follow-up visits planned?',
+                  'follow_up_planned',
+                ),
+                const SizedBox(height: 24),
+
+                // Section 7: Overall Assessment
+                Text(
+                  'Section 7: Overall Assessment',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Overall Assessment Questions
+                _buildQuestionCard(
+                  context,
+                  '35. Based on progress, is the child considered remediated (no longer in child labour)?',
+                  'remediated_status',
+                ),
+                const SizedBox(height: 16),
+
+                // Additional comments field
+                _buildFormField(
+                  context: context,
+                  label: '36. Additional comments or observations',
+                  controller: _additionalCommentsController,
+                  hintText: 'Enter any additional comments or observations...',
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 24),
+
+                // Section 8: Follow-up Cycle Completion
+                Text(
+                  'Section 8: Follow-up Cycle Completion',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Follow-up visits count
+                _buildFormField(
+                  context: context,
+                  label: '37. How many follow-up visits have been conducted since the child was first identified?',
+                  controller: _followUpVisitsCountController,
+                  hintText: 'Enter number of visits',
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+
+                // Follow-up Cycle Questions
+                _buildQuestionCard(
+                  context,
+                  '38. Were the visits spaced between 3-6 months apart?',
+                  'visits_spaced_correctly',
+                ),
+                _buildQuestionCard(
+                  context,
+                  '39. At the last two consecutive visits, was the child confirmed not to be in child labour?',
+                  'no_child_labour_last_two_visits',
+                ),
+                _buildQuestionCard(
+                  context,
+                  '40. Based on this, can the follow-up cycle for this child be considered complete?',
+                  'follow_up_cycle_complete',
+                ),
                 const SizedBox(height: 24),
 
                 // Submit Buttons
@@ -713,7 +1317,9 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
               ],
             ),
           ),
-        )));
+        ),
+      ),
+    );
   }
 
   /// Builds each question card with Yes/No full-width buttons
@@ -722,12 +1328,10 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
     String question,
     String key, {
     Function(String)? onAnswerChanged,
-    String? initialAnswer,
   }) {
     final theme = Theme.of(context);
-    final isYesSelected = _answers[key] == "Yes" || initialAnswer == "Yes";
-    final isNoSelected = _answers[key] == "No" ||
-        (initialAnswer == "No" && _answers[key] == null);
+    final isYesSelected = _answers[key] == "Yes";
+    final isNoSelected = _answers[key] == "No";
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -750,9 +1354,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      setState(() {
-                        _answers[key] = "Yes";
-                      });
+                      _updateAnswers(key, "Yes");
                       if (onAnswerChanged != null) {
                         onAnswerChanged('Yes');
                       }
@@ -760,9 +1362,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: isYesSelected
-                            ? theme.primaryColor
-                            : Colors.grey[200],
+                        color: isYesSelected ? theme.primaryColor : Colors.grey[200],
                         borderRadius: BorderRadius.circular(10),
                       ),
                       alignment: Alignment.center,
@@ -770,9 +1370,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                         "Yes",
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: isYesSelected
-                              ? Colors.white
-                              : theme.textTheme.bodyLarge?.color,
+                          color: isYesSelected ? Colors.white : theme.textTheme.bodyLarge?.color,
                         ),
                       ),
                     ),
@@ -783,9 +1381,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      setState(() {
-                        _answers[key] = "No";
-                      });
+                      _updateAnswers(key, "No");
                       if (onAnswerChanged != null) {
                         onAnswerChanged('No');
                       }
@@ -793,9 +1389,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: isNoSelected
-                            ? theme.colorScheme.error
-                            : Colors.grey[200],
+                        color: isNoSelected ? theme.colorScheme.error : Colors.grey[200],
                         borderRadius: BorderRadius.circular(10),
                       ),
                       alignment: Alignment.center,
@@ -803,9 +1397,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                         "No",
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: isNoSelected
-                              ? Colors.white
-                              : theme.colorScheme.error,
+                          color: isNoSelected ? Colors.white : theme.colorScheme.error,
                         ),
                       ),
                     ),
@@ -819,112 +1411,71 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
     );
   }
 
-  // Update answers map when a question is answered
-  void _updateAnswers(String questionId, String answer) {
-    _answers[questionId] = answer;
-    // Update score if needed
-    if (answer == 'Yes') {
-      _monitoringScore.value++;
+  Future<void> _saveAsDraft() async {
+    try {
+      // Update text controllers in the controller
+      _controller.childIdController.text = _childIdController.text;
+      _controller.childNameController.text = _childNameController.text;
+      _controller.ageController.text = _ageController.text;
+      _controller.interventionDateController.text = _interventionDateController.text;
+      _controller.remediationTypeController.text = _remediationTypeController.text;
+      _controller.followUpVisitsController.text = _followUpVisitsController.text;
+      _controller.recommendationsController.text = _recommendationsController.text;
+      _controller.noBirthCertReasonController.text = _noBirthCertReasonController.text;
+      _controller.additionalCommentsController.text = _additionalCommentsController.text;
+      _controller.followUpVisitsCountController.text = _followUpVisitsCountController.text;
+
+      // Save as draft
+      final saveDraftSuccess = await _controller.saveAsDraft();
+      
+      if (saveDraftSuccess && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Form saved as draft'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving draft: $e')),
+        );
+      }
     }
   }
 
-  Widget _buildSubmitButton(BuildContext context) {
-    final theme = Theme.of(context);
+  Future<void> _submitForm() async {
+    try {
+      // Update text controllers in the controller
+      _controller.childIdController.text = _childIdController.text;
+      _controller.childNameController.text = _childNameController.text;
+      _controller.ageController.text = _ageController.text;
+      _controller.interventionDateController.text = _interventionDateController.text;
+      _controller.remediationTypeController.text = _remediationTypeController.text;
+      _controller.followUpVisitsController.text = _followUpVisitsController.text;
+      _controller.recommendationsController.text = _recommendationsController.text;
+      _controller.noBirthCertReasonController.text = _noBirthCertReasonController.text;
+      _controller.additionalCommentsController.text = _additionalCommentsController.text;
+      _controller.followUpVisitsCountController.text = _followUpVisitsCountController.text;
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _saveAsDraft,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: theme.primaryColor),
-                ),
-                child: Text(
-                  'Save as Draft',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _submitForm();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Text(
-                  'Submit',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
-  void _saveAsDraft() {
-    // TODO: Implement save as draft functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Form saved as draft')),
-    );
-  }
-
-  void _submitForm() {
-    // Collect all form data
-    final formData = {
-      'childId': _childIdController.text,
-      'childName': _childNameController.text,
-      'age': _ageController.text,
-      'gender': _selectedGender,
-      'community': _communityController.text,
-      'farmerId': _farmerIdController.text,
-      'interventionDate': _interventionDateController.text,
-      'remediationType': _remediationTypeController.text,
-      'followUpVisits': _followUpVisitsController.text,
-      'education': {
-        'currentSchool': _currentSchoolController.text,
-        'gradeLevel': _gradeLevelController.text,
-        'attendanceRate': _attendanceRateController.text,
-        'attendingSchool': _educationQuestions[0].selectedValue,
-        'regularAttendance': _educationQuestions[1].selectedValue,
-        'satisfactoryPerformance': _educationQuestions[2].selectedValue,
-        'receivingSupport': _educationQuestions[3].selectedValue,
-        'attendanceNotes': _attendanceNotesController.text,
-        'performanceNotes': _performanceNotesController.text,
-        'supportNotes': _supportNotesController.text,
-        'challenges': _challengesController.text,
-        'supportNeeded': _supportNeededController.text,
-        'additionalNotes': _otherNotesController.text,
-      },
-    };
-
-    // TODO: Submit form data to API
-    print('Form submitted: $formData');
-
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Form submitted successfully')),
-    );
-
-    // Navigate back or reset form
-    Navigator.of(context).pop();
+      // Submit the form
+      final submitSuccess = await _controller.submitForm();
+      
+      if (submitSuccess && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Form submitted successfully')),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      print('Error submitting form: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting form: $e')),
+        );
+      }
+    }
   }
 
   // Build the form buttons row
@@ -944,11 +1495,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
               ),
               icon: const Icon(Icons.save),
               label: const Text("Save Draft"),
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  _saveAsDraft();
-                }
-              },
+              onPressed: _saveAsDraft,
             ),
           ),
           const SizedBox(width: 12),

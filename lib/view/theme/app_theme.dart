@@ -22,24 +22,24 @@ class AppTheme {
 
   // Text Theme (Light)
   static TextTheme textTheme = TextTheme(
-    displayLarge: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: textPrimary),
-    displayMedium: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: textPrimary),
-    titleLarge: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w600, color: textPrimary),
-    titleMedium: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w500, color: textPrimary),
-    bodyLarge: GoogleFonts.poppins(fontSize: 16, color: textPrimary),
-    bodyMedium: GoogleFonts.poppins(fontSize: 14, color: textSecondary),
-    labelLarge: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.white),
+    displayLarge: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: textPrimary),
+    displayMedium: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary),
+    titleLarge: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: textPrimary),
+    titleMedium: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimary),
+    bodyLarge: GoogleFonts.poppins(fontSize: 12, color: textPrimary),
+    bodyMedium: GoogleFonts.poppins(fontSize: 11, color: textSecondary),
+    labelLarge: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
   );
 
   // Text Theme (Dark)
   static TextTheme darkTextTheme = TextTheme(
-    displayLarge: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: darkTextPrimary),
-    displayMedium: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: darkTextPrimary),
-    titleLarge: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w600, color: darkTextPrimary),
-    titleMedium: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w500, color: darkTextPrimary),
-    bodyLarge: GoogleFonts.poppins(fontSize: 16, color: darkTextPrimary),
-    bodyMedium: GoogleFonts.poppins(fontSize: 14, color: darkTextSecondary),
-    labelLarge: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.white),
+    displayLarge: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: darkTextPrimary),
+    displayMedium: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: darkTextPrimary),
+    titleLarge: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: darkTextPrimary),
+    titleMedium: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: darkTextPrimary),
+    bodyLarge: GoogleFonts.poppins(fontSize: 12, color: darkTextPrimary),
+    bodyMedium: GoogleFonts.poppins(fontSize: 11, color: darkTextSecondary),
+    labelLarge: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
   );
 
   // App Bar Theme (Light)

@@ -1,503 +1,814 @@
+// import 'package:flutter/material.dart';
+// import 'package:google_fonts/google_fonts.dart';
+// import 'package:url_launcher/url_launcher.dart';
+
+// class FarmerDetailScreen extends StatelessWidget {
+//   final Map<String, dynamic> farmerData;
+
+//   const FarmerDetailScreen({
+//     Key? key,
+//     required this.farmerData,
+//   }) : super(key: key);
+
+//   // Mock children data - replace with your actual data source
+//   List<Map<String, dynamic>> get children => [
+//         {
+//           'name': 'Alice Mwangi',
+//           'age': 12,
+//           'isAtRisk': true,
+//           'gender': 'Female',
+//           'lastSeen': '2 days ago',
+//           'riskFactors': ['Working on farm', 'Not attending school'],
+//         },
+//         {
+//           'name': 'Bob Omondi',
+//           'age': 14,
+//           'isAtRisk': true,
+//           'gender': 'Male',
+//           'lastSeen': '1 week ago',
+//           'riskFactors': ['Working long hours'],
+//         },
+//         {
+//           'name': 'Charlie Wanjiku',
+//           'age': 16,
+//           'isAtRisk': false,
+//           'gender': 'Female',
+//           'lastSeen': '3 days ago',
+//           'riskFactors': [],
+//         },
+//       ];
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
+//     final coordinates = farmerData['coordinates'];
+//     final lat = coordinates['lat'];
+//     final lng = coordinates['lng'];
+//     final mapUrl = 'https://www.google.com/maps?q=$lat,$lng';
+//     final atRiskCount = children.where((c) => c['isAtRisk']).length;
+//     final safeCount = children.length - atRiskCount;
+
+//     return Scaffold(
+//       backgroundColor: Colors.grey[50],
+//       body: CustomScrollView(
+//         slivers: [
+//           SliverAppBar(
+//             expandedHeight: 50,
+//             pinned: true,
+//             backgroundColor: Theme.of(context).primaryColor,
+//             flexibleSpace: FlexibleSpaceBar(
+//               centerTitle: true,
+//               title: Text(
+//                 farmerData['name'],
+//                 style: GoogleFonts.poppins(
+//                   color: Colors.white,
+//                   fontWeight: FontWeight.w500,
+//                   fontSize: 13,
+//                 ),
+//               ),
+//             ),
+//             leading: IconButton(
+//               icon: const Icon(Icons.arrow_back, color: Colors.white),
+//               onPressed: () => Navigator.of(context).pop(),
+//             ),
+//           ),
+//           SliverToBoxAdapter(
+//             child: Padding(
+//               padding: const EdgeInsets.all(16.0),
+//               child: Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   // Farmer Information Card
+//                   Card(
+//                     elevation: 2,
+//                     shape: RoundedRectangleBorder(
+//                       borderRadius: BorderRadius.circular(16),
+//                     ),
+//                     child: Padding(
+//                       padding: const EdgeInsets.all(20.0),
+//                       child: Column(
+//                         crossAxisAlignment: CrossAxisAlignment.start,
+//                         children: [
+//                           Row(
+//                             children: [
+//                               Container(
+//                                 padding: const EdgeInsets.all(10),
+//                                 decoration: BoxDecoration(
+//                                   color: theme.primaryColor.withOpacity(0.1),
+//                                   shape: BoxShape.circle,
+//                                 ),
+//                                 child: Icon(
+//                                   Icons.person_outline,
+//                                   color: theme.primaryColor,
+//                                   size: 24,
+//                                 ),
+//                               ),
+//                               const SizedBox(width: 16),
+//                               Text(
+//                                 'Farmer Details',
+//                                 style: GoogleFonts.poppins(
+//                                   fontSize: 16,
+//                                   fontWeight: FontWeight.w600,
+//                                   color: Colors.grey[800],
+//                                 ),
+//                               ),
+//                             ],
+//                           ),
+//                           const SizedBox(height: 20),
+//                           _buildInfoRow(
+//                             Icons.location_on_outlined,
+//                             'Location',
+//                             farmerData['location'],
+//                             theme.primaryColor,
+//                           ),
+//                           const Divider(height: 24, thickness: 0.5),
+//                           _buildInfoRow(
+//                             Icons.agriculture_outlined,
+//                             'Farm Size',
+//                             '5 acres',
+//                             Colors.green,
+//                           ),
+//                           const Divider(height: 24, thickness: 0.5),
+//                           _buildInfoRow(
+//                             Icons.phone_android_outlined,
+//                             'Contact',
+//                             '+233 555 555 555',
+//                             Colors.blue,
+//                           ),
+//                           const SizedBox(height: 20),
+//                           SizedBox(
+//                             width: double.infinity,
+//                             child: ElevatedButton.icon(
+//                               onPressed: () async {
+//                                 final Uri uri = Uri.parse(mapUrl);
+//                                 if (await canLaunchUrl(uri)) {
+//                                   await launchUrl(uri);
+//                                 }
+//                               },
+//                               style: ElevatedButton.styleFrom(
+//                                 backgroundColor: theme.primaryColor,
+//                                 padding:
+//                                     const EdgeInsets.symmetric(vertical: 14),
+//                                 shape: RoundedRectangleBorder(
+//                                   borderRadius: BorderRadius.circular(12),
+//                                 ),
+//                                 elevation: 0,
+//                               ),
+//                               icon: const Icon(Icons.map_outlined, size: 20),
+//                               label: Text(
+//                                 'View on Map',
+//                                 style: GoogleFonts.poppins(
+//                                   color: Colors.white,
+//                                   fontWeight: FontWeight.w500,
+//                                   fontSize: 14,
+//                                 ),
+//                               ),
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                   ),
+
+//                   const SizedBox(height: 16),
+
+//                   // Children Summary
+//                   Row(
+//                     children: [
+//                       _buildStatCard(
+//                         context,
+//                         '${children.length}',
+//                         'Total Children',
+//                         Icons.people,
+//                         Colors.blue,
+//                       ),
+//                       const SizedBox(width: 10),
+//                       _buildStatCard(
+//                         context,
+//                         '$atRiskCount',
+//                         'At Risk',
+//                         Icons.warning_amber_rounded,
+//                         Colors.orange,
+//                       ),
+//                       const SizedBox(width: 12),
+//                       _buildStatCard(
+//                         context,
+//                         '$safeCount',
+//                         'Safe',
+//                         Icons.verified_user,
+//                         Colors.green,
+//                       ),
+//                     ],
+//                   ),
+
+//                   const SizedBox(height: 25),
+//                   Text(
+//                     'Children Details',
+//                     style: GoogleFonts.poppins(
+//                       fontSize: 18,
+//                       fontWeight: FontWeight.w600,
+//                     ),
+//                   ),
+//                   // const SizedBox(height: 6),
+//                 ],
+//               ),
+//             ),
+//           ),
+
+//           // Children List
+//           SliverList(
+//             delegate: SliverChildBuilderDelegate(
+//               (context, index) => Padding(
+//                 padding:
+//                     const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+//                 child: _buildChildCard(context, children[index]),
+//               ),
+//               childCount: children.length,
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildSectionCard(BuildContext context,
+//       {required String title, required Widget child}) {
+//     return Card(
+//       elevation: 2,
+//       shape: RoundedRectangleBorder(
+//         borderRadius: BorderRadius.circular(12),
+//       ),
+//       child: Padding(
+//         padding: const EdgeInsets.all(16.0),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text(
+//               title,
+//               style: GoogleFonts.poppins(
+//                 fontSize: 16,
+//                 fontWeight: FontWeight.w600,
+//                 color: Colors.grey[800],
+//               ),
+//             ),
+//             const Divider(height: 24, thickness: 1),
+//             child,
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildInfoRow(IconData icon, String label, String value, Color color) {
+//     return Row(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Container(
+//           padding: const EdgeInsets.all(6),
+//           decoration: BoxDecoration(
+//             color: color.withOpacity(0.1),
+//             borderRadius: BorderRadius.circular(8),
+//           ),
+//           child: Icon(icon, size: 18, color: color),
+//         ),
+//         const SizedBox(width: 16),
+//         Expanded(
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Text(
+//                 label,
+//                 style: GoogleFonts.poppins(
+//                   fontSize: 13,
+//                   color: Colors.grey[600],
+//                   fontWeight: FontWeight.w500,
+//                 ),
+//               ),
+//               const SizedBox(height: 4),
+//               Text(
+//                 value,
+//                 style: GoogleFonts.poppins(
+//                   fontSize: 15,
+//                   fontWeight: FontWeight.w500,
+//                   color: Colors.grey[900],
+//                   height: 1.3,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildStatCard(BuildContext context, String value, String label,
+//       IconData icon, Color color) {
+//     return Expanded(
+//       child: Container(
+//         height: 120,
+//         margin: const EdgeInsets.symmetric(horizontal: 4),
+//         child: Container(
+//           padding: const EdgeInsets.all(12),
+//           decoration: BoxDecoration(
+//             color: color.withOpacity(0.1),
+//             borderRadius: BorderRadius.circular(16),
+//           ),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               // Icon at top-right
+//               Align(
+//                 alignment: Alignment.topRight,
+//                 child: Container(
+//                   padding: const EdgeInsets.all(6),
+//                   decoration: BoxDecoration(
+//                     color: color.withOpacity(0.2),
+//                     shape: BoxShape.circle,
+//                   ),
+//                   child: Icon(icon, color: color, size: 16),
+//                 ),
+//               ),
+//               const Spacer(),
+//               // Text content
+//               Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   Text(
+//                     label.toUpperCase(),
+//                     style: GoogleFonts.poppins(
+//                       fontSize: 10,
+//                       fontWeight: FontWeight.w500,
+//                       color: Colors.grey[600],
+//                       letterSpacing: 0.5,
+//                     ),
+//                     overflow: TextOverflow.ellipsis,
+//                     maxLines: 1,
+//                   ),
+//                   const SizedBox(height: 4),
+//                   Text(
+//                     value,
+//                     style: GoogleFonts.poppins(
+//                       fontSize: 20,
+//                       fontWeight: FontWeight.w700,
+//                       color: color,
+//                       height: 1.1,
+//                     ),
+//                     overflow: TextOverflow.ellipsis,
+//                     maxLines: 1,
+//                   ),
+//                 ],
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildChildCard(BuildContext context, Map<String, dynamic> child) {
+//     final isAtRisk = child['isAtRisk'] as bool;
+//     final riskFactors =
+//         List<String>.from(child['riskFactors'] as List<dynamic>? ?? []);
+
+//     return Card(
+//       margin: const EdgeInsets.only(bottom: 12),
+//       elevation: 1,
+//       shape: RoundedRectangleBorder(
+//         borderRadius: BorderRadius.circular(12),
+//         side: BorderSide(
+//           color: isAtRisk ? Colors.red[100]! : Colors.green[100]!,
+//           width: 1.5,
+//         ),
+//       ),
+//       child: InkWell(
+//         onTap: () {
+//           // Navigate to child details
+//         },
+//         borderRadius: BorderRadius.circular(12),
+//         child: Padding(
+//           padding: const EdgeInsets.all(16.0),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Row(
+//                 children: [
+//                   CircleAvatar(
+//                     backgroundColor:
+//                         isAtRisk ? Colors.red[100] : Colors.green[100],
+//                     child: Icon(
+//                       child['gender'] == 'Male' ? Icons.boy : Icons.girl,
+//                       color: isAtRisk ? Colors.red[800] : Colors.green[800],
+//                     ),
+//                   ),
+//                   const SizedBox(width: 12),
+//                   Expanded(
+//                     child: Column(
+//                       crossAxisAlignment: CrossAxisAlignment.start,
+//                       children: [
+//                         Text(
+//                           child['name'],
+//                           style: GoogleFonts.poppins(
+//                             fontSize: 15,
+//                             fontWeight: FontWeight.w600,
+//                           ),
+//                         ),
+//                         const SizedBox(height: 2),
+//                         Text(
+//                           '${child['age']} years • ${child['gender']}',
+//                           style: GoogleFonts.poppins(
+//                             fontSize: 12,
+//                             color: Colors.grey[600],
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                   ),
+//                   Container(
+//                     padding:
+//                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+//                     decoration: BoxDecoration(
+//                       color: isAtRisk ? Colors.red[50] : Colors.green[50],
+//                       borderRadius: BorderRadius.circular(12),
+//                       border: Border.all(
+//                         color: isAtRisk ? Colors.red[100]! : Colors.green[100]!,
+//                       ),
+//                     ),
+//                     child: Text(
+//                       isAtRisk ? 'At Risk' : 'Safe',
+//                       style: GoogleFonts.poppins(
+//                         fontSize: 12,
+//                         fontWeight: FontWeight.w500,
+//                         color: isAtRisk ? Colors.red[800] : Colors.green[800],
+//                       ),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//               if (isAtRisk && riskFactors.isNotEmpty) ...[
+//                 const SizedBox(height: 12),
+//                 const Divider(
+//                   height: 0.5,
+//                 ),
+//                 const SizedBox(height: 8),
+//                 Text(
+//                   'Risk Factors:',
+//                   style: GoogleFonts.poppins(
+//                     fontSize: 12,
+//                     fontWeight: FontWeight.w500,
+//                     color: Colors.grey[700],
+//                   ),
+//                 ),
+//                 const SizedBox(height: 4),
+//                 Wrap(
+//                   spacing: 8,
+//                   runSpacing: 4,
+//                   children: riskFactors
+//                       .map((factor) => Chip(
+//                             label: Text(
+//                               factor,
+//                               style: GoogleFonts.poppins(
+//                                   fontSize: 11, color: Colors.black),
+//                             ),
+//                             backgroundColor: Colors.red[50],
+//                             side: BorderSide(
+//                               color: Colors.red[100]!,
+//                               width: 0.5,
+//                             ),
+//                             padding: EdgeInsets.zero,
+//                             labelPadding:
+//                                 const EdgeInsets.symmetric(horizontal: 8),
+//                             materialTapTargetSize:
+//                                 MaterialTapTargetSize.shrinkWrap,
+//                           ))
+//                       .toList(),
+//                 ),
+//               ],
+//               const SizedBox(height: 4),
+//               Align(
+//                 alignment: Alignment.centerRight,
+//                 child: Text(
+//                   'Last seen: ${child['lastSeen']}',
+//                   style: GoogleFonts.poppins(
+//                     fontSize: 10,
+//                     color: Colors.grey[500],
+//                     fontStyle: FontStyle.italic,
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:human_rights_monitor/controller/models/farmers/farmers_model.dart';
 
-class FarmerDetailScreen extends StatelessWidget {
-  final Map<String, dynamic> farmerData;
+class FarmerDetailsScreen extends StatelessWidget {
+  final Farmer farmer;
 
-  const FarmerDetailScreen({
-    Key? key,
-    required this.farmerData,
-  }) : super(key: key);
-
-  // Mock children data - replace with your actual data source
-  List<Map<String, dynamic>> get children => [
-        {
-          'name': 'Alice Mwangi',
-          'age': 12,
-          'isAtRisk': true,
-          'gender': 'Female',
-          'lastSeen': '2 days ago',
-          'riskFactors': ['Working on farm', 'Not attending school'],
-        },
-        {
-          'name': 'Bob Omondi',
-          'age': 14,
-          'isAtRisk': true,
-          'gender': 'Male',
-          'lastSeen': '1 week ago',
-          'riskFactors': ['Working long hours'],
-        },
-        {
-          'name': 'Charlie Wanjiku',
-          'age': 16,
-          'isAtRisk': false,
-          'gender': 'Female',
-          'lastSeen': '3 days ago',
-          'riskFactors': [],
-        },
-      ];
+  const FarmerDetailsScreen({Key? key, required this.farmer}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final coordinates = farmerData['coordinates'];
-    final lat = coordinates['lat'];
-    final lng = coordinates['lng'];
-    final mapUrl = 'https://www.google.com/maps?q=$lat,$lng';
-    final atRiskCount = children.where((c) => c['isAtRisk']).length;
-    final safeCount = children.length - atRiskCount;
-
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 50,
-            pinned: true,
-            backgroundColor: Theme.of(context).primaryColor,
-            flexibleSpace: FlexibleSpaceBar(
-              centerTitle: true,
-              title: Text(
-                farmerData['name'],
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Farmer Information Card
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: theme.primaryColor.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.person_outline,
-                                  color: theme.primaryColor,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                'Farmer Details',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          _buildInfoRow(
-                            Icons.location_on_outlined,
-                            'Location',
-                            farmerData['location'],
-                            theme.primaryColor,
-                          ),
-                          const Divider(height: 24, thickness: 0.5),
-                          _buildInfoRow(
-                            Icons.agriculture_outlined,
-                            'Farm Size',
-                            '5 acres',
-                            Colors.green,
-                          ),
-                          const Divider(height: 24, thickness: 0.5),
-                          _buildInfoRow(
-                            Icons.phone_android_outlined,
-                            'Contact',
-                            '+233 555 555 555',
-                            Colors.blue,
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () async {
-                                final Uri uri = Uri.parse(mapUrl);
-                                if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.primaryColor,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 0,
-                              ),
-                              icon: const Icon(Icons.map_outlined, size: 20),
-                              label: Text(
-                                'View on Map',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Children Summary
-                  Row(
-                    children: [
-                      _buildStatCard(
-                        context,
-                        '${children.length}',
-                        'Total Children',
-                        Icons.people,
-                        Colors.blue,
-                      ),
-                      const SizedBox(width: 10),
-                      _buildStatCard(
-                        context,
-                        '$atRiskCount',
-                        'At Risk',
-                        Icons.warning_amber_rounded,
-                        Colors.orange,
-                      ),
-                      const SizedBox(width: 12),
-                      _buildStatCard(
-                        context,
-                        '$safeCount',
-                        'Safe',
-                        Icons.verified_user,
-                        Colors.green,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 25),
-                  Text(
-                    'Children Details',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  // const SizedBox(height: 6),
-                ],
-              ),
-            ),
-          ),
-
-          // Children List
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: _buildChildCard(context, children[index]),
-              ),
-              childCount: children.length,
-            ),
-          ),
-        ],
+      backgroundColor: Theme.of(context).colorScheme.background,
+      appBar: AppBar(
+        title: Text('${farmer.firstName} ${farmer.lastName}'),
       ),
-    );
-  }
-
-  Widget _buildSectionCard(BuildContext context,
-      {required String title, required Widget child}) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
+            // Profile Header
+            _buildProfileHeader(context),
+            const SizedBox(height: 24),
+
+            // Personal Information
+            _buildSection(
+              context,
+              title: 'Personal Information',
+              children: [
+                _buildDetailItem(
+                  context,
+                  label: 'Full Name',
+                  value: '${farmer.firstName} ${farmer.lastName}',
+                  icon: Icons.person,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'Farmer Code',
+                  value: farmer.farmerCode ?? 'N/A',
+                  icon: Icons.code,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'National ID',
+                  value: farmer.nationalIdNo ?? 'N/A',
+                  icon: Icons.badge,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'Contact',
+                  value: farmer.contact ?? 'N/A',
+                  icon: Icons.phone,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'ID Type',
+                  value: farmer.idType ?? 'N/A',
+                  icon: Icons.credit_card,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'ID Expiry',
+                  value: farmer.idExpiryDate??'N/A',
+                  icon: Icons.calendar_today,
+                ),
+              ],
             ),
-            const Divider(height: 24, thickness: 1),
-            child,
+            const SizedBox(height: 24),
+
+            // Farm Information
+            _buildSection(
+              context,
+              title: 'Farm Information',
+              children: [
+                _buildDetailItem(
+                  context,
+                  label: 'Total Cocoa Farms',
+                  value: farmer.noOfCocoaFarms.toString(),
+                  icon: Icons.agriculture,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'Certified Crops',
+                  value: farmer.noOfCertifiedCrop.toString(),
+                  icon: Icons.verified,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'Mapped Farms',
+                  value: farmer.calNoMappedFarms.toString(),
+                  icon: Icons.map,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'Mapped Status',
+                  value: farmer.mappedStatus??'N/A',
+                  icon: Icons.check_circle,
+                 valueColor: (farmer.mappedStatus ?? 'no').toLowerCase() == 'yes'
+    ? Colors.green
+    : Colors.orange,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Production Information
+            _buildSection(
+              context,
+              title: 'Production Information',
+              children: [
+                _buildDetailItem(
+                  context,
+                  label: 'Last Year Harvest',
+                  value: '${farmer.totalCocoaBagsHarvestedPreviousYear} bags',
+                  icon: Icons.inventory,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'Last Year Sales',
+                  value: '${farmer.totalCocoaBagsSoldGroupPreviousYear} bags',
+                  icon: Icons.shopping_cart,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'Current Year Estimate',
+                  value: '${farmer.currentYearYieldEstimate} bags',
+                  icon: Icons.trending_up,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Additional Information
+            _buildSection(
+              context,
+              title: 'Additional Information',
+              children: [
+                _buildDetailItem(
+                  context,
+                  label: 'Society',
+                  value: 'Society ${farmer.societyName}',
+                  icon: Icons.business,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'Staff Reference',
+                  value: farmer.staffTblForeignkey.toString(),
+                  icon: Icons.people,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'New Farmer Code',
+                  value: farmer.newFarmerCode??'N/A',
+                  icon: Icons.qr_code,
+                ),
+                _buildDetailItem(
+                  context,
+                  label: 'UUID',
+                  value: farmer.uuid??'N/A',
+                  icon: Icons.fingerprint,
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value, Color color) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 18, color: color),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+  Widget _buildProfileHeader(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            // Profile Avatar
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[900],
-                  height: 1.3,
-                ),
+              child: Icon(
+                Icons.person,
+                size: 40,
+                color: Theme.of(context).colorScheme.primary,
               ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(BuildContext context, String value, String label,
-      IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        height: 120,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Icon at top-right
-              Align(
-                alignment: Alignment.topRight,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color, size: 16),
-                ),
-              ),
-              const Spacer(),
-              // Text content
-              Column(
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    label.toUpperCase(),
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[600],
-                      letterSpacing: 0.5,
-                    ),
+                    '${farmer.firstName} ${farmer.lastName}',
+                    style: Theme.of(context).textTheme.displayLarge,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    value,
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                      height: 1.1,
+                    farmer.farmerCode,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: (farmer.mappedStatus?.toLowerCase() ?? '') == 'yes'
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
+                    child: Text(
+                      farmer.mappedStatus?? 'N/A',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: (farmer.mappedStatus?.toLowerCase() ?? '') == 'yes'
+                                ? Colors.green
+                                : Colors.orange,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildChildCard(BuildContext context, Map<String, dynamic> child) {
-    final isAtRisk = child['isAtRisk'] as bool;
-    final riskFactors =
-        List<String>.from(child['riskFactors'] as List<dynamic>? ?? []);
-
+  Widget _buildSection(BuildContext context, {required String title, required List<Widget> children}) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 1,
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isAtRisk ? Colors.red[100]! : Colors.green[100]!,
-          width: 1.5,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.displayMedium,
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
         ),
       ),
-      child: InkWell(
-        onTap: () {
-          // Navigate to child details
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor:
-                        isAtRisk ? Colors.red[100] : Colors.green[100],
-                    child: Icon(
-                      child['gender'] == 'Male' ? Icons.boy : Icons.girl,
-                      color: isAtRisk ? Colors.red[800] : Colors.green[800],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          child['name'],
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${child['age']} years • ${child['gender']}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isAtRisk ? Colors.red[50] : Colors.green[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isAtRisk ? Colors.red[100]! : Colors.green[100]!,
-                      ),
-                    ),
-                    child: Text(
-                      isAtRisk ? 'At Risk' : 'Safe',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isAtRisk ? Colors.red[800] : Colors.green[800],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (isAtRisk && riskFactors.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                const Divider(
-                  height: 0.5,
-                ),
-                const SizedBox(height: 8),
+    );
+  }
+
+  Widget _buildDetailItem(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    Color? valueColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  'Risk Factors:',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[700],
-                  ),
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                      ),
                 ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: riskFactors
-                      .map((factor) => Chip(
-                            label: Text(
-                              factor,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 11, color: Colors.black),
-                            ),
-                            backgroundColor: Colors.red[50],
-                            side: BorderSide(
-                              color: Colors.red[100]!,
-                              width: 0.5,
-                            ),
-                            padding: EdgeInsets.zero,
-                            labelPadding:
-                                const EdgeInsets.symmetric(horizontal: 8),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                          ))
-                      .toList(),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: valueColor ?? Theme.of(context).colorScheme.onBackground,
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
               ],
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Last seen: ${child['lastSeen']}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.grey[500],
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

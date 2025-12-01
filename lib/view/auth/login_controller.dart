@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:human_rights_monitor/view/sync/sync_page.dart';
 
 import '../screen_wrapper/screen_wrapper.dart';
 
@@ -33,7 +34,7 @@ class LoginController extends ChangeNotifier {
     await Future.delayed(const Duration(seconds: 2));
 
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const ScreenWrapper()),
+      MaterialPageRoute(builder: (context) => const SyncPage()),
     );
 
   }
