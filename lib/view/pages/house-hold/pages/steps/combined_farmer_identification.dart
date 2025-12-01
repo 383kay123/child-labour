@@ -1845,18 +1845,11 @@ class CombinedFarmIdentificationPageState
   Future<void> _goToNextPage() async {
     // Validate current page first
     if (!validateCurrentPage()) {
+      debugPrint('❌ Validation failed, not proceeding to next page');
       return;
     }
     
     try {
-      // Save current page data before navigating with validation
-      final saved = await saveData(validateAllPages: false);
-      
-      if (!saved) {
-        debugPrint('❌ Failed to save data before navigation');
-        return;
-      }
-      
       // If we have more sub-pages, go to the next one
       if (_currentPageIndex < _totalPages - 1) {
         final nextPageIndex = _currentPageIndex + 1;
@@ -1897,7 +1890,7 @@ class CombinedFarmIdentificationPageState
       debugPrint('❌ Error in _goToNextPage: $e');
       debugPrint('Stack trace: $stackTrace');
       if (mounted) {
-        _showValidationError('Error saving data. Please try again.');
+        _showValidationError('Error navigating to next page. Please try again.');
       }
     }
   }
@@ -2439,38 +2432,24 @@ class CombinedFarmIdentificationPageState
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
       body: Column(
         children: [
-          // Progress indicator for sub-pages
+          // Page title only, no navigation arrows
           Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: _Spacing.lg, vertical: _Spacing.md),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  onPressed: _goToPreviousPage,
-                  icon: const Icon(Icons.arrow_back),
+            padding: const EdgeInsets.symmetric(horizontal: _Spacing.lg, vertical: _Spacing.md),
+            child: Center(
+              child: Text(
+                _getSubPageTitle(_currentPageIndex),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
-                Expanded(
-                  child: Text(
-                    _getSubPageTitle(_currentPageIndex),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _goToNextPage,
-                  icon: const Icon(Icons.arrow_forward),
-                ),
-              ],
+              ),
             ),
           ),
+          const Divider(height: 1),
           Expanded(
             child: PageView(
               controller: _pageController,

@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/districts_repo.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/farmers_repo.dart';
+import 'package:human_rights_monitor/controller/models/districts/districts_model.dart';
+import 'package:human_rights_monitor/controller/models/farmers/farmers_model.dart';
 import 'package:intl/intl.dart';
-import 'monitoring_assessment_form_controller.dart' hide FormState;
+
+// Import the controller
+import 'monitoring_assessment_form_controller.dart';
 
 // Model to track yes/no question state
 class YesNoQuestion {
@@ -47,7 +53,7 @@ class MonitoringAssessmentForm extends StatefulWidget {
 
 class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
   final _formKey = GlobalKey<FormState>();
-  final MonitoringAssessmentFormController _controller = MonitoringAssessmentFormController();
+  late final MonitoringAssessmentFormController _controller;
 
   // Form controllers
   final TextEditingController _childIdController = TextEditingController();
@@ -68,22 +74,16 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
   String? _selectedCommunity;
   String? _selectedFarmerId;
   
-  // Dummy data for dropdowns
-  final List<String> _communities = [
-    'Community A',
-    'Community B',
-    'Community C',
-  ];
+  // District repository and state
+  final DistrictRepository _districtRepo = DistrictRepository();
+  final RxList<District> _districts = <District>[].obs;
+  final RxBool _isLoadingDistricts = false.obs;
   
-  final List<String> _farmerIds = [
-    'FARM001',
-    'FARM002',
-    'FARM003',
-  ];
+  // Farmers list
+  final FarmerRepository _farmerRepo = FarmerRepository();
+  final RxList<Farmer> _farmers = <Farmer>[].obs;
+  final RxBool _isLoadingFarmers = false.obs;
   
-  // Track promotion and academic status
-  bool? _promoted = null;
-  bool? _academicImprovement;
 
   // Child Labour Risk section state
   String? _hazardousWork;
@@ -94,6 +94,12 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
   // Legal Documentation section state
   String? _hasBirthCertificate;
   String? _ongoingBirthCertProcess;
+  
+  // Academic status
+  bool? _promoted;
+  bool? _academicImprovement;
+  String? _selectedCurrentGrade;
+  bool? _academicYearEnded;
 
   // Answers map to track question responses
   final Map<String, String> _answers = {};
@@ -119,10 +125,6 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
     'College/University'
   ];
   String? _selectedRemediationClass;
-  String? _selectedCurrentGrade;
-
-  // Track academic year status
-  String? _academicYearEnded;
 
   @override
   void dispose() {
@@ -138,27 +140,44 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
     _noBirthCertReasonController.dispose();
     _additionalCommentsController.dispose();
     _followUpVisitsCountController.dispose();
+    _isLoadingDistricts.close();
+    _districts.close();
+    _isLoadingFarmers.close();
+    _farmers.close();
     super.dispose();
   }
 
-  // Auto-populate sample data
-  void _autoPopulateData() {
-    // Set default values for dropdowns if needed
-    if (_communities.isNotEmpty) {
-      _selectedCommunity = _communities.first;
-      _communityController.text = _selectedCommunity!;
+  // Load districts from database
+  Future<void> _loadDistricts() async {
+    _isLoadingDistricts.value = true;
+    try {
+      final districts = await _districtRepo.getAllDistricts();
+      _districts.assignAll(districts);
+    } catch (e) {
+      debugPrint('Error loading districts: $e');
+    } finally {
+      _isLoadingDistricts.value = false;
     }
-    
-    if (_farmerIds.isNotEmpty) {
-      _selectedFarmerId = _farmerIds.first;
-      _farmerIdController.text = _selectedFarmerId!;
+  }
+
+  Future<void> _loadFarmers() async {
+    _isLoadingFarmers.value = true;
+    try {
+      final farmers = await _farmerRepo.getFirst10Farmers();
+      _farmers.assignAll(farmers);
+    } catch (e) {
+      debugPrint('Error loading farmers: $e');
+    } finally {
+      _isLoadingFarmers.value = false;
     }
   }
 
   @override
   void initState() {
     super.initState();
-    _autoPopulateData();
+    _controller = Get.put(MonitoringAssessmentFormController());
+    _loadDistricts();
+    _loadFarmers();
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -500,7 +519,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                     children: [
                       RichText(
                         text: TextSpan(
-                          text: '4. Community',
+                          text: '4. District',
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 fontWeight: FontWeight.w500,
                                 color: Theme.of(context).colorScheme.onSurface,
@@ -514,46 +533,72 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _selectedCommunity,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                          ),
-                        ),
-                        hint: const Text('Select Community'),
-                        isExpanded: true,
-                        items: _communities.map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
+                      Obx(() {
+                        if (_isLoadingDistricts.value) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(child: CircularProgressIndicator()),
                           );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedCommunity = newValue;
-                            _communityController.text = newValue ?? '';
-                          });
-                          _controller.selectedCommunity.value = newValue ?? '';
-                          _controller.communityController.text = newValue ?? '';
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a community';
-                          }
-                          return null;
-                        },
-                      ),
+                        }
+
+                        if (_districts.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text('No districts available. Please sync data first.'),
+                          );
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          value: _selectedCommunity,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                            ),
+                          ),
+                          hint: const Text('Select District'),
+                          isExpanded: true,
+                          items: _districts.map<DropdownMenuItem<String>>((District district) {
+                            return DropdownMenuItem<String>(
+                              value: district.district,
+                              child: Text(district.district),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                _selectedCommunity = newValue;
+                                _communityController.text = newValue;
+                              });
+                              _controller.selectedCommunity.value = newValue;
+                              _controller.communityController.text = newValue;
+                              
+                              // Store the selected district ID for reference if needed
+                              final selectedDistrict = _districts.firstWhereOrNull(
+                                (d) => d.district == newValue
+                              );
+                              if (selectedDistrict != null) {
+                                _controller.formData.value.communityId = selectedDistrict.id;
+                              }
+                            }
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select a district';
+                            }
+                            return null;
+                          },
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -580,46 +625,78 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _selectedFarmerId,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                          ),
-                        ),
-                        hint: const Text('Select Farmer ID'),
-                        isExpanded: true,
-                        items: _farmerIds.map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
+                      Obx(() {
+                        if (_isLoadingFarmers.value) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(child: CircularProgressIndicator()),
                           );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedFarmerId = newValue;
-                            _farmerIdController.text = newValue ?? '';
-                          });
-                          _controller.selectedFarmerId.value = newValue ?? '';
-                          _controller.farmerIdController.text = newValue ?? '';
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a farmer ID';
-                          }
-                          return null;
-                        },
-                      ),
+                        }
+
+                        if (_farmers.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text('No farmers available. Please sync data first.'),
+                          );
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          value: _selectedFarmerId,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outlineVariant,
+                                width: 1.0,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outlineVariant,
+                                width: 1.0,
+                              ),
+                            ),
+                            suffixIcon: _isLoadingFarmers.value
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12.0),
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          hint: const Text('Select Farmer Code'),
+                          isExpanded: true,
+                          items: _farmers.map<DropdownMenuItem<String>>((Farmer farmer) {
+                            return DropdownMenuItem<String>(
+                              value: farmer.farmerCode,
+                              child: Text('${farmer.farmerCode} - ${farmer.firstName} ${farmer.lastName}'),
+                            );
+                          }).toList(),
+                          onChanged: _isLoadingFarmers.value
+                              ? null
+                              : (String? newValue) {
+                                  setState(() {
+                                    _selectedFarmerId = newValue;
+                                    _farmerIdController.text = newValue ?? '';
+                                  });
+                                  _controller.selectedFarmerId.value = newValue ?? '';
+                                  _controller.farmerIdController.text = newValue ?? '';
+                                },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select a farmer ID';
+                            }
+                            return null;
+                          },
+                        );
+                      }),
+                        
+                      
                     ],
                   ),
                 ),
@@ -907,7 +984,7 @@ class _MonitoringAssessmentFormState extends State<MonitoringAssessmentForm> {
                   'academic_year_ended',
                   onAnswerChanged: (answer) {
                     setState(() {
-                      _academicYearEnded = answer;
+                      _academicYearEnded = answer == 'Yes';
                       if (answer != 'Yes') {
                         _promoted = null;
                         _selectedCurrentGrade = null;

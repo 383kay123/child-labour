@@ -924,7 +924,9 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
       ),
       value: value,
       groupValue: groupValue,
-      onChanged: onChanged,
+      onChanged: (String? value) {
+        onChanged(value);
+      },
       activeColor: AppTheme.primaryColor,
       contentPadding: EdgeInsets.zero,
       dense: true,
@@ -1106,8 +1108,8 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                 Row(
                   children: [
                     _buildRadioOption(
-                      value: 'Yes',
-                      groupValue: _hasGhanaCard,
+                      value: 'yes',
+                      groupValue: _hasGhanaCard?.toLowerCase(),
                       label: 'Yes',
                       onChanged: (value) {
                         if (value == null) return;
@@ -1122,8 +1124,8 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
                     ),
                     const SizedBox(width: 20),
                     _buildRadioOption(
-                      value: 'No',
-                      groupValue: _hasGhanaCard,
+                      value: 'no',
+                      groupValue: _hasGhanaCard?.toLowerCase(),
                       label: 'No',
                       onChanged: (value) {
                         if (value == null) return;
@@ -1140,8 +1142,8 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
             ),
           ),
 
-          // Ghana Card ID (shown when 'Yes' is selected)
-          if (_hasGhanaCard == 'Yes')
+          // Ghana Card ID (shown when 'yes' is selected)
+          if (_hasGhanaCard?.toLowerCase() == 'yes')
             _buildQuestionCard(
               child: _buildTextField(
                 label: 'Ghana Card ID',
@@ -1150,8 +1152,8 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
               ),
             ),
 
-          // Other ID Card (shown when 'No' is selected)
-          if (_hasGhanaCard == 'No')
+          // Other ID Card (shown when 'no' is selected)
+          if (_hasGhanaCard?.toLowerCase() == 'no')
             _buildQuestionCard(
               child: Column(
                 children: [
@@ -1180,8 +1182,8 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
             ),
 
           // Show consent question if has Ghana card or any other national ID (not 'none')
-          if ((_hasGhanaCard == 'Yes' && _selectedIdType != 'none') ||
-              (_hasGhanaCard == 'No' &&
+          if ((_hasGhanaCard?.toLowerCase() == 'yes') ||
+              (_hasGhanaCard?.toLowerCase() == 'no' &&
                   _selectedIdType != null &&
                   _selectedIdType != 'none'))
             _buildQuestionCard(

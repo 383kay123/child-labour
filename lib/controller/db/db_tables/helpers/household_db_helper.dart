@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:human_rights_monitor/controller/models/fullsurveymodel.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqlite_api.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:human_rights_monitor/controller/models/survey_summary.dart';
@@ -131,33 +132,39 @@ class HouseholdDBHelper {
     await db.execute('BEGIN EXCLUSIVE TRANSACTION');
     debugPrint('🚀 Starting transaction for complete survey save...');
     
-    // 1. Save Cover Page
-    // Ensure coverPage has isSynced set
+    // 1. UPDATE Cover Page (Don't create new one)
+    debugPrint('💾 Updating existing cover page with ID: ${coverPage.id}');
+    
     final coverPageWithSync = coverPage.copyWith(
       isSynced: 0,
       updatedAt: DateTime.now(),
     );
-    
+
     final coverPageMap = coverPageWithSync.toMap()
       ..addAll({
-        'created_at': coverPageWithSync.updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
-        'updated_at': coverPageWithSync.updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
-    coverPageMap.remove('id'); // Remove ID to avoid conflicts
-    
+
     // Remove any null values to prevent SQL errors
     coverPageMap.removeWhere((key, value) => value == null);
-    
-    debugPrint('💾 Inserting cover page...');
-    
-    final coverPageId = await db.insert(
+
+    // UPDATE existing cover page instead of INSERT
+    final rowsAffected = await db.update(
       TableNames.coverPageTBL,
       coverPageMap,
-      conflictAlgorithm: ConflictAlgorithm.replace,
+      where: 'id = ?',
+      whereArgs: [coverPage.id],
     );
-    
-    debugPrint('✅ Saved cover page with ID: $coverPageId');
-    
+
+    if (rowsAffected == 0) {
+      debugPrint('❌ Failed to update cover page with ID: ${coverPage.id}');
+      await db.execute('ROLLBACK');
+      return false;
+    }
+
+    final coverPageId = coverPage.id!; // Use existing ID
+    debugPrint('✅ Updated cover page with ID: $coverPageId');
+
     // 2. Save Consent with reference to Cover Page
     debugPrint('💾 Saving consent data for cover page ID: $coverPageId');
     final consentWithId = consent.copyWith(coverPageId: coverPageId);
@@ -264,204 +271,148 @@ class HouseholdDBHelper {
       rethrow;
     }
     
-    // 4. Save Combined Farm if exists
+    // 4. Save Combined Farmer Identification if exists
     if (combinedFarm != null) {
-      debugPrint('💾 Saving combined farm data for cover page ID: $coverPageId');
-      
-      // Create a copy with the updated cover page ID and timestamps
-      final combinedFarmWithId = combinedFarm.copyWith(
-        coverPageId: coverPageId,
-        createdAt: combinedFarm.createdAt ?? DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      
-      // Use the dedicated method to insert the combined farm data
-      final combinedFarmId = await insertCombinedFarmerIdentification(combinedFarmWithId);
-      debugPrint('✅ Saved combined farm with ID: $combinedFarmId');
-    } else {
-      debugPrint('ℹ️ No combined farm data to save');
-    }
-    
-    // 5. Save Children Household if exists - USING COVER PAGE ID ONLY
-    if (childrenHousehold != null) {
-      debugPrint('💾 Saving children household data for cover page ID: $coverPageId');
-      
-      final updatedHousehold = childrenHousehold.copyWith(
-        coverPageId: coverPageId,
-        timestamp: DateTime.now(),
-      );
-      
-      final householdMap = updatedHousehold.toMap()
-        ..addAll({
-          'cover_page_id': coverPageId, // Only use cover_page_id
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-          'is_synced': 0,
-          'sync_status': 0,
-        });
-      
-      householdMap.removeWhere((key, value) => value == null);
-      
-      await db.insert(
-        TableNames.childrenHouseholdTBL,
-        householdMap,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      debugPrint('✅ Saved children household');
-    } else {
-      debugPrint('ℹ️ No children household data to save');
-    }
-    
-    // 6. Save Remediation if exists - USING COVER PAGE ID ONLY
-    if (remediation != null) {
-      debugPrint('💾 Saving remediation data for cover page ID: $coverPageId');
-      
-      final updatedRemediation = remediation.copyWith(
-        coverPageId: coverPageId,
-      );
-      
-      final remediationMap = updatedRemediation.toMap();
-      
-      // ONLY use cover_page_id, remove farm_identification_id
-      remediationMap['cover_page_id'] = coverPageId;
-      remediationMap.remove('farm_identification_id'); // Remove farmer ID dependency
-      
-      remediationMap['created_at'] = DateTime.now().toIso8601String();
-      remediationMap['updated_at'] = DateTime.now().toIso8601String();
-      remediationMap['is_synced'] = 0;
-      remediationMap['sync_status'] = 0;
-      
-      // Handle has_school_fees properly - convert bool to int
-      if (remediationMap['has_school_fees'] != null) {
-        if (remediationMap['has_school_fees'] is bool) {
-          remediationMap['has_school_fees'] = remediationMap['has_school_fees'] ? 1 : 0;
-        }
-      }
-      
-      remediationMap.removeWhere((key, value) => value == null);
-      
-      await db.insert(
-        TableNames.remediationTBL,
-        remediationMap,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      debugPrint('✅ Saved remediation data');
-    } else {
-      debugPrint('ℹ️ No remediation data to save');
-    }
-
-    // 7. Save Sensitization if exists - USING COVER PAGE ID ONLY
-if (sensitization != null) {
-  debugPrint('💾 [DEBUG] Starting to save sensitization data...');
-  debugPrint('💾 [DEBUG] Sensitization data before processing: ${sensitization.toMap()}');
-  debugPrint('💾 [DEBUG] Cover page ID: $coverPageId');
-  
-  try {
-    // Create a new instance with the updated coverPageId
-    final updatedSensitization = SensitizationData(
-      id: sensitization.id,
-      coverPageId: coverPageId, // Ensure coverPageId is set
-      isAcknowledged: sensitization.isAcknowledged,
-      acknowledgedAt: sensitization.acknowledgedAt,
-      createdAt: sensitization.createdAt ?? DateTime.now(),
-      updatedAt: DateTime.now(),
-      isSynced: false,
-      syncStatus: 0,
-    );
-    
-    debugPrint('💾 [DEBUG] Updated sensitization data: ${updatedSensitization.toMap()}');
-    
-    // Use the toMap() method from the updated sensitization data
-    final data = updatedSensitization.toMap();
-    
-    // Ensure timestamps are set
-    if (data['created_at'] == null) {
-      data['created_at'] = DateTime.now().toIso8601String();
-    }
-    data['updated_at'] = DateTime.now().toIso8601String();
-    data['is_synced'] = 0;
-    
-    // Remove farm_identification_id if it exists
-    data.remove('farm_identification_id');
-    
-    debugPrint('💾 [DEBUG] Final data to be inserted: $data');
-    
-    final result = await db.insert(
-      TableNames.sensitizationTBL,
-      data,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    
-    debugPrint('✅ [DEBUG] Successfully saved sensitization with ID: $result');
-    debugPrint('✅ Saved sensitization with cover_page_id: $coverPageId');
-  } catch (e, stackTrace) {
-    debugPrint('❌ [DEBUG] Error saving sensitization: $e');
-    debugPrint('📜 Stack trace: $stackTrace');
-    rethrow;
-  }
-} else {
-  debugPrint('⚠️ [DEBUG] No sensitization data provided to save');
-  debugPrint('⚠️ [DEBUG] This means the sensitization object was null when saveCompleteSurvey was called');
-  debugPrint('⚠️ [DEBUG] Check the code that calls saveCompleteSurvey to ensure sensitization data is being passed correctly');
-}
-    // 8. Save Sensitization Questions if exists - USING COVER PAGE ID ONLY
-    if (sensitizationQuestions != null && sensitizationQuestions.isNotEmpty) {
-      debugPrint('💾 Saving ${sensitizationQuestions.length} sensitization questions for cover page ID: $coverPageId');
-
-      for (var question in sensitizationQuestions) {
-        final updatedQuestion = question.copyWith(
-          coverPageId: coverPageId, // Use cover page ID directly
-          createdAt: question.createdAt ?? DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        
-        final questionMap = updatedQuestion.toMap();
-        // Remove farm_identification_id if it exists
-        questionMap.remove('farm_identification_id');
+      try {
+        debugPrint('💾 Saving combined farmer identification...');
+        final combinedMap = combinedFarm.toMap()
+          ..addAll({
+            'cover_page_id': coverPageId,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
         
         await db.insert(
-          TableNames.sensitizationQuestionsTBL,
-          questionMap,
+          TableNames.combinedFarmIdentificationTBL,
+          combinedMap,
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
+        debugPrint('✅ Saved combined farmer identification');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error saving combined farmer identification: $e');
+        debugPrint('📜 Stack trace: $stackTrace');
+        rethrow;
       }
-      debugPrint('✅ All sensitization questions saved with cover_page_id: $coverPageId');
-    } else {
-      debugPrint('ℹ️ No sensitization questions to save');
     }
-    
-    // 9. Save End of Collection if exists - USING COVER PAGE ID ONLY
+
+    // 5. Save Children Household if exists
+    if (childrenHousehold != null) {
+      try {
+        debugPrint('💾 Saving children household data...');
+        final childrenMap = childrenHousehold.toMap()
+          ..addAll({
+            'cover_page_id': coverPageId,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        
+        await db.insert(
+          TableNames.childrenHouseholdTBL,
+          childrenMap,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        debugPrint('✅ Saved children household data');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error saving children household data: $e');
+        debugPrint('📜 Stack trace: $stackTrace');
+        rethrow;
+      }
+    }
+
+    // 6. Save Remediation if exists
+    if (remediation != null) {
+      try {
+        debugPrint('💾 Saving remediation data...');
+        final remediationMap = remediation.toMap()
+          ..addAll({
+            'cover_page_id': coverPageId,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        
+        await db.insert(
+          TableNames.remediationTBL,
+          remediationMap,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        debugPrint('✅ Saved remediation data');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error saving remediation data: $e');
+        debugPrint('📜 Stack trace: $stackTrace');
+        rethrow;
+      }
+    }
+
+    // 7. Save Sensitization if exists
+    if (sensitization != null) {
+      try {
+        debugPrint('💾 Saving sensitization data...');
+        final sensitizationMap = sensitization.toMap()
+          ..addAll({
+            'cover_page_id': coverPageId,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        
+        await db.insert(
+          TableNames.sensitizationTBL,
+          sensitizationMap,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        debugPrint('✅ Saved sensitization data');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error saving sensitization data: $e');
+        debugPrint('📜 Stack trace: $stackTrace');
+        rethrow;
+      }
+    }
+
+    // 8. Save Sensitization Questions if they exist
+    if (sensitizationQuestions != null && sensitizationQuestions.isNotEmpty) {
+      try {
+        debugPrint('💾 Saving ${sensitizationQuestions.length} sensitization questions...');
+        final batch = db.batch();
+        
+        for (final question in sensitizationQuestions) {
+          final questionMap = question.toMap()
+            ..addAll({
+              'cover_page_id': coverPageId,
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+          
+          batch.insert(
+            TableNames.sensitizationQuestionsTBL,
+            questionMap,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        
+        await batch.commit(noResult: true);
+        debugPrint('✅ Saved ${sensitizationQuestions.length} sensitization questions');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error saving sensitization questions: $e');
+        debugPrint('📜 Stack trace: $stackTrace');
+        rethrow;
+      }
+    }
+
+    // 9. Save End of Collection if exists
     if (endOfCollection != null) {
-      debugPrint('💾 Saving end of collection data for cover page ID: $coverPageId');
-      
-      final updatedEndOfCollection = endOfCollection.copyWith(
-        coverPageId: coverPageId,
-        createdAt: endOfCollection.createdAt ?? DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      
-      final endOfCollectionMap = updatedEndOfCollection.toMap()
-        ..addAll({
-          'cover_page_id': coverPageId, // Only use cover_page_id
-          'created_at': updatedEndOfCollection.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
-          'updated_at': updatedEndOfCollection.updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
-          'is_synced': 0,
-          'sync_status': 0,
-        });
-      
-      // Remove farm_identification_id if it exists
-      endOfCollectionMap.remove('farm_identification_id');
-      
-      endOfCollectionMap.removeWhere((key, value) => value == null);
-      
-      await db.insert(
-        TableNames.endOfCollectionTBL,
-        endOfCollectionMap,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      debugPrint('✅ Saved end of collection data');
-    } else {
-      debugPrint('ℹ️ No end of collection data to save');
+      try {
+        debugPrint('💾 Saving end of collection data...');
+        final endMap = endOfCollection.toMap()
+          ..addAll({
+            'cover_page_id': coverPageId,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        
+        await db.insert(
+          TableNames.endOfCollectionTBL,
+          endMap,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        debugPrint('✅ Saved end of collection data');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Error saving end of collection data: $e');
+        debugPrint('📜 Stack trace: $stackTrace');
+        rethrow;
+      }
     }
     
     // Commit transaction
@@ -482,7 +433,6 @@ if (sensitization != null) {
     return false;
   }
 }
-
 
   /// Updates an existing consent record in the database
   Future<int> updateConsent(ConsentData consent) async {
@@ -1158,74 +1108,153 @@ try {
   sensitization = null;
 }
 
-// 8. Sensitization Questions - ENHANCED with validation
+// 8. Sensitization Questions - ENHANCED with comprehensive debugging
 List<SensitizationQuestionsData> sensitizationQuestions = [];
 try {
-  final sqMaps = await db.query(
-    TableNames.sensitizationQuestionsTBL, 
-    where: 'cover_page_id = ?', 
-    whereArgs: [coverPageId],
-    orderBy: 'id ASC'
+  debugPrint('🔍 [HouseholdDB] ===== LOADING SENSITIZATION QUESTIONS =====');
+  debugPrint('🔍 [HouseholdDB] Cover Page ID: $coverPageId');
+  
+  // First, call the debug method
+  await debugSensitizationQuestions(coverPageId);
+  
+  // Verify table exists
+  final tables = await db.rawQuery(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+    [TableNames.sensitizationQuestionsTBL],
   );
   
-  debugPrint('🔍 [HouseholdDB] Found ${sqMaps.length} sensitization question records');
-  
-  for (var questionMap in sqMaps) {
-    try {
-      final qData = Map<String, dynamic>.from(questionMap);
+  if (tables.isEmpty) {
+    debugPrint('❌ [HouseholdDB] Table ${TableNames.sensitizationQuestionsTBL} does not exist');
+  } else {
+    debugPrint('✅ [HouseholdDB] Table exists, querying for data...');
+    
+    // Query for sensitization questions
+    final sqMaps = await db.query(
+      TableNames.sensitizationQuestionsTBL, 
+      where: 'cover_page_id = ?', 
+      whereArgs: [coverPageId],
+      orderBy: 'id ASC'
+    );
+    
+    debugPrint('📊 [HouseholdDB] Query returned ${sqMaps.length} records');
+    
+    if (sqMaps.isNotEmpty) {
+      debugPrint('📋 [HouseholdDB] First raw record: ${sqMaps.first}');
       
-      // Check if this question has any meaningful data
-      bool hasValidData = false;
-      final checkFields = [
-        'has_sensitized_household', 'has_sensitized_on_protection', 
-        'has_sensitized_on_safe_labour', 'female_adults_count', 
-        'male_adults_count', 'consent_for_picture', 'parents_reaction'
-      ];
-      
-      for (final field in checkFields) {
-        if (qData[field] != null && qData[field].toString().isNotEmpty) {
-          hasValidData = true;
-          break;
-        }
-      }
-      
-      if (hasValidData) {
-        // Convert boolean fields
-        for (final field in ['has_sensitized_household', 'has_sensitized_on_protection', 
-                             'has_sensitized_on_safe_labour', 'consent_for_picture', 'is_synced']) {
-          if (qData[field] != null) {
-            qData[field] = qData[field] == 1;
+      for (var i = 0; i < sqMaps.length; i++) {
+        try {
+          final questionMap = sqMaps[i];
+          final qData = Map<String, dynamic>.from(questionMap);
+          
+          debugPrint('\n📝 [HouseholdDB] Processing question ${i + 1}...');
+          debugPrint('   - Raw data: $qData');
+          
+          // Validate required fields
+          if (qData['id'] == null) {
+            debugPrint('⚠️ [HouseholdDB] Skipping record with null ID');
+            continue;
           }
-        }
-        
-        // Parse DateTime fields
-        for (final field in ['submitted_at', 'created_at', 'updated_at']) {
-          if (qData[field] != null && qData[field] is String) {
-            try {
-              qData[field] = DateTime.parse(qData[field]);
-            } catch (e) {
-              debugPrint('⚠️ Error parsing $field: ${qData[field]}');
+          
+          if (qData['cover_page_id'] != coverPageId) {
+            debugPrint('⚠️ [HouseholdDB] Skipping record with wrong cover_page_id: ${qData['cover_page_id']}');
+            continue;
+          }
+          
+          // Convert boolean fields with comprehensive handling
+          final booleanFields = [
+            'has_sensitized_household',
+            'has_sensitized_on_protection',
+            'has_sensitized_on_safe_labour',
+            'consent_for_picture',
+            'is_synced'
+          ];
+          
+          for (final field in booleanFields) {
+            if (qData[field] != null) {
+              if (qData[field] is int) {
+                qData[field] = qData[field] == 1;
+              } else if (qData[field] is String) {
+                final value = qData[field].toString().toLowerCase();
+                qData[field] = value == 'true' || value == '1';
+              } else if (qData[field] is! bool) {
+                qData[field] = false;
+              }
+            } else {
+              qData[field] = false;
+            }
+            debugPrint('   - $field: ${qData[field]}');
+          }
+          
+          // Parse DateTime fields with comprehensive error handling
+          final dateFields = ['submitted_at', 'created_at', 'updated_at'];
+          for (final field in dateFields) {
+            if (qData[field] != null) {
+              try {
+                if (qData[field] is String) {
+                  qData[field] = DateTime.parse(qData[field]);
+                } else if (qData[field] is int) {
+                  qData[field] = DateTime.fromMillisecondsSinceEpoch(qData[field]);
+                } else if (qData[field] is! DateTime) {
+                  qData[field] = DateTime.now();
+                }
+              } catch (e) {
+                debugPrint('⚠️ [HouseholdDB] Error parsing $field: ${qData[field]}');
+                qData[field] = field == 'submitted_at' ? DateTime.now() : null;
+              }
+            } else if (field == 'submitted_at') {
               qData[field] = DateTime.now();
             }
+            debugPrint('   - $field: ${qData[field]}');
           }
+          
+          // Ensure string fields are properly typed
+          qData['female_adults_count'] = qData['female_adults_count']?.toString() ?? '0';
+          qData['male_adults_count'] = qData['male_adults_count']?.toString() ?? '0';
+          qData['consent_reason'] = qData['consent_reason']?.toString() ?? '';
+          qData['parents_reaction'] = qData['parents_reaction']?.toString() ?? '';
+          qData['sensitization_image_path'] = qData['sensitization_image_path']?.toString();
+          qData['household_with_user_image_path'] = qData['household_with_user_image_path']?.toString();
+          
+          debugPrint('✅ [HouseholdDB] Processed data: $qData');
+          
+          // Create the model
+          final question = SensitizationQuestionsData.fromMap(qData);
+          
+          if (question.id != null) {
+            sensitizationQuestions.add(question);
+            debugPrint('✅ [HouseholdDB] Successfully added question ${i + 1} with ID: ${question.id}');
+          } else {
+            debugPrint('⚠️ [HouseholdDB] Skipping question with null ID after parsing');
+          }
+          
+        } catch (e, stackTrace) {
+          debugPrint('❌ [HouseholdDB] Error parsing question ${i + 1}: $e');
+          debugPrint('📜 Stack trace: $stackTrace');
+          continue;
         }
-        
-        final question = SensitizationQuestionsData.fromMap(qData);
-        sensitizationQuestions.add(question);
-        debugPrint('✅ Loaded valid sensitization question ${question.id}');
-      } else {
-        debugPrint('⚠️ Skipping sensitization question with no meaningful data');
       }
-    } catch (e, stackTrace) {
-      debugPrint('❌ Error parsing sensitization question: $e');
-      debugPrint('📜 Stack trace: $stackTrace');
+    } else {
+      debugPrint('ℹ️ [HouseholdDB] No records found in query result');
     }
   }
+  
+  debugPrint('✅ [HouseholdDB] Final count: ${sensitizationQuestions.length} questions loaded');
+  debugPrint('🔍 [HouseholdDB] ===== END LOADING SENSITIZATION QUESTIONS =====\n');
+  
 } catch (e, stackTrace) {
-  debugPrint('❌ Error loading sensitization questions: $e');
+  debugPrint('❌ [HouseholdDB] Error loading sensitization questions: $e');
   debugPrint('📜 Stack trace: $stackTrace');
+  sensitizationQuestions = [];
 }
-    // 9. End of Collection - ENHANCED
+
+// Debug output for verification
+debugPrint('📋 Final sensitization questions count: ${sensitizationQuestions.length}');
+if (sensitizationQuestions.isNotEmpty) {
+  debugPrint('📋 First question summary:');
+  debugPrint('   - ID: ${sensitizationQuestions.first.id}');
+  debugPrint('   - Cover Page ID: ${sensitizationQuestions.first.coverPageId}');
+  debugPrint('   - Has Sensitized Household: ${sensitizationQuestions.first.hasSensitizedHousehold}');
+}    // 9. End of Collection - ENHANCED
     EndOfCollectionModel? endOfCollection;
     try {
       final endMaps = await db.query(
@@ -1253,7 +1282,7 @@ try {
       childrenHousehold: childrenHousehold,
       remediation: remediation,
       sensitization: sensitization,
-      sensitizationQuestions: sensitizationQuestions.isNotEmpty ? sensitizationQuestions : null,
+      sensitizationQuestions: sensitizationQuestions, // Always include the list, even if empty
       endOfCollection: endOfCollection,
       surveyId: coverPageId.toString(),
       createdAt: coverMaps.first['created_at'] != null 
@@ -1278,6 +1307,72 @@ try {
     debugPrint('❌ [HouseholdDB] Error loading full survey: $e');
     debugPrint('📜 Stack trace: $stackTrace');
     rethrow;
+  }
+}
+
+/// Debug method to verify sensitization questions in database
+Future<void> debugSensitizationQuestions(int coverPageId) async {
+  try {
+    final db = await database;
+    
+    debugPrint('\n🔍 ====== SENSITIZATION QUESTIONS DEBUG ======');
+    debugPrint('🔍 Cover Page ID: $coverPageId');
+    
+    // Check if table exists
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+      [TableNames.sensitizationQuestionsTBL],
+    );
+    
+    if (tables.isEmpty) {
+      debugPrint('❌ Table ${TableNames.sensitizationQuestionsTBL} does not exist!');
+      return;
+    }
+    
+    debugPrint('✅ Table exists');
+    
+    // Get table schema
+    final schema = await db.rawQuery('PRAGMA table_info(${TableNames.sensitizationQuestionsTBL})');
+    debugPrint('📋 Table Schema:');
+    for (var column in schema) {
+      debugPrint('   - ${column['name']}: ${column['type']}');
+    }
+    
+    // Get all records for this cover page
+    final records = await db.query(
+      TableNames.sensitizationQuestionsTBL,
+      where: 'cover_page_id = ?',
+      whereArgs: [coverPageId],
+    );
+    
+    debugPrint('📊 Found ${records.length} record(s) for cover_page_id: $coverPageId');
+    
+    if (records.isEmpty) {
+      // Check if there are ANY records in the table
+      final allRecords = await db.query(TableNames.sensitizationQuestionsTBL);
+      debugPrint('ℹ️ Total records in table: ${allRecords.length}');
+      
+      if (allRecords.isNotEmpty) {
+        debugPrint('ℹ️ Sample record IDs and cover_page_ids:');
+        for (var record in allRecords.take(5)) {
+          debugPrint('   - ID: ${record['id']}, Cover Page ID: ${record['cover_page_id']}');
+        }
+      }
+    } else {
+      // Display each record
+      for (int i = 0; i < records.length; i++) {
+        final record = records[i];
+        debugPrint('\n📄 Record ${i + 1}:');
+        record.forEach((key, value) {
+          debugPrint('   $key: $value');
+        });
+      }
+    }
+    
+    debugPrint('🔍 ====== END DEBUG ======\n');
+  } catch (e, stackTrace) {
+    debugPrint('❌ Error in debug method: $e');
+    debugPrint('📜 Stack trace: $stackTrace');
   }
 }
 /// Inserts a new cover page record

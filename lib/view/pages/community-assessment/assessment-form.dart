@@ -4,8 +4,11 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:get/get.dart';
 
 import 'community-assessment-controller.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/districts_repo.dart';
+import 'package:human_rights_monitor/controller/models/districts/districts_model.dart';
 
 
 class CommunityAssessmentForm extends StatefulWidget {
@@ -23,12 +26,9 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
   bool get _hasPrimarySchools => _answers["q6"] == "Yes";
   final CommunityAssessmentController _controller =
       CommunityAssessmentController();
-  final List<String> _communities = [
-    "Community A",
-    "Community B",
-    "Community C",
-    "Community D"
-  ];
+  final DistrictRepository _districtRepo = DistrictRepository();
+  final RxList<District> _districts = <District>[].obs;
+  final RxBool _isLoadingDistricts = false.obs;
   final List<String> _schools = [];
   final List<TextEditingController> _schoolControllers = [];
   final Map<String, bool> _schoolToilets = {};
@@ -37,11 +37,32 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
   String? _selectedCommunity;
 
   @override
+  void initState() {
+    super.initState();
+    _loadDistricts();
+  }
+
+  @override
   void dispose() {
     for (var controller in _schoolControllers) {
       controller.dispose();
     }
+    _isLoadingDistricts.close();
+    _districts.close();
     super.dispose();
+  }
+
+  Future<void> _loadDistricts() async {
+    try {
+      _isLoadingDistricts.value = true;
+      final districts = await _districtRepo.getDistrictsOrderByName();
+      _districts.assignAll(districts);
+    } catch (e) {
+      debugPrint('Error loading districts: $e');
+      Get.snackbar('Error', 'Failed to load districts');
+    } finally {
+      _isLoadingDistricts.value = false;
+    }
   }
 
   /// Updates the controller's observable value based on the answer
@@ -318,35 +339,56 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
   }
 
   Widget _buildCommunityDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _selectedCommunity,
-      decoration: const InputDecoration(
-        labelText: 'Select Community *',
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      ),
-      items: _communities.map((String value) {
-        return DropdownMenuItem<String>(
-          value: value,
-          child: Text(value),
+    return Obx(() {
+      if (_isLoadingDistricts.value) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.0),
+          child: Center(child: CircularProgressIndicator()),
         );
-      }).toList(),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please select a community';
-        }
-        return null;
-      },
-      onChanged: (String? newValue) {
-        if (newValue != null) {
-          setState(() {
-            _selectedCommunity = newValue;
-            _controller.communityName.value = newValue;
-            _answers["community"] = newValue;
-          });
-        }
-      },
-    );
+      }
+
+      if (_districts.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Text('No districts available. Please sync data first.'),
+        );
+      }
+
+      return DropdownButtonFormField<String>(
+        value: _selectedCommunity,
+        decoration: const InputDecoration(
+          labelText: 'Select District *',
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        ),
+        items: _districts.map((District district) {
+          return DropdownMenuItem<String>(
+            value: district.district,
+            child: Text(district.district),
+          );
+        }).toList(),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select a district';
+          }
+          return null;
+        },
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _selectedCommunity = newValue;
+              _controller.communityName.value = newValue;
+              _answers["community"] = newValue;
+              // Store the selected district ID for reference if needed
+              final selectedDistrict = _districts.firstWhereOrNull((d) => d.district == newValue);
+              if (selectedDistrict != null) {
+                _answers["district_id"] = selectedDistrict.id;
+              }
+            });
+          }
+        },
+      );
+    });
   }
 
   List<Widget> _buildSchoolQuestions() {

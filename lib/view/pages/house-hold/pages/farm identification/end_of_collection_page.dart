@@ -61,6 +61,25 @@ class EndOfCollectionPageState extends State<EndOfCollectionPage> {
 
   /// Tag for logging purposes
   static const String _logTag = 'EndOfCollectionPage';
+
+  /// Shows an error message in a snackbar
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
   
   // Public getters for private fields
   File? get respondentImage => _respondentImage;
@@ -307,38 +326,103 @@ class EndOfCollectionPageState extends State<EndOfCollectionPage> {
   /// Captures an image using the device camera
   /// [isSignature] determines if this is for signature capture (different icon and styling)
   Future<void> _takePicture({bool isSignature = false}) async {
+    if (!mounted) return;
+    
     developer.log('Taking picture - isSignature: $isSignature', name: _logTag);
 
     try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 80,
+      // Add a small delay to ensure any previous operations complete
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // Show a loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
       );
 
-      if (photo != null) {
-        developer.log('Picture captured successfully: ${photo.path}',
-            name: _logTag);
-        setState(() {
-          if (isSignature) {
-            _producerSignatureImage = File(photo.path);
-          } else {
-            _respondentImage = File(photo.path);
-          }
+      try {
+        final XFile? photo = await _picker.pickImage(
+          source: ImageSource.camera,
+          maxWidth: 1200,
+          maxHeight: 1200,
+          imageQuality: 70,  // Reduced quality to save memory
+          preferredCameraDevice: CameraDevice.rear,
+        ).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () {
+            if (!mounted) return null;
+            _showErrorSnackBar('Camera operation timed out');
+            return null;
+          },
+        ).catchError((error) {
+          if (!mounted) return null;
+          _showErrorSnackBar('Camera error: ${error.toString()}');
+          return null;
         });
-      } else {
-        developer.log('Picture capture cancelled by user', name: _logTag);
+
+        // Dismiss loading dialog
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+
+        if (photo == null || !mounted) return;
+
+        try {
+          final File file = File(photo.path);
+          final bool exists = await file.exists();
+          final length = exists ? await file.length() : 0;
+          
+          if (!exists || length == 0) {
+            throw Exception('Failed to capture image');
+          }
+
+          developer.log('Picture captured successfully: ${photo.path} - Size: ${length} bytes', 
+              name: _logTag);
+              
+          if (!mounted) return;
+          
+          setState(() {
+            if (isSignature) {
+              _producerSignatureImage = file;
+            } else {
+              _respondentImage = file;
+            }
+          });
+          
+          // Show success message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${isSignature ? 'Signature' : 'Image'} captured successfully'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          if (!mounted) return;
+          _showErrorSnackBar('Error processing image: $e');
+        }
+      } catch (e) {
+        // Dismiss loading dialog if still showing
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+        rethrow;
       }
-    } catch (e) {
-      developer.log('Error capturing picture: $e', name: _logTag, level: 1000);
+    } catch (e, stackTrace) {
+      developer.log('Error in _takePicture: $e\n$stackTrace', 
+          name: _logTag, 
+          level: 1000);
+          
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to capture image. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      
+      _showErrorSnackBar('Failed to access camera. Please check permissions.');
     }
   }
 

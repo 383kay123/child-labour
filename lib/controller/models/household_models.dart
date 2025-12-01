@@ -82,9 +82,9 @@ class CoverPageData {
     );
   }
 
-  /// Creates a CoverPageData instance with test data
+  /// Creates a CoverPageData instance with empty data
   factory CoverPageData.test() {
-    return CoverDummyData.testCoverData;
+    return CoverPageData.empty();
   }
 
   String? _selectedTownCode;
@@ -169,6 +169,7 @@ class CoverPageData {
     debugPrint('🔵 selectTown called with: $townCode');
     return copyWith(
       selectedTownCode: townCode,
+      selectedFarmerCode: null, // Clear selected farmer when town changes
       hasUnsavedChanges: true,
     );
   }

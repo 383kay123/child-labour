@@ -1,5 +1,7 @@
 import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/db/table_names.dart';
 import 'package:human_rights_monitor/controller/models/farmers/farmers_model.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 class FarmerRepository {
@@ -11,7 +13,7 @@ class FarmerRepository {
     
     try {
       final id = await db.insert(
-        'farmers',
+        TableNames.farmersTBL,
         farmer.toJson(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -29,7 +31,7 @@ class FarmerRepository {
     try {
       for (final farmer in farmers) {
         batch.insert(
-          'farmers',
+          TableNames.farmersTBL,
           farmer.toJson(),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
@@ -51,7 +53,7 @@ class FarmerRepository {
       
       for (final farmer in farmers) {
         final id = await txn.insert(
-          'farmers',
+          TableNames.farmersTBL,
           farmer.toJson(),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
@@ -65,15 +67,35 @@ class FarmerRepository {
   // Read - Get all farmers
   Future<List<Farmer>> getAllFarmers() async {
     final db = await databaseHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('farmers');
+    final List<Map<String, dynamic>> maps = await db.query(TableNames.farmersTBL);
     return List.generate(maps.length, (i) => Farmer.fromJson(maps[i]));
   }
+
+
+
+
+    // Read - Get the first 10 farmers, ordered by farmerCode
+    Future<List<Farmer>> getFirst10Farmers() async {
+      try {
+        final db = await databaseHelper.database;
+        final List<Map<String, dynamic>> maps = await db.query(
+          TableNames.farmersTBL,
+          orderBy: 'farmer_code ASC',
+          limit: 10,
+        );
+        debugPrint('Fetched ${maps.length} farmers');
+        return List.generate(maps.length, (i) => Farmer.fromJson(maps[i]));
+      } catch (e) {
+        debugPrint('Error in getFirst10Farmers: $e');
+        rethrow;
+      }
+    }
 
   // Read - Get farmer by ID
   Future<Farmer?> getFarmerById(int id) async {
     final db = await databaseHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'farmers',
+      TableNames.farmersTBL,
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -88,7 +110,7 @@ class FarmerRepository {
   Future<Farmer?> getFarmerByCode(String farmerCode) async {
     final db = await databaseHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'farmers',
+      TableNames.farmersTBL,
       where: 'farmer_code = ?',
       whereArgs: [farmerCode],
     );
@@ -99,23 +121,13 @@ class FarmerRepository {
     return null;
   }
 
-  // Read - Get farmers with pagination
-  Future<List<Farmer>> getFarmersPaginated(int limit, int offset) async {
-    final db = await databaseHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'farmers',
-      limit: limit,
-      offset: offset,
-    );
-    return List.generate(maps.length, (i) => Farmer.fromJson(maps[i]));
-  }
-
+  
   // Update - Update a farmer
   // Future<int> updateFarmer(Farmer farmer) async {
   //   final db = await databaseHelper.database;
     
   //   return await db.update(
-  //     'farmers',
+  //     TableNames.farmersTBL,
   //     farmer.toJson(),
   //     where: 'id = ?',
   //     whereArgs: [farmer.id], // You'll need to add an id field to your Farmer model
@@ -127,7 +139,7 @@ class FarmerRepository {
     final db = await databaseHelper.database;
     
     return await db.update(
-      'farmers',
+      TableNames.farmersTBL,
       farmer.toJson(),
       where: 'farmer_code = ?',
       whereArgs: [farmer.farmerCode],
@@ -138,7 +150,7 @@ class FarmerRepository {
   Future<int> deleteFarmer(int id) async {
     final db = await databaseHelper.database;
     return await db.delete(
-      'farmers',
+      TableNames.farmersTBL,
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -148,7 +160,7 @@ class FarmerRepository {
   Future<int> deleteFarmerByCode(String farmerCode) async {
     final db = await databaseHelper.database;
     return await db.delete(
-      'farmers',
+      TableNames.farmersTBL,
       where: 'farmer_code = ?',
       whereArgs: [farmerCode],
     );
@@ -157,14 +169,14 @@ class FarmerRepository {
   // Delete all farmers
   Future<int> deleteAllFarmers() async {
     final db = await databaseHelper.database;
-    return await db.delete('farmers');
+    return await db.delete(TableNames.farmersTBL);
   }
 
   // Count total farmers
   Future<int> getFarmersCount() async {
     final db = await databaseHelper.database;
     final count = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM farmers'),
+      await db.rawQuery('SELECT COUNT(*) FROM ${TableNames.farmersTBL}'),
     );
     return count ?? 0;
   }
@@ -173,10 +185,33 @@ class FarmerRepository {
   Future<List<Farmer>> searchFarmersByName(String query) async {
     final db = await databaseHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'farmers',
+      TableNames.farmersTBL,
       where: 'first_name LIKE ? OR last_name LIKE ?',
       whereArgs: ['%$query%', '%$query%'],
     );
     return List.generate(maps.length, (i) => Farmer.fromJson(maps[i]));
+  }
+
+  // Get farmers by society name with pagination
+  Future<List<Farmer>> getFarmersByDistrict(
+    String societyName, {
+    int limit = 10,
+    int offset = 0,
+  }) async {
+    final db = await databaseHelper.database;
+    try {
+      final List<Map<String, dynamic>> maps = await db.query(
+        TableNames.farmersTBL,
+        where: 'society_name = ?',
+        whereArgs: [societyName],
+        limit: limit,
+        offset: offset,
+        orderBy: 'first_name ASC, last_name ASC',
+      );
+      return List.generate(maps.length, (i) => Farmer.fromJson(maps[i]));
+    } catch (e) {
+      debugPrint('Error getting farmers by society: $e');
+      rethrow;
+    }
   }
 }

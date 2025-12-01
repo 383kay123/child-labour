@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/controller/db/daos/cover_page_dao.dart';
 import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
-import 'package:human_rights_monitor/data/dummy_data/cover_dummy_data.dart';
-
-
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/farmers_repo.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart' show CoverPageData, DropdownItem;
 
 /// A widget that represents the cover page for the household survey.
@@ -39,7 +37,8 @@ class CoverPageState extends State<CoverPage> {
   void initState() {
     super.initState();
     _coverPageDao = widget.coverPageDao ?? CoverPageDao(dbHelper: HouseholdDBHelper.instance);
-    _loadSavedData();
+    
+  
 
     // Notify parent that this page needs to handle next button
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -47,31 +46,68 @@ class CoverPageState extends State<CoverPage> {
     });
   }
 
-  /// Loads initial dummy data for the cover page
-  Future<void> _loadSavedData() async {
-    if (_isLoading) return;
-    setState(() => _isLoading = true);
+//   /// Loads the first 10 farmers for the farmer dropdown
+//   Future<void> _loadSavedData() async {
+//     if (_isLoading) return;
+//     setState(() => _isLoading = true);
     
-    try {
-      // Initialize with empty data first
-      final newData = widget.data.copyWith(
-        towns: CoverDummyData.dummyTowns,
-        farmers: const [],  // Clear any pre-loaded farmers
-        selectedTownCode: null,  // Explicitly set to null
-        selectedFarmerCode: null,  // Clear any farmer selection
-        hasUnsavedChanges: true,
-      );
+//     try {
+//       // Initialize with empty data first
+//       var newData = widget.data.copyWith(
+//         towns: const [],  // No districts/towns needed
+//         farmers: const [],
+//         selectedTownCode: null,
+//         selectedFarmerCode: null,
+//         hasUnsavedChanges: true,
+//         isLoadingFarmers: true,
+//         farmerError: null,
+//       );
       
-      widget.onDataChanged(newData);
+//       widget.onDataChanged(newData);
       
-    } catch (e) {
-      debugPrint('❌ Error loading dummy data: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-}
+//       // Load first 10 farmers
+//       try {
+//         final farmerRepo = FarmerRepository();
+//         debugPrint('🔄 Loading first 10 farmers...');
+//         final farmers = await farmerRepo.getFirst10Farmers();
+//         debugPrint('✅ Loaded ${farmers.length} farmers');
+        
+//         newData = newData.copyWith(
+//           farmers: farmers.map((farmer) => DropdownItem(
+//             code: farmer.farmerCode,
+//             name: '${farmer.firstName} ${farmer.lastName}'.trim(),
+//           )).toList(),
+//           isLoadingFarmers: false,
+//           hasUnsavedChanges: true,
+//         );
+        
+//         if (mounted) {
+//           widget.onDataChanged(newData);
+//         }
+//       } catch (e) {
+//         debugPrint('❌ Error loading farmers: $e');
+//         if (mounted) {
+//           widget.onDataChanged(newData.copyWith(
+//             farmerError: 'Failed to load farmers: $e',
+//             isLoadingFarmers: false,
+//           ));
+//         }
+//       }
+      
+//     } catch (e) {
+//       debugPrint('❌ Error in _loadSavedData: $e');
+//       if (mounted) {
+//         widget.onDataChanged(widget.data.copyWith(
+//           farmerError: 'Error initializing: $e',
+//           isLoadingFarmers: false,
+//         ));
+//       }
+//     } finally {
+//       if (mounted) {
+//         setState(() => _isLoading = false);
+//       }
+//     }
+// }
   // Public method to save data that can be called from parent
   Future<bool> saveData() => _saveData();
   

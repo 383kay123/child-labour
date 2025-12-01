@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:human_rights_monitor/view/pages/communities/community_list_screen.dart';
 // import 'package:human_rights_monitor/view/pages/community/community_list_screen.dart';
 import 'package:human_rights_monitor/view/pages/farmers/farmer_list_screen.dart';
 
@@ -19,7 +20,7 @@ class _ScreenWrapperState extends State<ScreenWrapper> {
   final List<Widget> _screens = const [
     Homepage(),
     FarmersListScreen(),
-    // CommunityListScreen(),
+    DistrictsListScreen(),
     ProfileScreen(),
   ];
 
@@ -67,7 +68,7 @@ class _ScreenWrapperState extends State<ScreenWrapper> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.groups),
-            label: "Communities",
+            label: "Districts",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

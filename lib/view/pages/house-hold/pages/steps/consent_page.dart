@@ -394,15 +394,83 @@ class ConsentPageState extends State<ConsentPage> {
     }
   }
 
-  /// Form validation disabled
+  /// Form validation
   String? validateForm() {
-    // Clear any existing errors
+    final errors = <String>[];
+
+    // Clear previous errors
     if (mounted) {
       setState(() {
         _fieldErrors.clear();
       });
     }
-    return null; // Always return null to indicate no errors
+
+    // 1. Check if consent is given or declined
+    if (!_hasGivenConsent && !_declinedConsent) {
+      errors.add(_ErrorMessages.consentRequired);
+      _fieldErrors['consent'] = _ErrorMessages.consentRequired;
+    }
+
+    // 2. If declined, check if reason is provided
+    if (_declinedConsent && _refusalReasonController.text.trim().isEmpty) {
+      errors.add(_ErrorMessages.refusalReasonRequired);
+      _fieldErrors['refusalReason'] = _ErrorMessages.refusalReasonRequired;
+    }
+
+    // 3. Check community type
+    if (widget.data.communityType == null) {
+      errors.add(_ErrorMessages.communityTypeRequired);
+      _fieldErrors['communityType'] = _ErrorMessages.communityTypeRequired;
+    }
+
+    // 4. Check if community type is "Other" and other community name is provided
+    if (widget.data.communityType == 'Other' && 
+        _otherCommunityController.text.trim().isEmpty) {
+      errors.add(_ErrorMessages.otherCommunityRequired);
+      _fieldErrors['otherCommunity'] = _ErrorMessages.otherCommunityRequired;
+    }
+
+    // 5. Check if farmer is available
+    if (widget.data.farmerAvailable == null) {
+      errors.add(_ErrorMessages.availabilityRequired);
+      _fieldErrors['farmerAvailable'] = _ErrorMessages.availabilityRequired;
+    }
+
+    // 6. If farmer is not available, check if available person is specified
+    if (widget.data.farmerAvailable == 'No' && 
+        widget.data.availablePerson == null) {
+      errors.add(_ErrorMessages.availablePersonRequired);
+      _fieldErrors['availablePerson'] = _ErrorMessages.availablePersonRequired;
+    }
+
+    // 7. If "Other" is selected for available person, check if specified
+    if (widget.data.availablePerson == 'Other' && 
+        _otherSpecController.text.trim().isEmpty) {
+      errors.add(_ErrorMessages.otherSpecRequired);
+      _fieldErrors['otherSpec'] = _ErrorMessages.otherSpecRequired;
+    }
+
+    // If there are errors, return the first one
+    if (errors.isNotEmpty) {
+      return errors.first;
+    }
+
+    return null; // No errors
+  }
+
+  Widget _buildValidationError(String? error) {
+    if (error == null || error.isEmpty) return const SizedBox.shrink();
+    
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0, left: 8.0),
+      child: Text(
+        error,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.error,
+          fontSize: 12,
+        ),
+      ),
+    );
   }
 
   void _showErrorSnackBar(String message) {
@@ -543,6 +611,12 @@ class ConsentPageState extends State<ConsentPage> {
   Future<void> _showEndSurveyConfirmation() async {
     if (!mounted) return;
     
+    // Check if reason is provided
+   if (_declinedConsent && _refusalReasonController.text.trim().isEmpty) {
+  _showErrorSnackBar('Please provide a reason for declining');
+  return;
+    }
+
     // Show the confirmation dialog
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -556,6 +630,9 @@ class ConsentPageState extends State<ConsentPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text('End Survey'),
           ),
         ],
@@ -563,14 +640,14 @@ class ConsentPageState extends State<ConsentPage> {
     );
 
     if (confirm == true && mounted) {
-      // If user confirms, call the survey end callback
+      // Save the refusal reason before ending
+      widget.onDataChanged(widget.data.copyWith(
+        consentGiven: false,
+        declinedConsent: true,
+        refusalReason: _refusalReasonController.text,
+      ));
+      // Call the survey end callback
       widget.onSurveyEnd?.call();
-    } else if (mounted) {
-      // If user cancels, uncheck the decline option
-      setState(() {
-        _declinedConsent = false;
-        _refusalReasonController.clear();
-      });
     }
   }
 
@@ -582,16 +659,19 @@ class ConsentPageState extends State<ConsentPage> {
       _declinedConsent = value;
       if (value) {
         _hasGivenConsent = false;
+      } else {
+        // Clear refusal reason when unchecking decline
+        _fieldErrors.remove('refusalReason');
+        _refusalReasonController.clear();
       }
     });
     
     if (value) {
-      // Show the end survey confirmation if declining
-      _showEndSurveyConfirmation();
-    } else {
-      // Clear refusal reason when unchecking decline
-      setState(() {
-        _fieldErrors.remove('refusalReason');
+      // Focus the reason field when declining
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _reasonFocusNode != null) {
+          FocusScope.of(context).requestFocus(_reasonFocusNode);
+        }
       });
     }
   }
@@ -1247,97 +1327,139 @@ class ConsentPageState extends State<ConsentPage> {
         ),
         const SizedBox(height: _Spacing.lg),
 
-        // Consent Checkbox
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Checkbox(
-                value: _hasGivenConsent,
-                onChanged: (value) {
-                  _handleConsentChange(value ?? false);
-                },
+        // Consent Checkbox with error display
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: _fieldErrors.containsKey('consent') 
+                    ? Border.all(color: Theme.of(context).colorScheme.error, width: 1)
+                    : null,
+                color: _fieldErrors.containsKey('consent') 
+                    ? Theme.of(context).colorScheme.error.withOpacity(0.1)
+                    : null,
               ),
-              const SizedBox(width: _Spacing.sm),
-              Expanded(
-                child: Text(
-                  'Yes, I accept the above conditions',
-                  style: TextStyle(fontSize: 13,
-                    fontWeight: _hasGivenConsent ? FontWeight.w600 : FontWeight.normal
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  // Consent Checkbox
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _hasGivenConsent,
+                        onChanged: (value) {
+                          _handleConsentChange(value ?? false);
+                        },
+                      ),
+                      const SizedBox(width: _Spacing.sm),
+                      Expanded(
+                        child: Text(
+                          'Yes, I accept the above conditions',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: _hasGivenConsent ? FontWeight.w600 : FontWeight.normal,
+                            color: _fieldErrors.containsKey('consent') 
+                                ? Theme.of(context).colorScheme.error 
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
 
-        const SizedBox(height: _Spacing.md),
+                  const SizedBox(height: _Spacing.md),
 
-        // Decline Checkbox
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Checkbox(
-                value: _declinedConsent,
-                onChanged: (value) {
-                  _handleDeclineChange(value ?? false);
-                },
-              ),
-              const SizedBox(width: _Spacing.sm),
-              Expanded(
-                child: Text(
-                  'No, I refuse and end the survey',
-                  style: TextStyle(fontSize: 13,
-                    fontWeight: _declinedConsent ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Refusal Reason Field (only shown when declined)
-        if (_declinedConsent) ...[
-          const SizedBox(height: _Spacing.lg),
-          TextFormField(
-            controller: _refusalReasonController,
-            focusNode: _reasonFocusNode,
-            decoration: InputDecoration(
-              labelText: 'What is your reason for refusing to participate?',
-              border: const OutlineInputBorder(),
-              errorText: _fieldErrors['refusalReason'],
-            ),
-            maxLines: 3,
-            onChanged: (value) {
-              // Update the data
-              widget.onDataChanged(widget.data.copyWith(
-                refusalReason: value.isNotEmpty ? value : null,
-              ));
-
-              // Log the update
-              _logUserInput(
-                'Refusal reason',
-                value,
-                fieldType: 'text_input',
-              );
-
-              // Update validation state
-              if (value.isNotEmpty) {
-                setState(() {
-                  _fieldErrors.remove('refusalReason');
-                });
-              }
-              validateForm();
-            },
-          ),
-        ],
-      ],
+                  // Decline Checkbox
+                 Row(
+  children: [
+    Checkbox(
+      value: _declinedConsent,
+      onChanged: (value) {
+        if (value == true) {
+          // When checking the box, show the reason field
+          _handleDeclineChange(true);
+          // Show the reason field and focus it
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _reasonFocusNode != null) {
+              FocusScope.of(context).requestFocus(_reasonFocusNode);
+            }
+          });
+        } else {
+          // When unchecking, clear the state
+          _handleDeclineChange(false);
+        }
+      },
     ),
+    const SizedBox(width: _Spacing.sm),
+    Expanded(
+      child: GestureDetector(
+        onTap: () {
+          // Toggle the checkbox when clicking the text
+          final newValue = !_declinedConsent;
+          if (newValue) {
+            _handleDeclineChange(true);
+            // Show the reason field and focus it
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _reasonFocusNode != null) {
+                FocusScope.of(context).requestFocus(_reasonFocusNode);
+              }
+            });
+          } else {
+            _handleDeclineChange(false);
+          }
+        },
+        child: Text(
+          'No, I refuse and end the survey',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: _declinedConsent ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    ),
+  ],
+),
+
+// Refusal Reason Field (only shown when declined)
+if (_declinedConsent) ...[
+  const SizedBox(height: _Spacing.lg),
+  TextFormField(
+    controller: _refusalReasonController,
+    focusNode: _reasonFocusNode,
+    decoration: InputDecoration(
+      labelText: 'What is your reason for refusing to participate?',
+      border: const OutlineInputBorder(),
+      errorText: _fieldErrors['refusalReason'],
+      errorMaxLines: 2,
+    ),
+    maxLines: 3,
+    onChanged: (value) {
+      // Update the data
+      widget.onDataChanged(widget.data.copyWith(
+        refusalReason: value.isNotEmpty ? value : null,
+      ));
+
+      // Log the update
+      _logUserInput(
+        'Refusal reason',
+        value,
+        fieldType: 'text_input',
+      );
+
+      // Update validation state
+      if (value.isNotEmpty) {
+        setState(() {
+          _fieldErrors.remove('refusalReason');
+        });
+      }
+      validateForm();
+    },
+  ),
+],
+      ],
+    ),)])])
   );
 }
 

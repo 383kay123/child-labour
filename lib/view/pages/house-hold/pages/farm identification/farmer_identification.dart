@@ -95,22 +95,12 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
   void initState() {
     super.initState();
     
-    // Initialize controllers with data values
-    _ghanaCardNumberController = TextEditingController(
-      text: widget.data.ghanaCardNumber ?? ''
-    );
-    _idNumberController = TextEditingController(
-      text: widget.data.idNumber ?? ''
-    );
-    _contactNumberController = TextEditingController(
-      text: widget.data.contactNumber ?? ''
-    );
-    _childrenCountController = TextEditingController(
-      text: widget.data.childrenCount > 0 ? widget.data.childrenCount.toString() : ''
-    );
-    _noConsentReasonController = TextEditingController(
-      text: widget.data.noConsentReason ?? ''
-    );
+    // Initialize controllers with empty strings
+    _ghanaCardNumberController = TextEditingController(text: '');
+    _idNumberController = TextEditingController(text: '');
+    _contactNumberController = TextEditingController(text: '');
+    _childrenCountController = TextEditingController(text: '');
+    _noConsentReasonController = TextEditingController(text: '');
     
     // Initialize focus nodes
     _ghanaCardNumberFocus = FocusNode();
@@ -788,52 +778,52 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
 
   // ==================== Section Builders ====================
 
-  Widget _buildGhanaCardSection() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    // Initialize as null to ensure no option is pre-selected
-    final hasGhanaCard = widget.data.hasGhanaCard == null ? null : (widget.data.hasGhanaCard == 1 ? 'Yes' : 'No');
+ Widget _buildGhanaCardSection() {
+  final theme = Theme.of(context);
+  final isDark = theme.brightness == Brightness.dark;
+  
+  // Convert the integer to string for radio button comparison
+  final hasGhanaCard = widget.data.hasGhanaCard?.toString();
 
-    return _buildQuestionCard(
-      errorKey: 'ghanaCard',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Does the farmer have a Ghana Card?',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
-                      fontWeight: FontWeight.w500,
-                    ),
-          ),
-          const SizedBox(height: _Spacing.md),
-          Column(
-            children: [
-              _buildRadioOption(
-                value: 'Yes',
-                groupValue: hasGhanaCard,
-                label: 'Yes',
-                onChanged: (value) {
-                  widget.onDataChanged(widget.data.updateGhanaCard(1));
-                },
-                errorKey: 'ghanaCard',
-              ),
-              _buildRadioOption(
-                value: 'No',
-                groupValue: hasGhanaCard,
-                label: 'No',
-                onChanged: (value) {
-                  widget.onDataChanged(widget.data.updateGhanaCard(0));
-                },
-                errorKey: 'ghanaCard',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
+  return _buildQuestionCard(
+    errorKey: 'ghanaCard',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Does the farmer have a Ghana Card?',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+        ),
+        const SizedBox(height: _Spacing.md),
+        Column(
+          children: [
+            _buildRadioOption(
+              value: '1', // Changed to string
+              groupValue: hasGhanaCard,
+              label: 'Yes',
+              onChanged: (value) {
+                widget.onDataChanged(widget.data.updateGhanaCard(1));
+              },
+              errorKey: 'ghanaCard',
+            ),
+            _buildRadioOption(
+              value: '0', // Changed to string
+              groupValue: hasGhanaCard,
+              label: 'No',
+              onChanged: (value) {
+                widget.onDataChanged(widget.data.updateGhanaCard(0));
+              },
+              errorKey: 'ghanaCard',
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
   Widget _buildAlternativeIdSection() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;

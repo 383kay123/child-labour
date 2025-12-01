@@ -428,7 +428,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
                 Text(
                   'Community Assessment',
                   style: GoogleFonts.poppins(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),

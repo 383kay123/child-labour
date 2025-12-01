@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
 import 'package:human_rights_monitor/controller/db/daos/sensitization_questions_dao.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
-
 import 'package:image_picker/image_picker.dart';
-
 import '../../../../theme/app_theme.dart';
 
 /// A collection of reusable spacing constants for consistent UI layout.
@@ -69,46 +67,138 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
     _loadSensitizationQuestionsData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Check if we're being removed from the navigation stack
+    if (ModalRoute.of(context)?.isCurrent == false &&
+        ModalRoute.of(context)?.isActive == false) {
+      _saveBeforeDispose();
+    }
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _femaleAdultsController.dispose();
+    _maleAdultsController.dispose();
+    _consentReasonController.dispose();
+    _reactionController.dispose();
+    super.dispose();
+  }
+
   /// Loads the sensitization questions data from the database
   Future<void> _loadSensitizationQuestionsData() async {
     if (widget.coverPageId == null) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
       return;
     }
 
     try {
-      developer.log('🔍 Loading sensitization questions data...', name: _logTag);
+      developer.log('🔍 Loading sensitization questions data for coverPageId: ${widget.coverPageId}', 
+          name: _logTag);
       
       final questionsDao = SensitizationQuestionsDao(dbHelper: LocalDBHelper.instance);
+      
+      // Add a small delay to ensure the UI has time to render the loading state
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       final existingData = await questionsDao.getByCoverPageId(widget.coverPageId!);
       
-      if (existingData != null && mounted) {
-        developer.log('📋 Loaded sensitization questions: ${existingData.toMap()}', name: _logTag);
+      if (!mounted) return;
+      
+      if (existingData.isNotEmpty) {
+        final data = existingData.first;
+        developer.log('📋 Loaded sensitization questions: ${data.toMap()}', name: _logTag);
         
+        // Load images if paths exist and are accessible
+        File? sensitizationImage;
+        File? householdWithUserImage;
+        
+        if (data.sensitizationImagePath != null && data.sensitizationImagePath!.isNotEmpty) {
+          try {
+            final file = File(data.sensitizationImagePath!);
+            if (await file.exists()) {
+              sensitizationImage = file;
+            } else {
+              developer.log('⚠️ Sensitization image file not found at path: ${data.sensitizationImagePath}', 
+                  name: _logTag);
+            }
+          } catch (e) {
+            developer.log('❌ Error loading sensitization image: $e', name: _logTag);
+          }
+        }
+        
+        if (data.householdWithUserImagePath != null && data.householdWithUserImagePath!.isNotEmpty) {
+          try {
+            final file = File(data.householdWithUserImagePath!);
+            if (await file.exists()) {
+              householdWithUserImage = file;
+            } else {
+              developer.log('⚠️ Household with user image file not found at path: ${data.householdWithUserImagePath}', 
+                  name: _logTag);
+            }
+          } catch (e) {
+            developer.log('❌ Error loading household with user image: $e', name: _logTag);
+          }
+        }
+        
+        if (!mounted) return;
         setState(() {
-          hasSensitizedHousehold = existingData.hasSensitizedHousehold;
-          hasSensitizedOnProtection = existingData.hasSensitizedOnProtection;
-          hasSensitizedOnSafeLabour = existingData.hasSensitizedOnSafeLabour;
-          _femaleAdultsController.text = existingData.femaleAdultsCount;
-          _maleAdultsController.text = existingData.maleAdultsCount;
-          _consentForPicture = existingData.consentForPicture;
-          _consentReasonController.text = existingData.consentReason;
-          _reactionController.text = existingData.parentsReaction;
-          
-          // Note: Image paths would need to be loaded from storage if they exist
-          // _sensitizationImage = existingData.sensitizationImagePath != null 
-          //     ? File(existingData.sensitizationImagePath!)
-          //     : null;
-          // _householdWithUserImage = existingData.householdWithUserImagePath != null
-          //     ? File(existingData.householdWithUserImagePath!)
-          //     : null;
+          try {
+            // Set boolean values with null checks
+            hasSensitizedHousehold = data.hasSensitizedHousehold;
+            hasSensitizedOnProtection = data.hasSensitizedOnProtection;
+            hasSensitizedOnSafeLabour = data.hasSensitizedOnSafeLabour;
+            _consentForPicture = data.consentForPicture;
+            
+            // Set text field values with null checks and default values
+            _femaleAdultsController.text = data.femaleAdultsCount?.isNotEmpty == true 
+                ? data.femaleAdultsCount! 
+                : '0';
+                
+            _maleAdultsController.text = data.maleAdultsCount?.isNotEmpty == true 
+                ? data.maleAdultsCount! 
+                : '0';
+                
+            _consentReasonController.text = data.consentReason ?? '';
+            _reactionController.text = data.parentsReaction ?? '';
+            
+            // Set the images after they've been loaded
+            _sensitizationImage = sensitizationImage;
+            _householdWithUserImage = householdWithUserImage;
+            
+            developer.log('✅ Successfully loaded and set sensitization questions data', 
+                name: _logTag);
+                
+          } catch (e, stackTrace) {
+            developer.log('❌ Error in setState while loading data: $e', 
+                name: _logTag, error: e, stackTrace: stackTrace);
+          }
         });
       } else {
-        developer.log('ℹ️ No existing sensitization questions data found', name: _logTag);
+        developer.log('ℹ️ No existing sensitization questions data found for coverPageId: ${widget.coverPageId}', 
+            name: _logTag);
+            
+        // Initialize default values if no data exists
+        if (mounted) {
+          setState(() {
+            _femaleAdultsController.text = '0';
+            _maleAdultsController.text = '0';
+            _consentReasonController.clear();
+            _reactionController.clear();
+          });
+        }
       }
     } catch (e, stackTrace) {
       developer.log('❌ Error loading sensitization questions: $e', 
           name: _logTag, error: e, stackTrace: stackTrace);
+          
+      if (mounted) {
+        _showErrorSnackBar('Failed to load sensitization data. Please try again.');
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -116,7 +206,6 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
     }
   }
 
- 
   /// Enhanced validation with better error tracking
   bool validateForm({bool silent = false}) {
     final errors = <String>[];
@@ -183,21 +272,8 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
     
     return errors.isEmpty;
   }
-  
-  /// Shows a success message to the user
-  void _showSuccessSnackBar(String message) {
-    if (!mounted || _isDisposed) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
 
-  /// Enhanced save method with better error handling
+  /// Enhanced save method with better error handling and data validation
   Future<bool> saveData([int? coverPageId]) async {
     if (_isDisposed || _isSaving) {
       debugPrint('⚠️ Save operation prevented - already saving or disposed');
@@ -220,30 +296,36 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
       }
 
       final questionsDao = SensitizationQuestionsDao(dbHelper: LocalDBHelper.instance);
-      final now = DateTime.now();
+      final now = DateTime.now().toUtc();
       
       // Check if record exists
-      final existingRecord = await questionsDao.getByCoverPageId(effectiveCoverPageId);
+      final existingRecords = await questionsDao.getByCoverPageId(effectiveCoverPageId);
+      final existingRecord = existingRecords.isNotEmpty ? existingRecords.first : null;
       
-      // Create the model with ALL required fields
+      // Prepare data for saving
+      final femaleCount = _femaleAdultsController.text.trim().isEmpty ? '0' : _femaleAdultsController.text.trim();
+      final maleCount = _maleAdultsController.text.trim().isEmpty ? '0' : _maleAdultsController.text.trim();
+      final consentReason = _consentForPicture == true ? '' : _consentReasonController.text.trim();
+      
+      // Create the model with all required fields
       final model = SensitizationQuestionsData(
         id: existingRecord?.id,
         coverPageId: effectiveCoverPageId,
-        hasSensitizedHousehold: hasSensitizedHousehold!,
-        hasSensitizedOnProtection: hasSensitizedOnProtection!,
-        hasSensitizedOnSafeLabour: hasSensitizedOnSafeLabour!,
-        femaleAdultsCount: _femaleAdultsController.text.trim(),
-        maleAdultsCount: _maleAdultsController.text.trim(),
-        consentForPicture: _consentForPicture!,
-        consentReason: _consentForPicture! ? '' : _consentReasonController.text.trim(),
+        hasSensitizedHousehold: hasSensitizedHousehold ?? false,
+        hasSensitizedOnProtection: hasSensitizedOnProtection ?? false,
+        hasSensitizedOnSafeLabour: hasSensitizedOnSafeLabour ?? false,
+        femaleAdultsCount: femaleCount,
+        maleAdultsCount: maleCount,
+        consentForPicture: _consentForPicture ?? false,
+        consentReason: consentReason,
         sensitizationImagePath: _sensitizationImage?.path,
         householdWithUserImagePath: _householdWithUserImage?.path,
         parentsReaction: _reactionController.text.trim(),
         submittedAt: existingRecord?.submittedAt ?? now,
         createdAt: existingRecord?.createdAt ?? now,
         updatedAt: now,
-        isSynced: false,
-        syncStatus: 0,
+        isSynced: existingRecord?.isSynced ?? false,
+        syncStatus: existingRecord?.syncStatus ?? 0,
       );
 
       debugPrint('💾 Saving sensitization questions: ${model.toMap()}');
@@ -258,8 +340,21 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
         debugPrint('✅ Updated sensitization questions, rows affected: $result');
       }
 
-      if (!widget.validateOnly) {
+      // Verify the data was saved
+      if (result > 0) {
+        final savedRecords = await questionsDao.getByCoverPageId(effectiveCoverPageId);
+        if (savedRecords.isEmpty) {
+          debugPrint('⚠️ Warning: Failed to verify saved data - no records found after save');
+        } else {
+          debugPrint('✅ Verified ${savedRecords.length} records in database');
+        }
+      }
+
+      if (!widget.validateOnly && result > 0) {
         _showSuccessSnackBar('Sensitization questions saved successfully!');
+      } else if (!widget.validateOnly) {
+        _showErrorSnackBar('Failed to save data. Please try again.');
+        return false;
       }
       
       return result > 0;
@@ -276,27 +371,20 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
       _isSaving = false;
     }
   }
-  
-  /// Returns the current form data as a map
-  Map<String, dynamic>? getData() {
-    if (!_formKey.currentState!.validate()) {
-      return null;
-    }
 
-    return {
-      'hasSensitizedHousehold': hasSensitizedHousehold,
-      'hasSensitizedOnProtection': hasSensitizedOnProtection,
-      'hasSensitizedOnSafeLabour': hasSensitizedOnSafeLabour,
-      'consentForPicture': _consentForPicture,
-      'femaleAdultsCount': int.tryParse(_femaleAdultsController.text) ?? 0,
-      'maleAdultsCount': int.tryParse(_maleAdultsController.text) ?? 0,
-      'consentReason': _consentReasonController.text,
-      'reaction': _reactionController.text,
-      'sensitizationImagePath': _sensitizationImage?.path,
-      'householdWithUserImagePath': _householdWithUserImage?.path,
-    };
+  /// Shows a success message to the user
+  void _showSuccessSnackBar(String message) {
+    if (!mounted || _isDisposed) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
-  
+
   /// Shows an error message to the user
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
@@ -318,7 +406,6 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
   ///
   /// [isHouseholdWithUser] - If true, stores as household with user image,
   /// otherwise stores as sensitization image
-  @override
   Future<void> _takePicture(bool isHouseholdWithUser) async {
     developer.log(
         'Initiating image capture. Type: ${isHouseholdWithUser ? 'Household with user' : 'Sensitization'}',
@@ -370,16 +457,6 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
     }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Check if we're being removed from the navigation stack
-    if (ModalRoute.of(context)?.isCurrent == false &&
-        ModalRoute.of(context)?.isActive == false) {
-      _saveBeforeDispose();
-    }
-  }
-
   Future<void> _saveBeforeDispose() async {
     if (_isSaving || _isDisposed) return;
     _isSaving = true;
@@ -396,19 +473,7 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
     }
   }
 
-  @override
-  void dispose() {
-    _isDisposed = true;
-    _femaleAdultsController.dispose();
-    _maleAdultsController.dispose();
-    _consentReasonController.dispose();
-    _reactionController.dispose();
-    super.dispose();
-  }
-
   /// Builds a consistent card widget for form questions
-  ///
-  /// [child] - The widget to be wrapped in the card
   Widget _buildQuestionCard({required Widget child}) {
     developer.log('Building question card', name: _logTag);
 
@@ -469,6 +534,7 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
     String hintText = '',
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    String? Function(String?)? validator,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -484,15 +550,15 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
           ),
         ),
         const SizedBox(height: _Spacing.md),
-        TextField(
+        TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
+          validator: validator,
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color:
-                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
@@ -556,8 +622,7 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
           Text(
             note,
             style: theme.textTheme.bodySmall?.copyWith(
-              color:
-                  isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
+              color: isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -581,15 +646,13 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
                       Icon(
                         Icons.photo_camera,
                         size: 48,
-                        color:
-                            isDark ? AppTheme.darkTextSecondary : Colors.grey,
+                        color: isDark ? AppTheme.darkTextSecondary : Colors.grey,
                       ),
                       const SizedBox(height: _Spacing.sm),
                       Text(
                         'No image captured',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color:
-                              isDark ? AppTheme.darkTextSecondary : Colors.grey,
+                          color: isDark ? AppTheme.darkTextSecondary : Colors.grey,
                         ),
                       ),
                     ],
@@ -628,295 +691,322 @@ class SensitizationQuestionsPageState extends State<SensitizationQuestionsPage> 
     );
   }
 
+  
+
+  Future<void> _handleSave() async {
+    final success = await saveData();
+    if (success && mounted) {
+      widget.onNext();
+    }
+  }
+
+  String? _validateNumberField(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'This field is required';
+    }
+    final number = int.tryParse(value);
+    if (number == null || number < 0) {
+      return 'Please enter a valid number';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('Sensitization Questions'),
-      //   backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
-      //   elevation: 0,
-      //   iconTheme: IconThemeData(
-      //     color: isDark ? Colors.white : AppTheme.primaryColor,
-      //   ),
-      // ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.only(
-              left: 16.0,
-              right: 16.0,
-              top: 16.0,
-              bottom: 100.0, // Space for bottom buttons
-            ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Question 1: Sensitization Status
-                  _buildQuestionCard(
+      appBar: AppBar(
+        title: const Text('Sensitization Questions'),
+        backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(
+          color: isDark ? Colors.white : AppTheme.primaryColor,
+        ),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    top: 16.0,
+                    bottom: 100.0, // Space for bottom buttons
+                  ),
+                  child: Form(
+                    key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '1. Have you sensitized the household members?',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.textPrimary,
-                            fontWeight: FontWeight.w500,
+                        // Question 1: Sensitization Status
+                        _buildQuestionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '1. Have you sensitized the household members?',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: _Spacing.md),
+                              Wrap(
+                                spacing: 20,
+                                children: [
+                                  _buildRadioOption(
+                                    value: true,
+                                    groupValue: hasSensitizedHousehold,
+                                    label: 'Yes',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        hasSensitizedHousehold = value;
+                                      });
+                                    },
+                                  ),
+                                  _buildRadioOption(
+                                    value: false,
+                                    groupValue: hasSensitizedHousehold,
+                                    label: 'No',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        hasSensitizedHousehold = value;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: _Spacing.md),
-                        Wrap(
-                          spacing: 20,
-                          children: [
-                            _buildRadioOption(
-                              value: true,
-                              groupValue: hasSensitizedHousehold,
-                              label: 'Yes',
-                              onChanged: (value) {
-                                setState(() {
-                                  hasSensitizedHousehold = value;
-                                });
-                              },
-                            ),
-                            _buildRadioOption(
-                              value: false,
-                              groupValue: hasSensitizedHousehold,
-                              label: 'No',
-                              onChanged: (value) {
-                                setState(() {
-                                  hasSensitizedHousehold = value;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
 
-                  // Question 2: Child Protection Sensitization
-                  _buildQuestionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '2. Have you sensitized the household members on Child Protection?',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.textPrimary,
-                            fontWeight: FontWeight.w500,
+                        // Question 2: Child Protection Sensitization
+                        _buildQuestionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '2. Have you sensitized the household members on Child Protection?',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: _Spacing.md),
+                              Wrap(
+                                spacing: 20,
+                                children: [
+                                  _buildRadioOption(
+                                    value: true,
+                                    groupValue: hasSensitizedOnProtection,
+                                    label: 'Yes',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        hasSensitizedOnProtection = value;
+                                      });
+                                    },
+                                  ),
+                                  _buildRadioOption(
+                                    value: false,
+                                    groupValue: hasSensitizedOnProtection,
+                                    label: 'No',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        hasSensitizedOnProtection = value;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: _Spacing.md),
-                        Wrap(
-                          spacing: 20,
-                          children: [
-                            _buildRadioOption(
-                              value: true,
-                              groupValue: hasSensitizedOnProtection,
-                              label: 'Yes',
-                              onChanged: (value) {
-                                setState(() {
-                                  hasSensitizedOnProtection = value;
-                                });
-                              },
-                            ),
-                            _buildRadioOption(
-                              value: false,
-                              groupValue: hasSensitizedOnProtection,
-                              label: 'No',
-                              onChanged: (value) {
-                                setState(() {
-                                  hasSensitizedOnProtection = value;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
 
-                  // Question 3: Safe Labour Practices Sensitization
-                  _buildQuestionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '3. Have you sensitized the household members on Safe Labour Practices?',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.textPrimary,
-                            fontWeight: FontWeight.w500,
+                        // Question 3: Safe Labour Practices Sensitization
+                        _buildQuestionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '3. Have you sensitized the household members on Safe Labour Practices?',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: _Spacing.md),
+                              Wrap(
+                                spacing: 20,
+                                children: [
+                                  _buildRadioOption(
+                                    value: true,
+                                    groupValue: hasSensitizedOnSafeLabour,
+                                    label: 'Yes',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        hasSensitizedOnSafeLabour = value;
+                                      });
+                                    },
+                                  ),
+                                  _buildRadioOption(
+                                    value: false,
+                                    groupValue: hasSensitizedOnSafeLabour,
+                                    label: 'No',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        hasSensitizedOnSafeLabour = value;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: _Spacing.md),
-                        Wrap(
-                          spacing: 20,
-                          children: [
-                            _buildRadioOption(
-                              value: true,
-                              groupValue: hasSensitizedOnSafeLabour,
-                              label: 'Yes',
-                              onChanged: (value) {
-                                setState(() {
-                                  hasSensitizedOnSafeLabour = value;
-                                });
-                              },
-                            ),
-                            _buildRadioOption(
-                              value: false,
-                              groupValue: hasSensitizedOnSafeLabour,
-                              label: 'No',
-                              onChanged: (value) {
-                                setState(() {
-                                  hasSensitizedOnSafeLabour = value;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
 
-                  // Question 4: Female Adults Count
-                  _buildQuestionCard(
-                    child: _buildTextField(
-                      label:
-                          '4. How many female adults were present during the sensitization?',
-                      controller: _femaleAdultsController,
-                      hintText: 'Enter number of female adults',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-
-                  // Question 5: Male Adults Count
-                  _buildQuestionCard(
-                    child: _buildTextField(
-                      label:
-                          '5. How many male adults were present during the sensitization?',
-                      controller: _maleAdultsController,
-                      hintText: 'Enter number of male adults',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-
-                  // Question 6: Picture Consent
-                  _buildQuestionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '6. Does the producer consent to taking a picture of his household?',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.textPrimary,
-                            fontWeight: FontWeight.w500,
+                        // Question 4: Female Adults Count
+                        _buildQuestionCard(
+                          child: _buildTextField(
+                            label: '4. How many female adults were present during the sensitization?',
+                            controller: _femaleAdultsController,
+                            hintText: 'Enter number of female adults',
+                            keyboardType: TextInputType.number,
+                            validator: _validateNumberField,
                           ),
                         ),
-                        const SizedBox(height: _Spacing.md),
-                        Wrap(
-                          spacing: 20,
-                          children: [
-                            _buildRadioOption(
-                              value: true,
-                              groupValue: _consentForPicture,
-                              label: 'Yes',
-                              onChanged: (value) {
-                                setState(() {
-                                  _consentForPicture = value;
-                                  _consentReasonController.clear();
-                                });
-                              },
-                            ),
-                            _buildRadioOption(
-                              value: false,
-                              groupValue: _consentForPicture,
-                              label: 'No',
-                              onChanged: (value) {
-                                setState(() {
-                                  _consentForPicture = value;
-                                });
-                              },
-                            ),
-                          ],
+
+                        // Question 5: Male Adults Count
+                        _buildQuestionCard(
+                          child: _buildTextField(
+                            label: '5. How many male adults were present during the sensitization?',
+                            controller: _maleAdultsController,
+                            hintText: 'Enter number of male adults',
+                            keyboardType: TextInputType.number,
+                            validator: _validateNumberField,
+                          ),
                         ),
 
-                        // Reason field for denied consent
-                        if (_consentForPicture == false) ...[
-                          const SizedBox(height: _Spacing.lg),
-                          _buildTextField(
-                            label:
-                                'Please specify the reason for not consenting:',
-                            controller: _consentReasonController,
-                            hintText: 'Enter reason...',
-                            maxLines: 2,
+                        // Question 6: Picture Consent
+                        _buildQuestionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '6. Does the producer consent to taking a picture of his household?',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: _Spacing.md),
+                              Wrap(
+                                spacing: 20,
+                                children: [
+                                  _buildRadioOption(
+                                    value: true,
+                                    groupValue: _consentForPicture,
+                                    label: 'Yes',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _consentForPicture = value;
+                                        _consentReasonController.clear();
+                                      });
+                                    },
+                                  ),
+                                  _buildRadioOption(
+                                    value: false,
+                                    groupValue: _consentForPicture,
+                                    label: 'No',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _consentForPicture = value;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+
+                              // Reason field for denied consent
+                              if (_consentForPicture == false) ...[
+                                const SizedBox(height: _Spacing.lg),
+                                _buildTextField(
+                                  label: 'Please specify the reason for not consenting:',
+                                  controller: _consentReasonController,
+                                  hintText: 'Enter reason...',
+                                  maxLines: 2,
+                                  validator: (value) {
+                                    if (_consentForPicture == false &&
+                                        (value == null || value.trim().isEmpty)) {
+                                      return 'Please provide a reason for not giving consent';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                        // Show image sections only if consent was given
+                        if (_consentForPicture == true) ...[
+                          // Question 7: Sensitization Session Picture
+                          _buildImageSection(
+                            title: '7. Please take a picture of the sensitization being done with your back facing the camera and the faces of the household showing',
+                            note: 'Note: Please take a picture of the household with your face showing as well as the household members',
+                            image: _sensitizationImage,
+                            onTakePicture: () => _takePicture(false),
+                            buttonText: _sensitizationImage == null
+                                ? 'Take Picture of Session'
+                                : 'Retake Session Picture',
+                          ),
+
+                          // Question 8: Household with User Picture
+                          _buildImageSection(
+                            title: '8. Please take a picture of the household with your face showing',
+                            note: 'Note: Ensure your face is clearly visible along with the household members',
+                            image: _householdWithUserImage,
+                            onTakePicture: () => _takePicture(true),
+                            buttonText: _householdWithUserImage == null
+                                ? 'Take Picture with Household'
+                                : 'Retake Household Picture',
                           ),
                         ],
+
+                        // Question 9: Parents' Reaction
+                        _buildQuestionCard(
+                          child: _buildTextField(
+                            label: '9. What are your observations regarding the reaction from the parents on the sensitization provided?',
+                            controller: _reactionController,
+                            hintText: 'Describe the parents\' reactions, concerns, or feedback...',
+                            maxLines: 4,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please provide the reaction of parents/guardians';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 20), // Extra space before the bottom buttons
                       ],
                     ),
                   ),
+                ),
 
-                  // Show image sections only if consent was given
-                  if (_consentForPicture == true) ...[
-                    // Question 7: Sensitization Session Picture
-                    _buildImageSection(
-                      title:
-                          '7. Please take a picture of the **sensitization being done** with the your back facing the camera and the faces of the household showing',
-                      note:
-                          'Note: Please take a picture of the household with your face showing as well as the household members',
-                      image: _sensitizationImage,
-                      onTakePicture: () => _takePicture(false),
-                      buttonText: _sensitizationImage == null
-                          ? 'Take Picture of Session'
-                          : 'Retake Session Picture',
-                    ),
-
-                    // Question 8: Household with User Picture
-                    _buildImageSection(
-                      title:
-                          '8. Please take a picture of the household with your face showing',
-                      note:
-                          'Note: Ensure your face is clearly visible along with the household members',
-                      image: _householdWithUserImage,
-                      onTakePicture: () => _takePicture(true),
-                      buttonText: _householdWithUserImage == null
-                          ? 'Take Picture with Household'
-                          : 'Retake Household Picture',
-                    ),
-                  ],
-
-                  // Question 9: Parents' Reaction
-                  _buildQuestionCard(
-                    child: _buildTextField(
-                      label:
-                          '9. What are your observations regarding the reaction from the parents on the sensitization provided?',
-                      controller: _reactionController,
-                      hintText:
-                          'Describe the parents\' reactions, concerns, or feedback...',
-                      maxLines: 4,
-                    ),
-                  ),
-
-                  const SizedBox(height: 20), // Extra space before the bottom buttons
-                ],
-              ),
+              ],
             ),
-          ),
-          
-        
-        ],
-      ),
     );
   }
 }

@@ -51,7 +51,7 @@ class SensitizationQuestionsDao {
       await db.execute('''
         CREATE TABLE ${TableNames.sensitizationQuestionsTBL} (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          farm_identification_id INTEGER NOT NULL,
+          cover_page_id INTEGER NOT NULL,
           has_sensitized_household INTEGER,
           has_sensitized_on_protection INTEGER,
           has_sensitized_on_safe_labour INTEGER,
@@ -67,15 +67,15 @@ class SensitizationQuestionsDao {
           updated_at TEXT NOT NULL,
           is_synced INTEGER DEFAULT 0,
           sync_status INTEGER DEFAULT 0,
-          FOREIGN KEY (farm_identification_id) 
-            REFERENCES ${TableNames.combinedFarmIdentificationTBL} (id) ON DELETE CASCADE
+          FOREIGN KEY (cover_page_id) 
+            REFERENCES ${TableNames.coverPageTBL} (id) ON DELETE CASCADE
         )
       ''');
       
       // Create index for better performance
       await db.execute('''
-        CREATE INDEX IF NOT EXISTS idx_sensitization_questions_farm_id 
-        ON ${TableNames.sensitizationQuestionsTBL} (farm_identification_id)
+        CREATE INDEX IF NOT EXISTS idx_sensitization_questions_cover_id 
+        ON ${TableNames.sensitizationQuestionsTBL} (cover_page_id)
       ''');
       
       developer.log('✅ Sensitization questions table created successfully', name: _logTag);
@@ -94,7 +94,7 @@ class SensitizationQuestionsDao {
       final db = await dbHelper.database;
       
       final data = {
-        'farm_identification_id': coverPageId,
+        'cover_page_id': coverPageId,
         'has_sensitized_household': model.hasSensitizedHousehold == true ? 1 : 0,
         'has_sensitized_on_protection': model.hasSensitizedOnProtection == true ? 1 : 0,
         'has_sensitized_on_safe_labour': model.hasSensitizedOnSafeLabour == true ? 1 : 0,
@@ -203,11 +203,11 @@ class SensitizationQuestionsDao {
         final count = await db.update(
           TableNames.sensitizationQuestionsTBL,
           data,
-          where: 'farm_identification_id = ?',
+          where: 'cover_page_id = ?',
           whereArgs: [coverPageId],
         );
         
-        developer.log('✅ Successfully updated $count record(s) for farm ID: $coverPageId', name: _logTag);
+        developer.log('✅ Successfully updated $count record(s) for cover page ID: $coverPageId', name: _logTag);
         
         if (count == 0) {
           developer.log('ℹ️ No records were updated, will attempt to insert instead', name: _logTag);
@@ -241,7 +241,7 @@ class SensitizationQuestionsDao {
           final retryCount = await db.update(
             TableNames.sensitizationQuestionsTBL,
             data,
-            where: 'farm_identification_id = ?',
+            where: 'cover_page_id = ?',
             whereArgs: [coverPageId],
           );
           
@@ -280,39 +280,57 @@ class SensitizationQuestionsDao {
     return _fromMap(maps.first);
   }
 
-  /// Gets a sensitization questions record by cover page ID
-  Future<SensitizationQuestionsData?> getByCoverPageId(int coverPageId) async {
+  /// Gets all sensitization questions records by cover page ID
+  Future<List<SensitizationQuestionsData>> getByCoverPageId(int coverPageId) async {
     try {
       await _ensureTableExists();
       final db = await dbHelper.database;
       
+      developer.log('🔍 Fetching sensitization questions for cover page ID: $coverPageId', name: _logTag);
+      
       final List<Map<String, dynamic>> maps = await db.query(
         TableNames.sensitizationQuestionsTBL,
-        where: 'farm_identification_id = ?',
+        where: 'cover_page_id = ?',
         whereArgs: [coverPageId],
-        orderBy: 'id DESC',
-        limit: 1,
+        orderBy: 'id DESC',  // Get most recent first
       );
 
       if (maps.isEmpty) {
         developer.log('ℹ️ No sensitization questions found for cover page ID: $coverPageId', name: _logTag);
-        return null;
+        return [];  // Return empty list if no records found
+      }
+
+      developer.log('✅ Found ${maps.length} sensitization questions for cover page ID: $coverPageId', name: _logTag);
+      
+      // Convert each map to SensitizationQuestionsData
+      final List<SensitizationQuestionsData> results = [];
+      for (var map in maps) {
+        try {
+          final data = _fromMap(map);
+          results.add(data);
+        } catch (e, stackTrace) {
+          developer.log('❌ Error converting map to SensitizationQuestionsData: $e', 
+              name: _logTag, error: e, stackTrace: stackTrace);
+        }
       }
       
-      return _fromMap(maps.first);
+      return results;
     } catch (e, stackTrace) {
       developer.log('❌ Error getting sensitization questions for cover page ID: $coverPageId', 
           name: _logTag, error: e, stackTrace: stackTrace);
           
-      // If query fails due to missing table, recreate and return null
+      // If query fails due to missing table, recreate and return empty list
       if (e.toString().contains('no such table')) {
         developer.log('🔄 Table missing, recreating...', name: _logTag);
-        final db = await dbHelper.database;
-        await _createTableDirectly(db);
-        return null;
+        try {
+          final db = await dbHelper.database;
+          await _createTableDirectly(db);
+        } catch (createError) {
+          developer.log('❌ Failed to recreate table: $createError', name: _logTag);
+        }
       }
       
-      rethrow;
+      return []; // Return empty list on error
     }
   }
 
@@ -384,28 +402,43 @@ class SensitizationQuestionsDao {
 
   /// Converts a database map to a SensitizationQuestionsData object
   SensitizationQuestionsData _fromMap(Map<String, dynamic> map) {
-    return SensitizationQuestionsData(
-      id: map['id'],
-      coverPageId: map['farm_identification_id'],
-      hasSensitizedHousehold: map['has_sensitized_household'] == 1 ? true : 
-                            (map['has_sensitized_household'] == null ? null : false),
-      hasSensitizedOnProtection: map['has_sensitized_on_protection'] == 1 ? true : 
-                               (map['has_sensitized_on_protection'] == null ? null : false),
-      hasSensitizedOnSafeLabour: map['has_sensitized_on_safe_labour'] == 1 ? true : 
-                               (map['has_sensitized_on_safe_labour'] == null ? null : false),
-      femaleAdultsCount: map['female_adults_count'] ?? '',
-      maleAdultsCount: map['male_adults_count'] ?? '',
-      consentForPicture: map['consent_for_picture'] == 1,
-      consentReason: map['consent_reason'] ?? '',
-      sensitizationImagePath: map['sensitization_image_path'],
-      householdWithUserImagePath: map['household_with_user_image_path'],
-      parentsReaction: map['parents_reaction'] ?? '',
-      submittedAt: map['submitted_at'] != null ? DateTime.parse(map['submitted_at']) : DateTime.now(),
-      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : null,
-      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
-      isSynced: map['is_synced'] == 1,
-      syncStatus: map['sync_status'] ?? 0,
-    );
+    try {
+      return SensitizationQuestionsData(
+        id: map['id'] as int?,
+        coverPageId: map['cover_page_id'] as int?,
+        hasSensitizedHousehold: map['has_sensitized_household'] == 1 || map['has_sensitized_household'] == true,
+        hasSensitizedOnProtection: map['has_sensitized_on_protection'] == 1 || map['has_sensitized_on_protection'] == true,
+        hasSensitizedOnSafeLabour: map['has_sensitized_on_safe_labour'] == 1 || map['has_sensitized_on_safe_labour'] == true,
+        femaleAdultsCount: map['female_adults_count']?.toString() ?? '0',
+        maleAdultsCount: map['male_adults_count']?.toString() ?? '0',
+        consentForPicture: map['consent_for_picture'] == 1 || map['consent_for_picture'] == true,
+        consentReason: map['consent_reason']?.toString() ?? '',
+        sensitizationImagePath: map['sensitization_image_path']?.toString(),
+        householdWithUserImagePath: map['household_with_user_image_path']?.toString(),
+        parentsReaction: map['parents_reaction']?.toString() ?? '',
+        submittedAt: map['submitted_at'] != null 
+            ? (map['submitted_at'] is DateTime 
+                ? map['submitted_at'] 
+                : DateTime.parse(map['submitted_at'].toString())) 
+            : DateTime.now(),
+        createdAt: map['created_at'] != null
+            ? (map['created_at'] is DateTime 
+                ? map['created_at'] 
+                : DateTime.parse(map['created_at'].toString()))
+            : DateTime.now(),
+        updatedAt: map['updated_at'] != null
+            ? (map['updated_at'] is DateTime 
+                ? map['updated_at'] 
+                : DateTime.parse(map['updated_at'].toString()))
+            : DateTime.now(),
+        isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
+        syncStatus: (map['sync_status'] as int?) ?? 0,
+      );
+    } catch (e, stackTrace) {
+      developer.log('❌ Error parsing SensitizationQuestionsData from map: $e', 
+          name: _logTag, error: e, stackTrace: stackTrace);
+      rethrow;
+    }
   }
 
   /// Checks if a cover page has any sensitization records
@@ -415,7 +448,7 @@ class SensitizationQuestionsDao {
       final db = await dbHelper.database;
       
       final count = Sqflite.firstIntValue(await db.rawQuery(
-        'SELECT COUNT(*) FROM ${TableNames.sensitizationQuestionsTBL} WHERE farm_identification_id = ?',
+        'SELECT COUNT(*) FROM ${TableNames.sensitizationQuestionsTBL} WHERE cover_page_id = ?',
         [coverPageId],
       ));
       

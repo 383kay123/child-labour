@@ -184,7 +184,9 @@ class HouseholdSurveyController extends GetxController {
     isSensitizationChecked.value = newData.isAcknowledged;
   }
 
-  // Form submission
+  // Form submission - Commented out to prevent duplicate saves
+  // The survey is now saved using the transaction-based approach in saveCompleteSurvey()
+  /*
   Future<void> submitSurvey() async {
     try {
       isLoading.value = true;
@@ -260,6 +262,7 @@ class HouseholdSurveyController extends GetxController {
       isLoading.value = false;
     }
   }
+  */
   
   bool _validateForm() {
     final cover = coverData.value;

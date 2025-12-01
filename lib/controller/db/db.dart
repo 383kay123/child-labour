@@ -11,6 +11,7 @@ import '../../view/models/monitoring_model.dart';
 // Import all table classes
 
 import 'db_tables/monitoring_table.dart';
+import 'db_columns/society_data_columns.dart';
 
 class LocalDBHelper {
   static final LocalDBHelper instance = LocalDBHelper._init();
@@ -39,24 +40,56 @@ class LocalDBHelper {
         last_name TEXT NOT NULL,
         farmer_code TEXT UNIQUE NOT NULL,
         society_name INTEGER NOT NULL,
-        national_id_no TEXT UNIQUE NOT NULL,
-        contact TEXT NOT NULL,
-        id_type TEXT NOT NULL,
-        id_expiry_date TEXT NOT NULL,
-        no_of_cocoa_farms INTEGER NOT NULL,
-        no_of_certified_crop INTEGER NOT NULL,
-        total_cocoa_bags_harvested_previous_year INTEGER NOT NULL,
-        total_cocoa_bags_sold_group_previous_year INTEGER NOT NULL,
-        current_year_yeild_estimate INTEGER NOT NULL,
-        staffTbl_foreignkey INTEGER NOT NULL,
-        uuid TEXT UNIQUE NOT NULL,
+        national_id_no TEXT UNIQUE,
+        contact TEXT,
+        id_type TEXT,
+        id_expiry_date TEXT,
+        no_of_cocoa_farms INTEGER DEFAULT 0,
+        no_of_certified_crop INTEGER DEFAULT 0,
+        total_cocoa_bags_harvested_previous_year INTEGER DEFAULT 0,
+        total_cocoa_bags_sold_group_previous_year INTEGER DEFAULT 0,
+        current_year_yeild_estimate INTEGER DEFAULT 0,
+        staffTbl_foreignkey INTEGER,
+        uuid TEXT UNIQUE,
         farmer_photo TEXT,
-        cal_no_mapped_farms INTEGER NOT NULL,
-        mapped_status TEXT NOT NULL,
-        new_farmer_code TEXT UNIQUE NOT NULL,
+        cal_no_mapped_farms INTEGER DEFAULT 0,
+        mapped_status TEXT,
+        new_farmer_code TEXT UNIQUE,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
+
+     await db.execute('''
+      CREATE TABLE ${TableNames.districtsTBL}(
+        id INTEGER PRIMARY KEY,
+        created_date TEXT NOT NULL,
+        delete_field TEXT NOT NULL,
+        district TEXT NOT NULL,
+        district_code TEXT NOT NULL,
+        regionTbl_foreignkey INTEGER NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+     await db.execute('''
+  CREATE TABLE ${SocietyDataColumns.tableName} (
+    ${SocietyDataColumns.id} INTEGER PRIMARY KEY AUTOINCREMENT,
+    ${SocietyDataColumns.enumerator} INTEGER NOT NULL,
+    ${SocietyDataColumns.society} INTEGER NOT NULL,
+    ${SocietyDataColumns.accessToProtectedWater} REAL NOT NULL,
+    ${SocietyDataColumns.hireAdultLabourers} REAL NOT NULL,
+    ${SocietyDataColumns.awarenessRaisingSession} REAL NOT NULL,
+    ${SocietyDataColumns.womenLeaders} REAL NOT NULL,
+    ${SocietyDataColumns.preSchool} REAL NOT NULL,
+    ${SocietyDataColumns.primarySchool} REAL NOT NULL,
+    ${SocietyDataColumns.separateToilets} REAL NOT NULL,
+    ${SocietyDataColumns.provideFood} REAL NOT NULL,
+    ${SocietyDataColumns.scholarships} REAL NOT NULL,
+    ${SocietyDataColumns.corporalPunishment} REAL NOT NULL,
+    UNIQUE(${SocietyDataColumns.enumerator}, ${SocietyDataColumns.society}) 
+    ON CONFLICT REPLACE
+  )
+''');
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -68,7 +101,7 @@ class LocalDBHelper {
 
     return await openDatabase(
       path,
-      version: 4, // Incremented to add remediation table
+      version: 5, // Incremented to update farmers table schema
       onCreate: _createAllTables,
       onUpgrade: _upgradeDatabase,
       onOpen: (db) {
@@ -88,6 +121,8 @@ class LocalDBHelper {
     debugPrint('📊 Creating monitoring table...');
     await MonitoringTable.createTable(db);
     await MonitoringTable.createIndexes(db);
+
+
 
     // Create remediation table
     debugPrint('🔧 Creating remediation table...');

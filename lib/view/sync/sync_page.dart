@@ -22,11 +22,13 @@ class _SyncPageState extends State<SyncPage> with SingleTickerProviderStateMixin
   late Animation<double> _animation;
 
   final List<Future<void> Function()> _syncFunctions = [
-   () => GetService().fetchFarmers()
+    () => GetService().fetchFarmers(),
+    () => GetService().fetchDistricts(),
   ];
 
   final List<String> syncTitles = [
     "Farmer Data",
+    "District Data",
 
   ];
 
@@ -53,81 +55,97 @@ class _SyncPageState extends State<SyncPage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _startSync({bool retryOnlyFailed = false}) async {
-    if (!await ConnectionVerify.connectionIsAvailable()) {
-      Get.offAll(() => ScreenWrapper());
+    // Check connection
+    final hasConnection = await ConnectionVerify.connectionIsAvailable();
+    if (!hasConnection) {
+      if (mounted) {
+        Get.offAll(() => ScreenWrapper());
+      }
       return;
     }
 
-    setState(() {
-      _isSyncing = true;
-      if (!retryOnlyFailed) {
-        _currentStep = 0;
-        _failedSteps.clear();
-        _syncStatusMessages.clear();
-        _retryCount = 0;
-      }
+    if (mounted) {
+      setState(() {
+        _isSyncing = true;
+        if (!retryOnlyFailed) {
+          _currentStep = 0;
+          _failedSteps.clear();
+          _syncStatusMessages.clear();
+          _retryCount = 0;
+        }
+      });
       _animationController.reset();
       _animationController.forward();
-    });
+    }
 
-    List<int> stepsToSync = retryOnlyFailed
-        ? _failedSteps.toList()
-        : List.generate(_syncFunctions.length, (index) => index);
+    try {
+      List<int> stepsToSync = retryOnlyFailed
+          ? _failedSteps.toList()
+          : List.generate(_syncFunctions.length, (index) => index);
 
-    _failedSteps.clear();
+      _failedSteps.clear();
 
-    for (int i in stepsToSync) {
+      for (int i in stepsToSync) {
+        if (!mounted) return;
+
+        if (mounted) {
+          setState(() {
+            _syncStatusMessages[i] = "Syncing...";
+          });
+        }
+
+        try {
+          await _syncFunctions[i]();
+          if (mounted) {
+            setState(() {
+              _syncStatusMessages[i] = "Success";
+            });
+          }
+        } catch (e) {
+          debugPrint('Error in sync step $i: $e');
+          if (mounted) {
+            setState(() {
+              _syncStatusMessages[i] = "Failed: ${e.toString().split('\n').first}";
+              _failedSteps.add(i);
+            });
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _currentStep = i;
+          });
+        }
+      }
+
+      // Handle completion
       if (!mounted) return;
 
       setState(() {
-        _syncStatusMessages[i] = "Syncing...";
-      });
-
-      try {
-        await _syncFunctions[i]();
-        if (mounted) {
-          setState(() {
-            _syncStatusMessages[i] = "Success";
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _syncStatusMessages[i] = "Failed: ${e.toString().split('\n').first}";
-            _failedSteps.add(i);
-          });
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _currentStep = i;
-        });
-      }
-    }
-
-    if (mounted) {
-      setState(() {
         _isSyncing = false;
       });
-    }
 
-    if (mounted) {
       if (_failedSteps.isEmpty) {
         // Success case - navigate to home
+        debugPrint('Sync completed successfully, navigating to home');
         if (Get.isSnackbarOpen) {
-          Get.back(); // Close any open snackbars
+          await Get.closeCurrentSnackbar();
         }
-        Get.offAll(() => ScreenWrapper());
+        if (mounted) {
+          Get.offAll(() => ScreenWrapper());
+        }
       } else if (_retryCount < 2) {
         // Retry failed steps
         _retryCount++;
         await Future.delayed(const Duration(seconds: 2));
-        _startSync(retryOnlyFailed: true);
+        if (mounted) {
+          _startSync(retryOnlyFailed: true);
+        }
       } else {
-        // Max retries reached - show error and navigate
+        // Max retries reached
+        debugPrint('Max retries reached, showing error');
         if (Get.isSnackbarOpen) {
-          Get.back(); // Close any open snackbars
+          await Get.closeCurrentSnackbar();
         }
         Get.snackbar(
           'Sync Incomplete',
@@ -136,6 +154,16 @@ class _SyncPageState extends State<SyncPage> with SingleTickerProviderStateMixin
           duration: const Duration(seconds: 3),
         );
         await Future.delayed(const Duration(seconds: 3));
+        if (mounted) {
+          Get.offAll(() => ScreenWrapper());
+        }
+      }
+    } catch (e) {
+      debugPrint('Unexpected error in _startSync: $e');
+      if (mounted) {
+        setState(() {
+          _isSyncing = false;
+        });
         Get.offAll(() => ScreenWrapper());
       }
     }

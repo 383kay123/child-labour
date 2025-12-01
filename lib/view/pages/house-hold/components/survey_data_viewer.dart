@@ -682,21 +682,26 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
         }
         return _buildRemediationContent();
         
-      case 6: {
+     case 6: {
   final hasSensitization = widget.surveyData.sensitization != null;
   final hasQuestions = widget.surveyData.sensitizationQuestions?.isNotEmpty == true;
   
   debugPrint('🔍 [SurveyViewer] Sensitization check - hasSensitization: $hasSensitization, hasQuestions: $hasQuestions');
+  debugPrint('🔍 [SurveyViewer] Sensitization data: ${widget.surveyData.sensitization?.toMap()}');
+  debugPrint('🔍 [SurveyViewer] Questions count: ${widget.surveyData.sensitizationQuestions?.length ?? 0}');
   
-  if (!hasSensitization && !hasQuestions) {
-    return _buildInfoCard(
-      'Sensitization', 
-      'This section was not completed during the survey.\n\nSensitization data is optional and may not be collected for all surveys.',
-      icon: Icons.info_outline,
-      color: Colors.blue,
-    );
+  // Always try to show the content if we have either sensitization data or questions
+  if (hasSensitization || hasQuestions) {
+    return _buildSensitizationContent();
   }
-  return _buildSensitizationContent();
+  
+  // Only show "not completed" if we have neither
+  return _buildInfoCard(
+    'Sensitization', 
+    'This section was not completed during the survey.\n\nSensitization data is optional and may not be collected for all surveys.',
+    icon: Icons.info_outline,
+    color: Colors.blue,
+  );
 }
 
         
@@ -1203,107 +1208,142 @@ String _formatAgreementKey(String key) {
   }
 
   Widget _buildSensitizationContent() {
-  final sensitization = widget.surveyData.sensitization;
-  final questions = widget.surveyData.sensitizationQuestions;
+    final sensitization = widget.surveyData.sensitization;
+    final questions = widget.surveyData.sensitizationQuestions;
 
-  debugPrint('📊 Building sensitization content...');
-  debugPrint('Sensitization data: ${sensitization?.toMap()}');
-  debugPrint('Questions count: ${questions?.length ?? 0}');
+    debugPrint('📊 [Viewer] Building sensitization content...');
+    debugPrint('📊 [Viewer] Sensitization: ${sensitization?.toMap()}');
+    debugPrint('📊 [Viewer] Questions count: ${questions?.length ?? 0}');
+    if (questions != null && questions.isNotEmpty) {
+      debugPrint('📊 [Viewer] First question: ${questions.first.toMap()}');
+    }
 
-  if (sensitization == null && (questions == null || questions.isEmpty)) {
-    return _buildEmptyState(_sections[6]['color']);
-  }
-
-  List<Widget> content = [];
-  
-  // Sensitization acknowledgment data
-  if (sensitization != null) {
-    content.add(_buildContentCard(
-      title: 'Sensitization Acknowledgment',
-      items: {
-        'Acknowledged': _boolToYesNo(sensitization.isAcknowledged),
-        'Acknowledged At': _formatDateTime(sensitization.acknowledgedAt) ?? 'Not recorded',
-        'Created At': _formatDateTime(sensitization.createdAt) ?? 'Not available',
-        'Updated At': _formatDateTime(sensitization.updatedAt) ?? 'Not available',
-        'Synced': _boolToYesNo(sensitization.isSynced),
-      },
-    ));
-  }
-
-  // Sensitization questions data
-  if (questions != null && questions.isNotEmpty) {
-    for (int i = 0; i < questions.length; i++) {
-      final question = questions[i];
-      final questionData = <String, String>{};
-      
-      // Basic questions
-      questionData['Sensitized Household'] = _boolToYesNo(question.hasSensitizedHousehold);
-      questionData['Sensitized on Protection'] = _boolToYesNo(question.hasSensitizedOnProtection);
-      questionData['Sensitized on Safe Labour'] = _boolToYesNo(question.hasSensitizedOnSafeLabour);
-      
-      // Adult counts
-      if (question.femaleAdultsCount.isNotEmpty) {
-        questionData['Female Adults Present'] = question.femaleAdultsCount;
-      }
-      if (question.maleAdultsCount.isNotEmpty) {
-        questionData['Male Adults Present'] = question.maleAdultsCount;
-      }
-      
-      // Picture consent
-      questionData['Consent for Picture'] = _boolToYesNo(question.consentForPicture);
-      if (question.consentForPicture == false && question.consentReason.isNotEmpty) {
-        questionData['Reason for No Consent'] = question.consentReason;
-      }
-      
-      // Parents reaction
-      if (question.parentsReaction.isNotEmpty) {
-        questionData['Parents Reaction'] = question.parentsReaction;
-      }
-      
-      // Submission time
-      questionData['Submitted At'] = _formatDateTime(question.submittedAt) ?? 'Not recorded';
-      
-      // Sync status
-      questionData['Synced'] = _boolToYesNo(question.isSynced ?? false);
-
+    List<Widget> content = [];
+    
+    // Sensitization acknowledgment data
+    if (sensitization != null) {
       content.add(_buildContentCard(
-        title: 'Sensitization Session ${i + 1}',
-        items: questionData,
+        title: 'Sensitization Acknowledgment',
+        items: {
+          'Database ID': sensitization.id?.toString() ?? 'Not set',
+          'Cover Page ID': sensitization.coverPageId?.toString() ?? 'Not set',
+          'Acknowledged': _boolToYesNo(sensitization.isAcknowledged),
+          'Acknowledged At': _formatDateTime(sensitization.acknowledgedAt) ?? 'Not recorded',
+          'Created At': _formatDateTime(sensitization.createdAt) ?? 'Not available',
+          'Updated At': _formatDateTime(sensitization.updatedAt) ?? 'Not available',
+          'Synced': _boolToYesNo(sensitization.isSynced),
+        },
       ));
+    } else {
+      debugPrint('⚠️ [Viewer] No sensitization acknowledgment data');
+    }
 
-      // Image previews
-      if (question.sensitizationImagePath?.isNotEmpty == true) {
-        content.add(_buildImagePreviewCard(
-          title: 'Sensitization Session ${i + 1} - Photo',
-          imagePath: question.sensitizationImagePath!,
+    // Sensitization questions data
+    if (questions != null && questions.isNotEmpty) {
+      debugPrint('✅ [Viewer] Processing ${questions.length} questions');
+      
+      for (int i = 0; i < questions.length; i++) {
+        final question = questions[i];
+        debugPrint('📝 [Viewer] Processing question ${i + 1}: ID=${question.id}');
+        
+        final questionData = <String, String>{};
+        
+        // Add database info
+        questionData['Database ID'] = question.id?.toString() ?? 'Not set';
+        questionData['Cover Page ID'] = question.coverPageId?.toString() ?? 'Not set';
+        
+        // Basic questions
+        questionData['Sensitized Household'] = _boolToYesNo(question.hasSensitizedHousehold);
+        questionData['Sensitized on Protection'] = _boolToYesNo(question.hasSensitizedOnProtection);
+        questionData['Sensitized on Safe Labour'] = _boolToYesNo(question.hasSensitizedOnSafeLabour);
+        
+        // Adult counts
+        if (question.femaleAdultsCount.isNotEmpty && question.femaleAdultsCount != '0') {
+          questionData['Female Adults Present'] = question.femaleAdultsCount;
+        } else {
+          questionData['Female Adults Present'] = '0 (or not recorded)';
+        }
+        
+        if (question.maleAdultsCount.isNotEmpty && question.maleAdultsCount != '0') {
+          questionData['Male Adults Present'] = question.maleAdultsCount;
+        } else {
+          questionData['Male Adults Present'] = '0 (or not recorded)';
+        }
+        
+        // Picture consent
+        questionData['Consent for Picture'] = _boolToYesNo(question.consentForPicture);
+        if (question.consentForPicture == false && question.consentReason.isNotEmpty) {
+          questionData['Reason for No Consent'] = question.consentReason;
+        }
+        
+        // Parents reaction
+        if (question.parentsReaction.isNotEmpty) {
+          questionData['Parents Reaction'] = question.parentsReaction;
+        } else {
+          questionData['Parents Reaction'] = 'Not recorded';
+        }
+        
+        // Submission time
+        questionData['Submitted At'] = _formatDateTime(question.submittedAt) ?? 'Not recorded';
+        
+        // Sync status
+        questionData['Synced'] = _boolToYesNo(question.isSynced ?? false);
+
+        content.add(_buildContentCard(
+          title: 'Sensitization Session ${i + 1}',
+          items: questionData,
         ));
-      }
 
-      if (question.householdWithUserImagePath?.isNotEmpty == true) {
-        content.add(_buildImagePreviewCard(
-          title: 'Household with User ${i + 1} - Photo',
-          imagePath: question.householdWithUserImagePath!,
+        // Image previews
+        if (question.sensitizationImagePath?.isNotEmpty == true) {
+          debugPrint('🖼️ [Viewer] Adding sensitization image: ${question.sensitizationImagePath}');
+          content.add(_buildImagePreviewCard(
+            title: 'Sensitization Session ${i + 1} - Photo',
+            imagePath: question.sensitizationImagePath!,
+          ));
+        } else {
+          debugPrint('⚠️ [Viewer] No sensitization image for question ${i + 1}');
+        }
+
+        if (question.householdWithUserImagePath?.isNotEmpty == true) {
+          debugPrint('🖼️ [Viewer] Adding household image: ${question.householdWithUserImagePath}');
+          content.add(_buildImagePreviewCard(
+            title: 'Household with User ${i + 1} - Photo',
+            imagePath: question.householdWithUserImagePath!,
+          ));
+        } else {
+          debugPrint('⚠️ [Viewer] No household image for question ${i + 1}');
+        }
+      }
+    } else {
+      debugPrint('⚠️ [Viewer] No sensitization questions found');
+      
+      // Show info card if we have sensitization but no questions
+      if (sensitization != null) {
+        content.add(_buildInfoCard(
+          'Sensitization Questions', 
+          'The sensitization was acknowledged but no detailed questions were recorded.\n\n'
+          'This may happen if the questions section was not completed during data collection.',
+          icon: Icons.info_outline,
+          color: Colors.amber,
         ));
       }
     }
-  }
 
-  // If we have neither sensitization nor questions data
-  if (content.isEmpty) {
-    content.add(
-      Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Text(
-          'No sensitization data available',
-          style: AppTheme.textTheme.bodyMedium,
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
+    // If we have neither sensitization nor questions data
+    if (content.isEmpty) {
+      debugPrint('ℹ️ [Viewer] No sensitization data at all');
+      return _buildInfoCard(
+        'Sensitization', 
+        'This section was not completed during the survey.\n\n'
+        'Sensitization data is optional and may not be collected for all surveys.',
+        icon: Icons.info_outline,
+        color: Colors.blue,
+      );
+    }
 
-  return _buildScrollableContent(content);
-}
+    return _buildScrollableContent(content);
+  }
 
 // Helper method for formatting DateTime with null safety
 String? _formatDateTime(DateTime? dateTime) {
@@ -1573,21 +1613,20 @@ Future<File?> _getImageFile(String path) async {
   }
 
   dynamic _getSectionData(int index) {
-  switch (index) {
-    case 0: return widget.surveyData.cover;
-    case 1: return widget.surveyData.consent;
-    case 2: return widget.surveyData.farmer;
-    case 3: return widget.surveyData.combinedFarm;
-    case 4: return widget.surveyData.childrenHousehold;
-    case 5: return widget.surveyData.remediation;
-    case 6: 
-      return widget.surveyData.sensitization != null || 
-            (widget.surveyData.sensitizationQuestions != null && 
-             widget.surveyData.sensitizationQuestions!.isNotEmpty)
-            ? true : null;
-    case 7: return widget.surveyData.endOfCollection;
-    default: return null;
-  }
+    switch (index) {
+      case 0: return widget.surveyData.cover;
+      case 1: return widget.surveyData.consent;
+      case 2: return widget.surveyData.farmer;
+      case 3: return widget.surveyData.combinedFarm;
+      case 4: return widget.surveyData.childrenHousehold;
+      case 5: return widget.surveyData.remediation;
+      case 6: return {
+        'sensitization': widget.surveyData.sensitization,
+        'questions': widget.surveyData.sensitizationQuestions ?? [],
+      };
+      case 7: return widget.surveyData.endOfCollection;
+      default: return null;
+    }
 }
 
   String _boolToYesNo(bool? value) {
