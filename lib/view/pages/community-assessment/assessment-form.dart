@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/society_repo.dart';
+import 'package:human_rights_monitor/controller/models/societies/societies_model.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:get/get.dart';
@@ -26,9 +28,10 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
   bool get _hasPrimarySchools => _answers["q6"] == "Yes";
   final CommunityAssessmentController _controller =
       CommunityAssessmentController();
-  final DistrictRepository _districtRepo = DistrictRepository();
-  final RxList<District> _districts = <District>[].obs;
-  final RxBool _isLoadingDistricts = false.obs;
+ final SocietyRepository _societyRepo = SocietyRepository();
+final RxList<Society> _societies = <Society>[].obs;
+final RxBool _isLoadingSocieties = false.obs;
+final RxnInt _selectedSocietyId = RxnInt();
   final List<String> _schools = [];
   final List<TextEditingController> _schoolControllers = [];
   final Map<String, bool> _schoolToilets = {};
@@ -39,7 +42,7 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
   @override
   void initState() {
     super.initState();
-    _loadDistricts();
+    _loadSocieties(); // Changed from _loadDistricts to _loadSocieties
   }
 
   @override
@@ -47,21 +50,22 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
     for (var controller in _schoolControllers) {
       controller.dispose();
     }
-    _isLoadingDistricts.close();
-    _districts.close();
+    _isLoadingSocieties.close();
+    _societies.close();
+    _selectedSocietyId.close();
     super.dispose();
   }
 
-  Future<void> _loadDistricts() async {
+    Future<void> _loadSocieties() async {
     try {
-      _isLoadingDistricts.value = true;
-      final districts = await _districtRepo.getDistrictsOrderByName();
-      _districts.assignAll(districts);
+      _isLoadingSocieties.value = true;
+      final societies = await _societyRepo.getAllSocieties();
+      _societies.value = societies;
     } catch (e) {
-      debugPrint('Error loading districts: $e');
-      Get.snackbar('Error', 'Failed to load districts');
+      debugPrint('Error loading societies: $e');
+      Get.snackbar('Error', 'Failed to load societies');
     } finally {
-      _isLoadingDistricts.value = false;
+      _isLoadingSocieties.value = false;
     }
   }
 
@@ -338,58 +342,56 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
     );
   }
 
-  Widget _buildCommunityDropdown() {
-    return Obx(() {
-      if (_isLoadingDistricts.value) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0),
-          child: Center(child: CircularProgressIndicator()),
-        );
-      }
-
-      if (_districts.isEmpty) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: Text('No districts available. Please sync data first.'),
-        );
-      }
-
-      return DropdownButtonFormField<String>(
-        value: _selectedCommunity,
-        decoration: const InputDecoration(
-          labelText: 'Select District *',
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-        ),
-        items: _districts.map((District district) {
-          return DropdownMenuItem<String>(
-            value: district.district,
-            child: Text(district.district),
-          );
-        }).toList(),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please select a district';
-          }
-          return null;
-        },
-        onChanged: (String? newValue) {
-          if (newValue != null) {
-            setState(() {
-              _selectedCommunity = newValue;
-              _controller.communityName.value = newValue;
-              _answers["community"] = newValue;
-              // Store the selected district ID for reference if needed
-              final selectedDistrict = _districts.firstWhereOrNull((d) => d.district == newValue);
-              if (selectedDistrict != null) {
-                _answers["district_id"] = selectedDistrict.id;
-              }
-            });
-          }
-        },
+ Widget _buildCommunityDropdown() {
+  return Obx(() {
+    if (_isLoadingSocieties.value) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.0),
+        child: Center(child: CircularProgressIndicator()),
       );
-    });
+    }
+
+    if (_societies.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8.0),
+        child: Text('No societies available. Please sync data first.'),
+      );
+    }
+
+    return DropdownButtonFormField<int>(
+      value: _selectedSocietyId.value,
+      decoration: const InputDecoration(
+        labelText: 'Select Society *',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      ),
+      items: _societies.map((society) {
+        return DropdownMenuItem<int>(
+          value: society.id,
+          child: Text(society.society ?? 'Unnamed Society'),
+        );
+      }).toList(),
+      validator: (value) {
+        if (value == null) {
+          return 'Please select a society';
+        }
+        return null;
+      },
+      onChanged: (int? newId) {
+        _selectedSocietyId.value = newId; // RxnInt can handle null values
+        if (newId != null) {
+          // Update the community name when a society is selected
+          final selectedSociety = _societies.firstWhereOrNull((s) => s.id == newId);
+          if (selectedSociety != null) {
+            _controller.communityName.value = selectedSociety.society ?? '';
+            _controller.communityId.value = selectedSociety.id; // Store the society ID in communityId
+          }
+        }
+      },
+    );
   }
+  );
+}
 
   List<Widget> _buildSchoolQuestions() {
     return [
@@ -577,26 +579,36 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
       onPressed: _isSubmitting ? null : _saveAsDraft,
     );
   }
+Future<void> _saveAsDraft() async {
+  if (!_formKey.currentState!.validate()) {
+    return;
+  }
 
-  Future<void> _saveAsDraft() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
+  setState(() => _isSubmitting = true);
+
+  try {
+    _updateCheckboxAnswers();
+    
+    final answers = Map<String, dynamic>.from(_answers);
+    
+    // Use the society ID from the controller
+    final societyId = _controller.communityId.value;
+    if (societyId != null) {
+      answers['society_id'] = societyId;
+      debugPrint('ℹ️ Using society ID from controller: $societyId');
+    } else {
+      debugPrint('⚠️ No society ID available in controller');
     }
-
-    setState(() => _isSubmitting = true);
-
-    try {
-      _updateCheckboxAnswers();
-      
-      final answers = Map<String, dynamic>.from(_answers);
-      if (_selectedCommunity != null) {
-        answers['community'] = _selectedCommunity!;
-      }
-      
-      answers['q7b'] = _schools.join(', ');
-      answers['q7c'] = _schools.where((s) => _schoolToilets[s] == true).join(', ');
-      
-      final success = await _controller.saveFormOffline(answers, status: 0);
+    
+    // Use the community name from the controller
+    if (_controller.communityName.value.isNotEmpty) {
+      answers['community'] = _controller.communityName.value;
+    }
+    
+    answers['q7b'] = _schools.join(', ');
+    answers['q7c'] = _schools.where((s) => _schoolToilets[s] == true).join(', ');
+    
+    final success = await _controller.saveFormOffline(answers, status: 0);
       
       if (success && context.mounted) {
         // Show success dialog
@@ -637,9 +649,8 @@ class _CommunityAssessmentFormState extends State<CommunityAssessmentForm> {
                   Text(
                     'Community Assessment successfully done',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: Colors.grey[800],
+                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontFamily: GoogleFonts.poppins().fontFamily,
                     ),
                   ),
                   const SizedBox(height: 20),

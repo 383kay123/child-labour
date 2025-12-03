@@ -1,16 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:human_rights_monitor/controller/api/api.dart';
+
+import 'package:human_rights_monitor/controller/api/get_methods.dart';
 
 import 'package:human_rights_monitor/controller/db/db_tables/helpers/community_db_helper.dart';
 import 'package:human_rights_monitor/controller/models/community-assessment-model.dart';
+import 'package:human_rights_monitor/controller/models/pci/pci.dart';
 import 'package:intl/intl.dart';
 
 class CommunityAssessmentController extends GetxController {
   BuildContext? communityAssessmentContext;
-  final ApiService _api = ApiService();
+  final GetService _api = GetService();
 
+  var communityId = RxnInt();  // Made nullable to match society ID type
   var communityName = ''.obs;
   var communityScore = 0.obs;
 
@@ -84,72 +87,147 @@ class CommunityAssessmentController extends GetxController {
     communityScore.value = newScore;
   }
 
-  /// Submit form online, fallback to offline if network fails
-  Future<bool> submit(Map<String, dynamic> answers) async {
-    try {
-      // Convert answers to CommunityAssessmentModel
-      final model = _createAssessmentModel(answers);
-      
-      // Try to submit online first
-      final success = await _api.submitCommunityAssessment(model);
-      
-      if (success) {
-        // If online submission is successful, save with status 1 (submitted)
-        await saveFormOffline(answers, status: 1);
-        
-        // Show success message if context is available
-        _showSnackBar('Form submitted successfully');
-        return true;
-      } else {
-        // Fallback to offline save if online submission fails
-        await saveFormOffline(answers, status: 0);
-        _showSnackBar('Form saved as draft (offline)');
-        return false;
-      }
-    } catch (e) {
-      debugPrint('Error submitting form: $e');
-      // Save offline if there's an error
+  // In CommunityAssessmentController's submit method
+Future<bool> submit(Map<String, dynamic> answers) async {
+  try {
+    debugPrint('Submitting with answers: $answers'); // Debug log
+    
+    // Get the society ID from answers or use the one from controller
+    final societyId = int.tryParse(answers['society_id']?.toString() ?? '0') ?? 
+                     communityId.value ?? 
+                     0;
+    
+    debugPrint('Using society ID: $societyId'); // Debug log
+    
+    // Convert answers to SocietyData
+    final societyData = SocietyData(
+      enumerator: int.tryParse(answers['enumerator_id']?.toString() ?? '0') ?? 0,
+      society: societyId,
+      accessToProtectedWater: (answers['access_to_protected_water'] as num?)?.toDouble() ?? 0.0,
+      hireAdultLabourers: (answers['hire_adult_labourers'] as num?)?.toDouble() ?? 0.0,
+      awarenessRaisingSession: (answers['awareness_raising_session'] as num?)?.toDouble() ?? 0.0,
+      womenLeaders: (answers['women_leaders'] as num?)?.toDouble() ?? 0.0,
+      preSchool: (answers['pre_school'] as num?)?.toDouble() ?? 0.0,
+      primarySchool: (answers['primary_school'] as num?)?.toDouble() ?? 0.0,
+      separateToilets: (answers['separate_toilets'] as num?)?.toDouble() ?? 0.0,
+      provideFood: (answers['provide_food'] as num?)?.toDouble() ?? 0.0,
+      scholarships: (answers['scholarships'] as num?)?.toDouble() ?? 0.0,
+      corporalPunishment: (answers['corporal_punishment'] as num?)?.toDouble() ?? 0.0,
+    );
+
+    // Get the API instance
+    final api = Get.find<GetService>();
+    
+    // Submit the data online
+    final success = await api.postPCIData(societyData.toJson());
+    
+    if (success) {
+      await saveFormOffline(answers, status: 1);
+      _showSnackBar('Form submitted successfully');
+      return true;
+    } else {
       await saveFormOffline(answers, status: 0);
-      _showSnackBar('Error submitting form. Saved as draft.');
+      _showSnackBar('Form saved as draft (offline)');
       return false;
     }
+  } catch (e) {
+    debugPrint('Error submitting form: $e');
+    // Save offline if there's an error
+    await saveFormOffline(answers, status: 0);
+    _showSnackBar('Error submitting form. Saved as draft.');
+    return false;
   }
+}
+  /// Submit Post-Collection Information (PCI) data to the server
+Future<void> _submitPCIData(Map<String, dynamic> answers) async {
+  try {
+    // Create SocietyData from answers
+    final societyData = SocietyData(
+      enumerator: int.tryParse(answers['enumerator_id']?.toString() ?? '0') ?? 0,
+      society: int.tryParse(answers['society_id']?.toString() ?? '0') ?? 0,
+      accessToProtectedWater: (answers['access_to_protected_water'] as num?)?.toDouble() ?? 0.0,
+      hireAdultLabourers: (answers['hire_adult_labourers'] as num?)?.toDouble() ?? 0.0,
+      awarenessRaisingSession: (answers['awareness_raising_session'] as num?)?.toDouble() ?? 0.0,
+      womenLeaders: (answers['women_leaders'] as num?)?.toDouble() ?? 0.0,
+      preSchool: (answers['pre_school'] as num?)?.toDouble() ?? 0.0,
+      primarySchool: (answers['primary_school'] as num?)?.toDouble() ?? 0.0,
+      separateToilets: (answers['separate_toilets'] as num?)?.toDouble() ?? 0.0,
+      provideFood: (answers['provide_food'] as num?)?.toDouble() ?? 0.0,
+      scholarships: (answers['scholarships'] as num?)?.toDouble() ?? 0.0,
+      corporalPunishment: (answers['corporal_punishment'] as num?)?.toDouble() ?? 0.0,
+    );
 
-  /// Save form to local database
-  /// [status] 0 = draft, 1 = submitted, 2 = synced
+    // Convert to PCI format
+    final pciData = {
+      'enumerator': societyData.enumerator,
+      'society': societyData.society,
+      'access_to_protected_water': societyData.accessToProtectedWater,
+      'hire_adult_labourers': societyData.hireAdultLabourers,
+      'awareness_raising_session': societyData.awarenessRaisingSession,
+      'women_leaders': societyData.womenLeaders,
+      'pre_school': societyData.preSchool,
+      'primary_school': societyData.primarySchool,
+      'separate_toilets': societyData.separateToilets,
+      'provide_food': societyData.provideFood,
+      'scholarships': societyData.scholarships,
+      'corporal_punishment': societyData.corporalPunishment,
+      'submission_date': DateTime.now().toIso8601String(),
+    };
+    
+    // Submit PCI data
+    final api = Get.find<GetService>();
+    await api.postPCIData(pciData);
+    
+    debugPrint('✅ PCI data submitted successfully');
+  } catch (e) {
+    debugPrint('❌ Error submitting PCI data: $e');
+    // Don't throw error here to not affect the main form submission
+  }
+}
   Future<bool> saveFormOffline(Map<String, dynamic> answers, {int status = 0}) async {
-    try {
-      final now = DateTime.now();
-      final formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
-      
-      // Create the assessment model
-      final model = _createAssessmentModel(answers);
-      
-      // Prepare the data to be saved
-      final assessmentData = model.toDatabaseMap()
-        ..addAll({
-          'date_created': formattedDate,
-          'date_modified': formattedDate,
-          'status': status,
-        });
-
-      // Save to database
-      final dbHelper = CommunityDBHelper.instance;
-      final id = await dbHelper.insertCommunityAssessment(assessmentData);
-      
-      if (id > 0) {
-        _showSnackBar('Form saved successfully');
-        return true;
-      } else {
-        _showSnackBar('Failed to save form');
-        return false;
-      }
-    } catch (e) {
-      debugPrint('Error saving form: $e');
-      _showSnackBar('Error saving form: ${e.toString()}');
-      return false;
+  try {
+    final now = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
+    
+    // Parse existing raw_data or create new map
+    final rawData = answers['raw_data'] != null 
+        ? jsonDecode(answers['raw_data']) as Map<String, dynamic>
+        : <String, dynamic>{};
+    
+    // Add society_id to raw_data if it exists
+    if (communityId.value != null) {
+      rawData['society_id'] = communityId.value;
     }
+    
+    // Prepare the assessment data
+    final assessmentData = {
+      ...answers,
+      'date_created': formattedDate,
+      'date_modified': formattedDate,
+      'status': status,
+      'raw_data': jsonEncode(rawData), // Include updated raw_data with society_id
+    };
+    
+    // Remove society_id from the top level to prevent column not found error
+    assessmentData.remove('society_id');
+    
+    final dbHelper = CommunityDBHelper.instance;
+    final assessment = _createAssessmentModel(assessmentData);
+    
+    if (assessment.id == null) {
+      // Insert new assessment
+      await dbHelper.insertCommunityAssessment(assessment.toMap());
+    } else {
+      // Update existing assessment
+      await dbHelper.updateCommunityAssessment(assessment.toMap());
+    }
+    
+    return true;
+  } catch (e) {
+    debugPrint('Error saving form offline: $e');
+    return false;
   }
+} 
 
   /// Update the status of an existing assessment
   Future<bool> updateStatus(int id, int status) async {
@@ -173,6 +251,10 @@ class CommunityAssessmentController extends GetxController {
     final schoolsWithFood = answers['q8']?.toString().split(',') ?? [];
     final schoolsNoCorporalPunishment = answers['q10']?.toString().split(',') ?? [];
 
+    // Get current timestamp if date_created is not provided
+    final now = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
+    
     return CommunityAssessmentModel(
       communityName: answers['community'] ?? answers['communityName'],
       region: answers['region'],
@@ -204,43 +286,45 @@ class CommunityAssessmentController extends GetxController {
       q8: schoolsWithFood.join(';'),
       q9: answers['q9'],
       q10: schoolsNoCorporalPunishment.join(';'),
+      dateCreated: answers['date_created'] ?? formattedDate,
+      dateModified: answers['date_modified'] ?? formattedDate,
       status: answers['status'] ?? 0,
     );
   }
 
-  /// Sync all pending forms (status = 0 or 1) when online
-  Future<void> syncPendingForms() async {
-    try {
-      final dbHelper = CommunityDBHelper.instance;
-      final pendingForms = await dbHelper.getAllCommunityAssessments();
+  // /// Sync all pending forms (status = 0 or 1) when online
+  // Future<void> syncPendingForms() async {
+  //   try {
+  //     final dbHelper = CommunityDBHelper.instance;
+  //     final pendingForms = await dbHelper.getAllCommunityAssessments();
       
-      for (final form in pendingForms) {
-        try {
-          // Skip already synced forms
-          if (form['status'] == 2) continue;
+  //     for (final form in pendingForms) {
+  //       try {
+  //         // Skip already synced forms
+  //         if (form['status'] == 2) continue;
           
-          // Convert to CommunityAssessmentModel
-          final model = CommunityAssessmentModel.fromMap(form);
-          final success = await _api.submitCommunityAssessment(model);
+  //         // Convert to CommunityAssessmentModel
+  //         final model = CommunityAssessmentModel.fromMap(form);
+  //         final success = await _api.submitCommunityAssessment(model);
           
-          if (success) {
-            // Mark as synced in DB
-            await dbHelper.updateCommunityAssessment({
-              ...form,
-              'status': 2, // Mark as synced
-              'date_modified': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-            });
-          }
-        } catch (e) {
-          debugPrint('Error syncing form ${form['id']}: $e');
-          continue;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error in syncPendingForms: $e');
-      rethrow;
-    }
-  }
+  //         if (success) {
+  //           // Mark as synced in DB
+  //           await dbHelper.updateCommunityAssessment({
+  //             ...form,
+  //             'status': 2, // Mark as synced
+  //             'date_modified': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+  //           });
+  //         }
+  //       } catch (e) {
+  //         debugPrint('Error syncing form ${form['id']}: $e');
+  //         continue;
+  //       }
+  //     }
+  //   } catch (e) {
+  //     debugPrint('Error in syncPendingForms: $e');
+  //     rethrow;
+  //   }
+  // }
 
   void _showSnackBar(String message) {
     if (communityAssessmentContext != null && communityAssessmentContext!.mounted) {

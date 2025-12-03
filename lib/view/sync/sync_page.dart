@@ -24,12 +24,15 @@ class _SyncPageState extends State<SyncPage> with SingleTickerProviderStateMixin
   final List<Future<void> Function()> _syncFunctions = [
     () => GetService().fetchFarmers(),
     () => GetService().fetchDistricts(),
+    () => GetService().fetchSocieties(),
+    () => GetService().fetchStaff()
   ];
 
   final List<String> syncTitles = [
     "Farmer Data",
     "District Data",
-
+    "Society Data",
+    "Staff Data"
   ];
 
   @override

@@ -10,14 +10,23 @@ import '../../view/models/monitoring_model.dart';
 
 // Import all table classes
 
+import '../models/society/society_data_model.dart';
 import 'db_tables/monitoring_table.dart';
-import 'db_columns/society_data_columns.dart';
+// import 'db_columns/society_data_columns.dart';
 
 class LocalDBHelper {
   static final LocalDBHelper instance = LocalDBHelper._init();
   static Database? _database;
 
   LocalDBHelper._init();
+   static const String id = 'id';
+  static const String createdDate = 'created_date';
+  static const String deleteField = 'delete_field';
+  static const String society = 'society';
+  static const String societyCode = 'society_code';
+  static const String societyPreCode = 'society_pre_code';
+  static const String newSocietyPreCode = 'new_society_pre_code';
+  static const String districtTblForeignKey = 'districtTbl_foreignkey';
 
   // Create community assessment table
   Future<void> _createCommunityAssessmentTable(Database db) async {
@@ -71,25 +80,77 @@ class LocalDBHelper {
       )
     ''');
 
+
+      await db.execute('''
+      CREATE TABLE ${TableNames.society}(
+       $id INTEGER PRIMARY KEY,
+      $createdDate TEXT NOT NULL,
+      $deleteField TEXT NOT NULL,
+      $society TEXT NOT NULL,
+      $societyCode TEXT NOT NULL,
+      $societyPreCode TEXT NOT NULL,
+      $newSocietyPreCode TEXT NOT NULL,
+      $districtTblForeignKey INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+    CREATE TABLE ${TableNames.staffTBL} (
+      id INTEGER PRIMARY KEY,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      gender TEXT NOT NULL,
+      contact TEXT NOT NULL,
+      designation INTEGER NOT NULL,
+      email_address TEXT,
+      staffid TEXT NOT NULL UNIQUE,
+      district TEXT,
+      created_at INTEGER DEFAULT (strftime('%s', 'now')),
+      updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+    )
+  ''');
+
+
+
+//      await db.execute('''
+//   CREATE TABLE ${SocietyDataColumns.tableName} (
+//     ${SocietyDataColumns.id} INTEGER PRIMARY KEY AUTOINCREMENT,
+//     ${SocietyDataColumns.enumerator} INTEGER NOT NULL,
+//     ${SocietyDataColumns.society} INTEGER NOT NULL,
+//     ${SocietyDataColumns.accessToProtectedWater} REAL NOT NULL,
+//     ${SocietyDataColumns.hireAdultLabourers} REAL NOT NULL,
+//     ${SocietyDataColumns.awarenessRaisingSession} REAL NOT NULL,
+//     ${SocietyDataColumns.womenLeaders} REAL NOT NULL,
+//     ${SocietyDataColumns.preSchool} REAL NOT NULL,
+//     ${SocietyDataColumns.primarySchool} REAL NOT NULL,
+//     ${SocietyDataColumns.separateToilets} REAL NOT NULL,
+//     ${SocietyDataColumns.provideFood} REAL NOT NULL,
+//     ${SocietyDataColumns.scholarships} REAL NOT NULL,
+//     ${SocietyDataColumns.corporalPunishment} REAL NOT NULL,
+//     UNIQUE(${SocietyDataColumns.enumerator}, ${SocietyDataColumns.society})
+//     ON CONFLICT REPLACE
+//   )
+// ''');
      await db.execute('''
-  CREATE TABLE ${SocietyDataColumns.tableName} (
-    ${SocietyDataColumns.id} INTEGER PRIMARY KEY AUTOINCREMENT,
-    ${SocietyDataColumns.enumerator} INTEGER NOT NULL,
-    ${SocietyDataColumns.society} INTEGER NOT NULL,
-    ${SocietyDataColumns.accessToProtectedWater} REAL NOT NULL,
-    ${SocietyDataColumns.hireAdultLabourers} REAL NOT NULL,
-    ${SocietyDataColumns.awarenessRaisingSession} REAL NOT NULL,
-    ${SocietyDataColumns.womenLeaders} REAL NOT NULL,
-    ${SocietyDataColumns.preSchool} REAL NOT NULL,
-    ${SocietyDataColumns.primarySchool} REAL NOT NULL,
-    ${SocietyDataColumns.separateToilets} REAL NOT NULL,
-    ${SocietyDataColumns.provideFood} REAL NOT NULL,
-    ${SocietyDataColumns.scholarships} REAL NOT NULL,
-    ${SocietyDataColumns.corporalPunishment} REAL NOT NULL,
-    UNIQUE(${SocietyDataColumns.enumerator}, ${SocietyDataColumns.society}) 
-    ON CONFLICT REPLACE
-  )
-''');
+      CREATE TABLE ${SocietyDataColumns.tableName} (
+        ${SocietyDataColumns.id} INTEGER PRIMARY KEY AUTOINCREMENT,
+        ${SocietyDataColumns.enumerator} INTEGER NOT NULL,
+        ${SocietyDataColumns.society} INTEGER NOT NULL,
+        ${SocietyDataColumns.accessToProtectedWater} REAL NOT NULL,
+        ${SocietyDataColumns.hireAdultLabourers} REAL NOT NULL,
+        ${SocietyDataColumns.awarenessRaisingSession} REAL NOT NULL,
+        ${SocietyDataColumns.womenLeaders} REAL NOT NULL,
+        ${SocietyDataColumns.preSchool} REAL NOT NULL,
+        ${SocietyDataColumns.primarySchool} REAL NOT NULL,
+        ${SocietyDataColumns.separateToilets} REAL NOT NULL,
+        ${SocietyDataColumns.provideFood} REAL NOT NULL,
+        ${SocietyDataColumns.scholarships} REAL NOT NULL,
+        ${SocietyDataColumns.corporalPunishment} REAL NOT NULL,
+        UNIQUE(${SocietyDataColumns.enumerator}, ${SocietyDataColumns.society}) ON CONFLICT REPLACE
+      )
+    ''');
+
+     
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -97,11 +158,11 @@ class LocalDBHelper {
     final path = join(dbPath, filePath);
     
     debugPrint('🔄 Initializing database at: $path');
-    debugPrint('📊 Database version: 4');
+    debugPrint('📊 Database version: 7');
 
     return await openDatabase(
       path,
-      version: 5, // Incremented to update farmers table schema
+      version: 7, // Incremented to add staff_districts table
       onCreate: _createAllTables,
       onUpgrade: _upgradeDatabase,
       onOpen: (db) {
@@ -109,6 +170,7 @@ class LocalDBHelper {
       },
     );
   }
+
 
   Future<void> _createAllTables(Database db, int version) async {
     debugPrint('🛠️ Creating all tables...');
@@ -121,13 +183,24 @@ class LocalDBHelper {
     debugPrint('📊 Creating monitoring table...');
     await MonitoringTable.createTable(db);
     await MonitoringTable.createIndexes(db);
-
-
+    
+    // Create staff_districts table
+    debugPrint('🔗 Creating staff_districts table...');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.staffDistrictsTBL} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        staff_id INTEGER NOT NULL,
+        district_id INTEGER NOT NULL,
+        district_name TEXT NOT NULL,
+        FOREIGN KEY (staff_id) REFERENCES ${TableNames.staffTBL}(id) ON DELETE CASCADE,
+        UNIQUE(staff_id, district_id) ON CONFLICT REPLACE
+      )
+    ''');
 
     // Create remediation table
     debugPrint('🔧 Creating remediation table...');
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS ${TableNames.remediationTBL} (
+      CREATE TABLE IF NOT EXISTS ${TableNames.remediationTBL} ( 
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         farm_identification_id INTEGER,
         has_school_fees INTEGER,
@@ -157,17 +230,30 @@ class LocalDBHelper {
     await _createDatabaseTriggers(db);
   }
 
+  
+
   Future<void> _upgradeDatabase(
       Database db, int oldVersion, int newVersion) async {
     debugPrint('🔄 Upgrading database from version $oldVersion to $newVersion');
+    
+    if (oldVersion < 7) {
+      // Create the new staff_districts table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${TableNames.staffDistrictsTBL} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          staff_id INTEGER NOT NULL,
+          district_id INTEGER NOT NULL,
+          district_name TEXT NOT NULL,
+          FOREIGN KEY (staff_id) REFERENCES ${TableNames.staffTBL}(id) ON DELETE CASCADE,
+          UNIQUE(staff_id, district_id) ON CONFLICT REPLACE
+        )
+      ''');
+      
+      debugPrint('✅ Created ${TableNames.staffDistrictsTBL} table');
+    }
+    
     // Let MonitoringTable handle its own upgrades
     await MonitoringTable.onUpgrade(db, oldVersion, newVersion);
-
-    // Add future version migrations here
-    // Example for version 4:
-    // if (oldVersion < 4) {
-    //   // Migration code for version 4
-    // }
   }
 
   Future<void> _createDatabaseTriggers(Database db) async {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:human_rights_monitor/controller/api/auth/auth_api.dart';
+import 'package:human_rights_monitor/view/screen_wrapper/screen_wrapper.dart';
 
 import '../screens/onboarding_screen.dart';
 import '../theme/app_theme.dart';
@@ -30,10 +32,14 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     )..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
-          // Navigate to onboarding after animation completes
-          Future.delayed(const Duration(seconds: 1), () {
-            Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => const OnboardingScreen()));
+          AuthService.isLoggedIn().then((isLoggedIn) {
+            if (isLoggedIn) {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const ScreenWrapper()));
+            } else {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const OnboardingScreen()));
+            }
           });
         }
       });

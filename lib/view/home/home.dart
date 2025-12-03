@@ -1,119 +1,168 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-
+import 'package:human_rights_monitor/view/theme/app_theme.dart';
+import 'package:provider/provider.dart';
 import 'Startsurvey.dart';
-
+import '../../../controller/providers/auth_provider.dart';
 
 class Homepage extends StatelessWidget {
   const Homepage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+    
     return Scaffold(
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // FloatingActionButton(
-          //   heroTag: 'farmer_identification',
-          //   onPressed: () {
-          //     Navigator.push(
-          //       context,
-          //       MaterialPageRoute(
-          //         builder: (context) => const FarmerIdentificationTestPage(),
-          //       ),
-          //     );
-          //   },
-          //   backgroundColor: Colors.purple,
-          //   tooltip: 'Farmer Identification',
-          //   child: const Icon(Icons.agriculture, color: Colors.white),
-          // ),
-          // const SizedBox(height: 10),
-          // FloatingActionButton(
-          //   heroTag: 'test_cover',
-          //   onPressed: () {
-          //     Navigator.pushNamed(context, '/test-cover');
-          //   },
-          //   backgroundColor: Colors.blue,
-          //   child: const Icon(Icons.article, color: Colors.white),
-          // ),
-          // const SizedBox(height: 10),
-        ],
-      ),
-      // backgroundColor: const Color(0xFFF8F9FA),
-      // appBar: AppBar(
-      //   backgroundColor: AppTheme.primaryColor,
-      //   automaticallyImplyLeading: false,
-      //   title: Text(
-      //     'Human Rights Monitoring',
-      //     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-      //           color: Colors.white,
-      //           fontWeight: FontWeight.w600,
-      //         ),
-      //   ),
-      //   centerTitle: true,
-      // ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Card
+              // Header with user welcome
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back,',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF666666),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        user?.firstName ?? 'User',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1A1A1A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Image.asset(
+                        'assets/images/icons8-sync-30.png',
+                        color: Colors.black,
+                        width: 20,
+                        height: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Main Card with gradient and circular patterns
               Container(
                 width: double.infinity,
-                height: 170,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF00C853), Color(0xFF1B5E20)],
+                    colors: [
+                      AppTheme.primaryColor,
+                      Color(0xFF2E7D32), // Darker green
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withOpacity(0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Stack(
                   children: [
-                    // Light shape overlay
+                    // Circular background patterns
                     Positioned(
-                      right: -20,
                       top: -20,
+                      right: -20,
                       child: Container(
-                        width: 150,
-                        height: 150,
+                        width: 100,
+                        height: 100,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
                           shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.05),
                         ),
                       ),
                     ),
+                    Positioned(
+                      bottom: -30,
+                      left: -30,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.03),
+                        ),
+                      ),
+                    ),
+                    
                     // Content
                     Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Center(
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           child: Text(
-                            'Human Rights for All',
+                            'Human Rights Initiative',
                             style: GoogleFonts.inter(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                               color: Colors.white,
                               letterSpacing: 0.5,
                             ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Stand for dignity,\nequality & justice',
+                          style: GoogleFonts.inter(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.2,
+                          ),
+                        ),
                         const SizedBox(height: 12),
-                        Center(
-                          child: Text(
-                            'Stand for dignity, equality, and justice.\nTogether we protect the rights of every person.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withOpacity(0.95),
-                              height: 1.5,
-                            ),
+                        Text(
+                          'Together we protect the fundamental rights of every individual.',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white.withOpacity(0.9),
+                            height: 1.5,
                           ),
                         ),
                       ],
@@ -121,48 +170,72 @@ class Homepage extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 17),
 
-              const SizedBox(height: 24),
-
-              // Stats Section
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      '24',
-                      'Children Helped',
-                      '+12%',
-                      const Color(0xFF2E7D32),
-                      Icons.child_care, // Added icon parameter
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      '8',
-                      'Reports Pending',
-                      '+8%',
-                      const Color(0xFFFF6B6B),
-                      Icons.pending_actions, // Added icon parameter
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // Section Title
+              // Stats Section Title
               Text(
-                'Quick Actions',
+                'Impact Overview',
                 style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
                   color: const Color(0xFF1A1A1A),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Action Card
+              // Stats Grid
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.1,
+                children: [
+                  _buildStatCard(
+                    '24',
+                    'Active Cases',
+                   
+                    AppTheme.primaryColor,
+                    Icons.assignment_turned_in,
+                  ),
+                  _buildStatCard(
+                    '18',
+                    'Children Rescued',
+                    
+                    const Color(0xFF2E7D32),
+                    Icons.child_friendly,
+                  ),
+                  _buildStatCard(
+                    '12',
+                    'Communities',
+                    
+                    const Color(0xFF1976D2),
+                    Icons.location_city,
+                  ),
+                  _buildStatCard(
+                    '8',
+                    'Awareness Sessions',
+                    
+                    const Color(0xFF7B1FA2),
+                    Icons.school,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 25),
+
+              // Quick Actions Section
+              Text(
+                'Quick Actions',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1A1A1A),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Survey Card
               GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -174,36 +247,45 @@ class Homepage extends StatelessWidget {
                 },
                 child: Container(
                   width: double.infinity,
-                  height: 130,
-                  padding: const EdgeInsets.all(28),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF2E7D32),
-                        Color(0xFF43A047),
-                        Color(0xFF4CAF50),
-                      ],
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFE8E8E8),
+                      width: 1,
                     ),
-                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 15,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
                       Container(
-                        width: 53,
-                        height: 53,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppTheme.primaryColor,
+                              const Color(0xFF2E7D32),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
-                          Icons.assignment_outlined,
+                          Icons.assessment_outlined,
                           color: Colors.white,
-                          size: 26,
+                          size: 24,
                         ),
                       ),
-                      const SizedBox(width: 20),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,61 +295,39 @@ class Homepage extends StatelessWidget {
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: const Color(0xFF1A1A1A),
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Text(
                               'Collect survey data on household and community',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
-                                fontWeight: FontWeight.w300,
-                                color: Colors.white.withOpacity(0.9),
-                                height: 1.2,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF666666),
+                                height: 1.4,
                               ),
                             ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: AppTheme.primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
                           Icons.arrow_forward,
-                          size: 20,
-                          color: Colors.white,
+                          size: 18,
+                          color: AppTheme.primaryColor,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // // Additional Action Cards (Optional)
-              // _buildActionTile(
-              //   context,
-              //   'View Reports',
-              //   'Access submitted survey reports',
-              //   Icons.description_outlined,
-              //   const Color(0xFF3B82F6),
-              //       () {},
-              // ),
-              //
-              // const SizedBox(height: 16),
-              //
-              // _buildActionTile(
-              //   context,
-              //   'Analytics',
-              //   'View insights and statistics',
-              //   Icons.bar_chart_outlined,
-              //   const Color(0xFF8B5CF6),
-              //       () {},
-              // ),
             ],
           ),
         ),
@@ -278,137 +338,90 @@ class Homepage extends StatelessWidget {
   Widget _buildStatCard(
     String value,
     String label,
-    String change,
     Color color,
     IconData icon,
   ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        // boxShadow: [
-        //   BoxShadow(
-        //     color: Colors.black.withOpacity(0.05),
-        //     blurRadius: 20,
-        //     offset: const Offset(0, 4),
-        //   ),
-        // ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Icon at top left
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              size: 24,
-              color: color,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Main value
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF111827),
-              height: 1.1,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Label
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF6B7280),
-            ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFFF0F0F0),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildActionTile(
-    BuildContext context,
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFFE5E7EB),
-            width: 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: 16,
+                    color: color,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1A1A1A),
+                  height: 1.2,
+                ),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF666666),
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A1A),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF6B7280),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Color(0xFF9CA3AF),
-            ),
-          ],
-        ),
+              const SizedBox(height: 4),
+              // Text(
+              //   subtitle,
+              //   style: GoogleFonts.inter(
+              //     fontSize: 11,
+              //     fontWeight: FontWeight.w400,
+              //     color: const Color(0xFF999999),
+              //   ),
+              // ),
+            ],
+          ),
+        ],
       ),
     );
   }

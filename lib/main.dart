@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 
+import 'package:human_rights_monitor/controller/providers/auth_provider.dart';
 import 'package:human_rights_monitor/view/splash/splash_screen.dart';
 import 'package:human_rights_monitor/view/theme/app_theme.dart';
 
@@ -39,23 +41,26 @@ class HumanRightsMonitor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'Human Rights Monitoring',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      defaultTransition: Transition.fadeIn,
+    return ChangeNotifierProvider(
+      create: (context) => AuthProvider(),
+      child: GetMaterialApp(
+        title: 'Human Rights Monitoring',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        defaultTransition: Transition.fadeIn,
       builder: (context, child) {
         return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            statusBarColor: Color(0xFF1B5E20),
-            statusBarIconBrightness: Brightness.light,
-            systemNavigationBarColor: Color(0xFF1B5E20),
-            systemNavigationBarIconBrightness: Brightness.light,
+          value: SystemUiOverlayStyle(
+            statusBarColor: AppTheme.backgroundColor,
+            statusBarIconBrightness: Brightness.dark,
+            systemNavigationBarColor: Colors.white,
+            systemNavigationBarIconBrightness: Brightness.dark,
           ),
           child: child!,
         );
       },
-      home: const SplashScreen(),
+        home: const SplashScreen(),
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'login_controller.dart';
 
@@ -14,6 +15,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: loginController,
+      child: Consumer<LoginController>(
+        builder: (context, controller, _) => _buildLoginScreen(context, controller),
+      ),
+    );
+  }
+
+  Widget _buildLoginScreen(BuildContext context, LoginController controller) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
 
@@ -48,7 +58,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Email Field
                   TextFormField(
-                    controller: loginController.phoneNumberController,
+                    controller: controller.phoneNumberController,
+                    onChanged: (_) {
+                      if (controller.hasError) {
+                        controller.clearError();
+                      }
+                    },
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: 'Phone',
@@ -77,25 +92,55 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
 
+                  // Error Message
+                  if (controller.hasError)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.red[800]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              controller.errorMessage ?? 'An error occurred',
+                              style: TextStyle(color: Colors.red[800]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
                   // Password Field
                   TextFormField(
-                    controller: loginController.passwordController,
-                    obscureText: loginController.obscurePassword,
+                    controller: controller.passwordController,
+                    onChanged: (_) {
+                      if (controller.hasError) {
+                        controller.clearError();
+                      }
+                    },
+                    obscureText: controller.obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon:
                           Icon(Icons.lock_outline, color: theme.primaryColor),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          loginController.obscurePassword
+                          controller.obscurePassword
                               ? Icons.visibility_off
                               : Icons.visibility,
                           color: Colors.grey,
                         ),
                         onPressed: () {
                           setState(() {
-                            loginController.obscurePassword =
-                                !loginController.obscurePassword;
+                            controller.obscurePassword =
+                                !controller.obscurePassword;
                           });
                         },
                       ),
@@ -145,9 +190,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: loginController.isLoading
-                          ? null
-                          : () => loginController.handleLogin(context),
+                      onPressed: controller.isLoading
+                        ? null
+                        : () async {
+                            final result = await controller.handleLogin(context);
+                            if (!result) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(controller.errorMessage ?? 'An error occurred'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.primaryColor,
                         shape: RoundedRectangleBorder(
@@ -155,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         elevation: 0,
                       ),
-                      child: loginController.isLoading
+                      child: controller.isLoading
                           ? const SizedBox(
                               width: 24,
                               height: 24,

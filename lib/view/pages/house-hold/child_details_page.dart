@@ -255,17 +255,16 @@ class ChildDetailsPageState extends State<ChildDetailsPage> {
   bool? _appliedAgrochemicals;
   bool? _onFarmDuringApplication;
   bool? _sufferedInjury;
-  bool? _wasSupervisedByAdultDangerous;
+  bool? _wasSupervisedByAdultLighttasks7daysDangerous;
   bool? _receivedSalaryForTasks;
   String? _longestSchoolDayTimeDangerous;
-  String? _longestNonSchoolDayTimeDangerous;
+  String? _longestNonSchoolDayTimeLighttasks7daysDangerous;
   final TextEditingController _totalHoursWorkedControllerDangerous =
       TextEditingController();
   final TextEditingController _totalHoursWorkedControllerNonSchoolDangerous =
       TextEditingController();
   String? _whereTaskDone;
-  final TextEditingController _otherLocationController =
-      TextEditingController();
+ 
   String? _taskDangerousLocation;
   final TextEditingController _otherLocationDangerousController =
       TextEditingController();
@@ -291,13 +290,12 @@ final TextEditingController _otherReasonNeverAttendedController = TextEditingCon
   String? _reasonNotAttendedSchool;
 final TextEditingController _otherReasonNotAttendedController = TextEditingController();
   bool? _activityRemuneration;
-  bool? _wasSupervisedByAdult;
-  String? _longestLightDutyTime;
-  String? _longestNonSchoolDayTime;
-  String? _taskLocation;
+  
+
+
   String? _schoolDayTaskDuration;
   String? _nonSchoolDayTaskDuration;
-  String? _taskLocationType;
+  String? _taskLocationLighttasks7daysType;
   String? _lastTimeSpokeWithParents;
   String? _totalSchoolDayHours;
   String? _totalNonSchoolDayHours;
@@ -305,16 +303,15 @@ final TextEditingController _otherReasonNotAttendedController = TextEditingContr
   String? _educationLevel;
   final Set<String> _cocoaFarmTasksLast7Days = {};
   bool? _hasReceivedSalary;
-  final TextEditingController _schoolDayTaskDurationController =
+  final TextEditingController _schoolDayTaskDurationLighttasks7daysControllerController =
       TextEditingController();
   final Set<String> _cocoaFarmTasks = {};
   final Set<String> _tasksLast12Months = {};
   final Map<String, bool> _absenceReasons = {
-    'It was the holidays': false,
-    'He/she was sick': false,
-    'He/she was working': false,
-    'He/she was traveling': false,
-    'Other': false,
+   'He/she was sick': false,
+  'He/she was working': false,
+  'He/she traveled': false,
+  'Other': false,
   };
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _otherReasonController = TextEditingController();
@@ -336,6 +333,8 @@ final TextEditingController _otherReasonNotAttendedController = TextEditingContr
   bool? _hasBirthCertificate;
   bool? _bornInCommunity;
   String? _birthCountry;
+  String? _workRelationship;
+final TextEditingController _otherWorkRelationshipController = TextEditingController();
   bool? _hasSeenSpokenToParents;
   String? _relationshipToHead;
   final TextEditingController _otherRelationshipController =
@@ -424,6 +423,7 @@ final TextEditingController _otherWhoDecidedController = TextEditingController()
   ];
 
   final List<String> _surveyNotPossibleReasons = [];
+  final Set<String> _dangerousTasks12Months = {};
   final TextEditingController _otherSurveyReasonController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _totalHoursWorkedController =
@@ -442,6 +442,50 @@ final TextEditingController _otherWhoDecidedController = TextEditingController()
   final TextEditingController _surnameController = TextEditingController();
   final TextEditingController _noBirthCertificateReasonController =
       TextEditingController();
+
+      
+
+ // Light Tasks 7 Days State Variables
+bool? _receivedRemunerationLighttasks7days;
+String? _longestLightDutyTimeLighttasks7days;
+String? _longestNonSchoolDayTimeLighttasks7days;
+bool? _wasSupervisedByAdultLighttasks7days;
+String? _taskLocationLighttasks7days;
+final TextEditingController _otherLocationLighttasks7daysController = TextEditingController();
+  final TextEditingController _schoolDayTaskDurationLighttasks7DaysControllerController =
+      TextEditingController();
+  final TextEditingController _nonSchoolDayTaskDurationLighttasks7DaysControllerController =
+      TextEditingController();
+
+      // Light Tasks 12 Months State Variables
+bool? _receivedRemunerationLighttasks12months;
+String? _longestSchoolDayTimeLighttasks12months;
+String? _longestNonSchoolDayTimeLighttasks12months;
+String? _taskLocationLighttasks12months;
+String? _otherTaskLocationLighttasks12months;
+String? _totalSchoolDayHoursLighttasks12months;
+String? _totalNonSchoolDayHoursLighttasks12months;
+bool? _wasSupervisedDuringTaskLighttasks12months;
+TextEditingController _otherLocationDangeroustask12monthsController = TextEditingController();
+TextEditingController _schoolDayHoursDangeroustask12monthsController = TextEditingController();
+TextEditingController _nonSchoolDayHoursDangeroustask12monthsController = TextEditingController();
+
+// Dangerous Tasks 7 Days State Variables
+bool? _hasReceivedSalaryDangeroustask7days;
+String? _taskLocationDangeroustask7days;
+final TextEditingController _otherLocationDangeroustask7daysController = TextEditingController();
+String? _longestSchoolDayTimeDangeroustask7days;
+String? _longestNonSchoolDayTimeDangeroustask7days;
+final TextEditingController _schoolDayHoursDangeroustask7daysController = TextEditingController();
+final TextEditingController _nonSchoolDayHoursDangeroustask7daysController = TextEditingController();
+bool? _wasSupervisedByAdultDangeroustask7days;
+
+// State variables for Dangerous Tasks (12 Months)
+bool? _hasReceivedSalaryDangeroustask12months;
+String? _taskLocationDangeroustask12months;
+String? _longestSchoolDayTimeDangeroustask12months;
+String? _longestNonSchoolDayTimeDangeroustask12months;
+bool? _wasSupervisedByAdultDangeroustask12months;
 
   // Birth location state
   String? _childBirthLocation;
@@ -561,6 +605,27 @@ final TextEditingController _otherWhoDecidedController = TextEditingController()
       title: task,
     );
   }
+
+  Widget _buildDangerousTaskCheckbox12Months(String title, String value, {bool isNoneOption = false}) {
+  return ModernCheckbox(
+    value: _dangerousTasks12Months.contains(value),
+    onChanged: (bool? selected) {
+      setState(() {
+        if (selected == true) {
+          if (isNoneOption) {
+            _dangerousTasks12Months.clear();
+          } else {
+            _dangerousTasks12Months.remove('none_dangeroustask12months');
+          }
+          _dangerousTasks12Months.add(value);
+        } else {
+          _dangerousTasks12Months.remove(value);
+        }
+      });
+    },
+    title: title,
+  );
+}
 
   Widget _buildModernRadioGroup<T>({
   required String question,
@@ -983,18 +1048,18 @@ final TextEditingController _otherWhoDecidedController = TextEditingController()
         'workFrequency': _workFrequency,
         'observedWorking': _observedWorking,
         'receivedRemuneration': _receivedRemuneration,
-        'wasSupervisedByAdult': _wasSupervisedByAdult,
-        'longestLightDutyTime': _longestLightDutyTime,
-        'longestNonSchoolDayTime': _longestNonSchoolDayTime,
+        'wasSupervisedByAdult': _wasSupervisedByAdultLighttasks7days,
+        'longestLightDutyTime':  _longestLightDutyTimeLighttasks7days,
+        'longestNonSchoolDayTime': _longestNonSchoolDayTimeLighttasks7days,
         'tasksLast12Months': _tasksLast12Months.toList(),
-        'taskLocation': _taskLocation,
+        'taskLocation': _taskLocationLighttasks7days,
         'reasonNeverAttendedSchool': _reasonNeverAttendedSchool,
 'otherReasonNeverAttended': _reasonNeverAttendedSchool == 'other'
     ? _otherReasonNeverAttendedController.text.trim()
     : null,
-        'otherTaskLocation': _otherLocationController.text.trim(),
+        'otherTaskLocation':  _otherLocationLighttasks7daysController.text.trim(),
         'schoolDayHours': _schoolDayHoursController.text.trim(),
-        'schoolDayTaskHours': _schoolDayTaskDurationController.text.trim(),
+        'schoolDayTaskHours': _schoolDayTaskDurationLighttasks7daysControllerController.text.trim(),
         'parentConsentPhoto': _parentConsentPhoto,
         'childPhotoPath': _childPhoto?.path,
       };
@@ -1155,8 +1220,10 @@ final TextEditingController _otherWhoDecidedController = TextEditingController()
   @override
   void dispose() {
     _childNumberController.removeListener(_onChildNumberChanged);
-    _otherLocationController.dispose();
+     _otherLocationLighttasks7daysController.dispose();
     _otherReasonController.dispose();
+     _otherReasonController.dispose();
+  _otherWorkRelationshipController.dispose(); // From previous addition
     _otherReasonForSchoolController.dispose();
     _otherAbsenceReasonController.dispose();
     _birthYearController.dispose();
@@ -1174,13 +1241,23 @@ final TextEditingController _otherWhoDecidedController = TextEditingController()
     _otherRelationshipController.dispose();
     _otherNotWithFamilyController.dispose();
     _otherAccompaniedController.dispose();
-    _otherLocationController.dispose();
-    _schoolDayTaskDurationController.dispose();
+     _otherLocationLighttasks7daysController.dispose();
+    _schoolDayTaskDurationLighttasks7daysControllerController.dispose();
     _nonSchoolDayHoursController.dispose();
+    @override
+void dispose() {
+  _otherLocationLighttasks7daysController.dispose();
+ 
+  super.dispose();
+}
     _howWoundedController.dispose();
     _whenWoundedController.dispose();
     _otherHelpController.dispose();
     _noConsentReasonController.dispose();
+     // Dispose all TextEditingControllers for Dangerous Tasks (12 months)
+  _otherLocationDangeroustask12monthsController.dispose();
+  _schoolDayHoursDangeroustask12monthsController.dispose();
+  _nonSchoolDayHoursDangeroustask12monthsController.dispose();
     super.dispose();
   }
 
@@ -2286,7 +2363,7 @@ if (_isCurrentlyEnrolled == true) ...[
 if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
   const SizedBox(height: 16),
   _buildModernRadioGroup<String>(
-    question: 'Why has the child not been to school in the past 7 days?',
+    question: 'Why has the child not been to school ?',
     groupValue: _reasonNotAttendedSchool,
     onChanged: (String? value) {
       setState(() {
@@ -2336,21 +2413,33 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
               ],
             ),
 
-            if (_missedSchoolDays == true) ...[
-              const SizedBox(height: 16),
-              _buildModernCheckboxGroup(
-                question: 'Why has the child missed school days?',
-                values: _absenceReasons,
-                onChanged: (String reason, bool? selected) {
-                  setState(() {
-                    _absenceReasons[reason] = selected ?? false;
-                  });
-                },
-              ),
-            ],
+           if (_missedSchoolDays == true) ...[
+  const SizedBox(height: 16),
+  _buildModernCheckboxGroup(
+    question: 'Why has the child miss school?',
+    values: _absenceReasons,
+    onChanged: (String reason, bool? selected) {
+      setState(() {
+        _absenceReasons[reason] = selected ?? false;
+      });
+    },
+  ),
+  if (_absenceReasons['Other'] == true) ...[
+    const SizedBox(height: 8),
+    TextFormField(
+      controller: _otherAbsenceReasonController,
+      decoration: const InputDecoration(
+        labelText: 'Please specify other reason',
+        border: OutlineInputBorder(),
+      ),
+      onChanged: (value) {
+        setState(() {});
+      },
+    ),
+  ],
           ],
         ],
-      
+      ]
     );
   }
 
@@ -2652,30 +2741,29 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
         ),
 
         // Remuneration question for light tasks
-        _buildModernRadioGroup<bool>(
-          question:
-              'Did the child receive remuneration for light tasks?',
-          groupValue: _receivedRemuneration,
-          onChanged: (value) {
-            setState(() {
-              _receivedRemuneration = value;
-            });
-          },
-          options: [
-            {'value': true, 'title': 'Yes'},
-            {'value': false, 'title': 'No'},
-          ],
-        ),
+       _buildModernRadioGroup<bool>(
+  question: 'Did the child receive remuneration for the activity?',
+  groupValue: _receivedRemunerationLighttasks7days,
+  onChanged: (bool? value) {
+    setState(() {
+      _receivedRemunerationLighttasks7days = value;
+    });
+  },
+  options: [
+    {'value': true, 'title': 'Yes'},
+    {'value': false, 'title': 'No'},
+  ],
+),
 
         // Time spent on light duty - School day
         const SizedBox(height: 24),
         _buildModernRadioGroup<String>(
           question:
               'What was the longest time spent on light duty during a SCHOOL DAY in the last 7 days?',
-          groupValue: _longestLightDutyTime,
+          groupValue:  _longestLightDutyTimeLighttasks7days,
           onChanged: (String? value) {
             setState(() {
-              _longestLightDutyTime = value;
+               _longestLightDutyTimeLighttasks7days = value;
             });
           },
           options: [
@@ -2698,10 +2786,10 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
         _buildModernRadioGroup<String>(
           question:
               'What was the longest amount of time spent on light duty on a NON-SCHOOL DAY in the last 7 days?',
-          groupValue: _longestNonSchoolDayTime,
+          groupValue: _longestNonSchoolDayTimeLighttasks7days,
           onChanged: (String? value) {
             setState(() {
-              _longestNonSchoolDayTime = value;
+              _longestNonSchoolDayTimeLighttasks7days = value;
             });
           },
           options: [
@@ -2723,10 +2811,10 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
         _buildModernRadioGroup<bool>(
           question:
               'Was the child under supervision of an adult when performing light tasks?',
-          groupValue: _wasSupervisedByAdult,
+          groupValue: _wasSupervisedByAdultLighttasks7days,
           onChanged: (value) {
             setState(() {
-              _wasSupervisedByAdult = value;
+              _wasSupervisedByAdultLighttasks7days = value;
             });
           },
           options: [
@@ -2739,10 +2827,10 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
         const SizedBox(height: 24),
         _buildModernRadioGroup<String>(
           question: 'Where were the light tasks done?',
-          groupValue: _taskLocation,
+          groupValue: _taskLocationLighttasks7days,
           onChanged: (String? value) {
             setState(() {
-              _taskLocation = value;
+              _taskLocationLighttasks7days = value;
             });
           },
           options: [
@@ -2771,11 +2859,11 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
           ],
         ),
 
-        if (_taskLocation == 'Other') ...[
+        if (_taskLocationLighttasks7days == 'Other') ...[
           const SizedBox(height: 16),
           _buildModernTextField(
             label: 'Please specify',
-            controller: _otherLocationController,
+            controller:  _otherLocationLighttasks7daysController,
           ),
         ],
 
@@ -2784,7 +2872,16 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
         _buildModernTextField(
           label:
               'How many hours in total did the child spend on light tasks during SCHOOL DAYS in the past 7 days?',
-          controller: _schoolDayTaskDurationController,
+          controller: _schoolDayTaskDurationLighttasks7DaysControllerController,
+          keyboardType: TextInputType.number,
+          hintText: 'Enter hours (0-1016)',
+        ),
+
+        const SizedBox(height: 24),
+        _buildModernTextField(
+          label:
+              'How many hours in total did the child spend on light tasks during SCHOOL DAYS in the past 7 days?',
+          controller:_nonSchoolDayTaskDurationLighttasks7DaysControllerController,
           keyboardType: TextInputType.number,
           hintText: 'Enter hours (0-1016)',
         ),
@@ -2835,917 +2932,704 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
         ],
       ],
     );
-  }
+  }Widget _buildLightTasks12MonthsSection() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionHeader('LIGHT TASK (12 MONTHS)'),
 
-  Widget _buildLightTasks12MonthsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('LIGHT TASK (12 MONTHS)'),
-
-        // Activity remuneration question for 12 months
-        _buildModernRadioGroup<bool>(
-          question:
-              'Did the child receive any remuneration for light tasks in the past 12 months?',
-          groupValue: _activityRemuneration,
-          onChanged: (bool? value) {
-            setState(() {
-              _activityRemuneration = value;
-            });
-          },
-          options: [
-            {'value': true, 'title': 'Yes'},
-            {'value': false, 'title': 'No'},
-          ],
-        ),
-
-        // School day task duration question for 12 months
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<String>(
-          question:
-              'What was the longest time spent on light tasks during a SCHOOL DAY in the past 12 months?',
-          groupValue: _schoolDayTaskDuration,
-          onChanged: (String? value) {
-            setState(() {
-              _schoolDayTaskDuration = value;
-            });
-          },
-          options: [
-            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
-            {'value': '1-2 hours', 'title': '1-2 hours'},
-            {'value': '2-3 hours', 'title': '2-3 hours'},
-            {'value': '3-4 hours', 'title': '3-4 hours'},
-            {'value': '4-6 hours', 'title': '4-6 hours'},
-            {'value': '6-8 hours', 'title': '6-8 hours'},
-            {
-              'value': 'More than 8 hours',
-              'title': 'More than 8 hours'
-            },
-            {'value': 'Does not apply', 'title': 'Does not apply'},
-          ],
-        ),
-
-        // Non-school day task duration question for 12 months
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<String>(
-          question:
-              'What was the longest time spent on light tasks on a NON-SCHOOL DAY in the past 12 months?',
-          groupValue: _nonSchoolDayTaskDuration,
-          onChanged: (String? value) {
-            setState(() {
-              _nonSchoolDayTaskDuration = value;
-            });
-          },
-          options: [
-            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
-            {'value': '1-2 hours', 'title': '1-2 hours'},
-            {'value': '2-3 hours', 'title': '2-3 hours'},
-            {'value': '3-4 hours', 'title': '3-4 hours'},
-            {'value': '4-6 hours', 'title': '4-6 hours'},
-            {'value': '6-8 hours', 'title': '6-8 hours'},
-            {
-              'value': 'More than 8 hours',
-              'title': 'More than 8 hours'
-            },
-          ],
-        ),
-
-        // Task location question for 12 months
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<String>(
-          question:
-              'Where were the light tasks done in the past 12 months?',
-          groupValue: _taskLocationType,
-          onChanged: (String? value) {
-            setState(() {
-              _taskLocationType = value;
-            });
-          },
-          options: [
-            {'value': 'On family farm', 'title': 'On family farm'},
-            {
-              'value': 'As a hired labourer on another farm',
-              'title': 'As a hired labourer on another farm'
-            },
-            {
-              'value': 'School farms/compounds',
-              'title': 'School farms/compounds'
-            },
-            {
-              'value': 'Teachers farms (during communal labour)',
-              'title': 'Teachers farms (during communal labour)'
-            },
-            {
-              'value': 'Church farms or cleaning activities',
-              'title': 'Church farms or cleaning activities'
-            },
-            {
-              'value': 'Helping a community member for free',
-              'title': 'Helping a community member for free'
-            },
-            {'value': 'Other', 'title': 'Other'},
-          ],
-        ),
-
-        // Total hours on school days question for 12 months
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<String>(
-          question:
-              'How many hours in total did the child spend on light tasks during SCHOOL DAYS in the past 12 months?',
-          groupValue: _totalSchoolDayHours,
-          onChanged: (String? value) {
-            setState(() {
-              _totalSchoolDayHours = value;
-            });
-          },
-          options: [
-            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
-            {'value': '1-2 hours', 'title': '1-2 hours'},
-            {'value': '2-4 hours', 'title': '2-4 hours'},
-            {'value': '4-6 hours', 'title': '4-6 hours'},
-            {'value': '6-8 hours', 'title': '6-8 hours'},
-            {
-              'value': 'More than 8 hours',
-              'title': 'More than 8 hours'
-            },
-            {'value': 'Not applicable', 'title': 'Not applicable'},
-          ],
-        ),
-
-        // Total hours on non-school days question for 12 months
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<String>(
-          question:
-              'How many hours in total did the child spend on light tasks during NON-SCHOOL DAYS in the past 12 months?',
-          groupValue: _totalNonSchoolDayHours,
-          onChanged: (String? value) {
-            setState(() {
-              _totalNonSchoolDayHours = value;
-            });
-          },
-          options: [
-            {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
-            {'value': '1-2 hours', 'title': '1-2 hours'},
-            {'value': '2-4 hours', 'title': '2-4 hours'},
-            {'value': '4-6 hours', 'title': '4-6 hours'},
-            {'value': '6-8 hours', 'title': '6-8 hours'},
-            {
-              'value': 'More than 8 hours',
-              'title': 'More than 8 hours'
-            },
-            {'value': 'Not applicable', 'title': 'Not applicable'},
-          ],
-        ),
-
-        // Adult supervision question for 12 months
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<bool>(
-          question:
-              'Was the child under supervision of an adult when performing light tasks in the past 12 months?',
-          groupValue: _wasSupervisedDuringTask,
-          onChanged: (bool? value) {
-            setState(() {
-              _wasSupervisedDuringTask = value;
-            });
-          },
-          options: [
-            {'value': true, 'title': 'Yes'},
-            {'value': false, 'title': 'No'},
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDangerousTasksSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('DANGEROUS TASKS (7 DAYS)'),
-
-        // Cocoa farm tasks question for dangerous tasks (7 days)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Which of the following DANGEROUS tasks has the child [${widget.childNumber}] done in the last 7 days on the cocoa farm?',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Column(
-              children: [
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days.contains(
-                      'Use of machetes for weeding or pruning (Clearing)'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days.add(
-                            'Use of machetes for weeding or pruning (Clearing)');
-                      } else {
-                        _cocoaFarmTasksLast7Days.remove(
-                            'Use of machetes for weeding or pruning (Clearing)');
-                      }
-                    });
-                  },
-                  title:
-                      'Use of machetes for weeding or pruning (Clearing)',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Felling of trees'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days
-                            .add('Felling of trees');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Felling of trees');
-                      }
-                    });
-                  },
-                  title: 'Felling of trees',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Burning of plots'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days
-                            .add('Burning of plots');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Burning of plots');
-                      }
-                    });
-                  },
-                  title: 'Burning of plots',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Game hunting with a weapon'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days
-                            .add('Game hunting with a weapon');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Game hunting with a weapon');
-                      }
-                    });
-                  },
-                  title: 'Game hunting with a weapon',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Woodcutter\'s work'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days
-                            .add('Woodcutter\'s work');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Woodcutter\'s work');
-                      }
-                    });
-                  },
-                  title: 'Woodcutter\'s work',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Charcoal production'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days
-                            .add('Charcoal production');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Charcoal production');
-                      }
-                    });
-                  },
-                  title: 'Charcoal production',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Stump removal'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days.add('Stump removal');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Stump removal');
-                      }
-                    });
-                  },
-                  title: 'Stump removal',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Digging holes'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days.add('Digging holes');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Digging holes');
-                      }
-                    });
-                  },
-                  title: 'Digging holes',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days.contains(
-                      'Working with a machete or any other sharp tool'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days.add(
-                            'Working with a machete or any other sharp tool');
-                      } else {
-                        _cocoaFarmTasksLast7Days.remove(
-                            'Working with a machete or any other sharp tool');
-                      }
-                    });
-                  },
-                  title:
-                      'Working with a machete or any other sharp tool',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Handling of agrochemicals'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days
-                            .add('Handling of agrochemicals');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Handling of agrochemicals');
-                      }
-                    });
-                  },
-                  title: 'Handling of agrochemicals',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('Driving motorized vehicles'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days
-                            .add('Driving motorized vehicles');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('Driving motorized vehicles');
-                      }
-                    });
-                  },
-                  title: 'Driving motorized vehicles',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days.contains(
-                      'Carrying heavy loads (Boys: 14-16 years old>15kg /16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days.add(
-                            'Carrying heavy loads (Boys: 14-16 years old>15kg /16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)');
-                      } else {
-                        _cocoaFarmTasksLast7Days.remove(
-                            'Carrying heavy loads (Boys: 14-16 years old>15kg /16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)');
-                      }
-                    });
-                  },
-                  title:
-                      'Carrying heavy loads (Boys: 14-16 years old>15kg /16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days.contains(
-                      'Night work on farm (between 6pm and 6am)'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days.add(
-                            'Night work on farm (between 6pm and 6am)');
-                      } else {
-                        _cocoaFarmTasksLast7Days.remove(
-                            'Night work on farm (between 6pm and 6am)');
-                      }
-                    });
-                  },
-                  title: 'Night work on farm (between 6pm and 6am)',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast7Days
-                      .contains('None of the above'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast7Days.clear();
-                        _cocoaFarmTasksLast7Days
-                            .add('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast7Days
-                            .remove('None of the above');
-                      }
-                    });
-                  },
-                  title: 'None of the above',
-                ),
-              ],
-            ),
-          ],
-        ),
-
-        // Salary question for dangerous tasks (7 days)
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<bool>(
-          question:
-              'Has the child [${widget.childNumber}] received a salary for DANGEROUS tasks in the last 7 days?',
-          groupValue: _hasReceivedSalary,
-          onChanged: (bool? value) {
-            setState(() {
-              _hasReceivedSalary = value;
-            });
-          },
-          options: [
-            {'value': true, 'title': 'Yes'},
-            {'value': false, 'title': 'No'},
-          ],
-        ),
-
-        // Task location question for dangerous tasks (7 days)
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<String>(
-          question:
-              'Where were the DANGEROUS tasks done in the last 7 days?',
-          groupValue: _taskLocationType,
-          onChanged: (String? value) {
-            setState(() {
-              _taskLocationType = value;
-            });
-          },
-          options: [
-            {'value': 'On family farm', 'title': 'On family farm'},
-            {
-              'value': 'As a hired labourer on another farm',
-              'title': 'As a hired labourer on another farm'
-            },
-            {
-              'value': 'School farms/compounds',
-              'title': 'School farms/compounds'
-            },
-            {
-              'value': 'Teachers farms (during communal labour)',
-              'title': 'Teachers farms (during communal labour)'
-            },
-            {
-              'value': 'Church farms or cleaning activities',
-              'title': 'Church farms or cleaning activities'
-            },
-            {
-              'value': 'Helping a community member for free',
-              'title': 'Helping a community member for free'
-            },
-            {'value': 'Other', 'title': 'Other'},
-          ],
-        ),
-
-        if (_taskLocationType == 'Other') ...[
-          const SizedBox(height: 16),
-          _buildModernTextField(
-            label: 'Please specify',
-            controller: _otherLocationController,
-          ),
+      // Activity remuneration question for 12 months
+      _buildModernRadioGroup<bool>(
+        question: 'Did the child receive any remuneration for the activity?',
+        groupValue: _receivedRemunerationLighttasks12months,
+        onChanged: (bool? value) {
+          setState(() {
+            _receivedRemunerationLighttasks12months = value;
+          });
+        },
+        options: [
+          {'value': true, 'title': 'Yes'},
+          {'value': false, 'title': 'No'},
         ],
+      ),
 
-        // Longest time spent on dangerous task during school day (7 days)
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<String>(
-          question:
-              'What was the longest time spent on DANGEROUS tasks during a SCHOOL DAY in the last 7 days?',
-          groupValue: _longestSchoolDayTime,
-          onChanged: (String? value) {
-            setState(() {
-              _longestSchoolDayTime = value;
-            });
-          },
-          options: [
-            {
-              'value': 'Less than one hour',
-              'title': 'Less than one hour'
+      // School day task duration question for 12 months
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'What was the longest time spent on light tasks during a SCHOOL DAY in the last 12 months?',
+        groupValue: _longestSchoolDayTimeLighttasks12months,
+        onChanged: (String? value) {
+          setState(() {
+            _longestSchoolDayTimeLighttasks12months = value;
+          });
+        },
+        options: [
+          {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+          {'value': '1-2 hours', 'title': '1-2 hours'},
+          {'value': '2-3 hours', 'title': '2-3 hours'},
+          {'value': '3-4 hours', 'title': '3-4 hours'},
+          {'value': '4-6 hours', 'title': '4-6 hours'},
+          {'value': '6-8 hours', 'title': '6-8 hours'},
+          {'value': 'More than 8 hours', 'title': 'More than 8 hours'},
+          {'value': 'Does not apply', 'title': 'Does not apply'},
+        ],
+      ),
+
+      // Non-school day task duration question for 12 months
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'What was the longest time spent on light tasks on a NON-SCHOOL DAY in the last 12 months?',
+        groupValue: _longestNonSchoolDayTimeLighttasks12months,
+        onChanged: (String? value) {
+          setState(() {
+            _longestNonSchoolDayTimeLighttasks12months = value;
+          });
+        },
+        options: [
+          {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+          {'value': '1-2 hours', 'title': '1-2 hours'},
+          {'value': '2-3 hours', 'title': '2-3 hours'},
+          {'value': '3-4 hours', 'title': '3-4 hours'},
+          {'value': '4-6 hours', 'title': '4-6 hours'},
+          {'value': '6-8 hours', 'title': '6-8 hours'},
+          {'value': 'More than 8 hours', 'title': 'More than 8 hours'},
+          {'value': 'Does not apply', 'title': 'Does not apply'},
+        ],
+      ),
+
+      // Task location question for 12 months
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'Where was this task done?',
+        groupValue: _taskLocationLighttasks12months,
+        onChanged: (String? value) {
+          setState(() {
+            _taskLocationLighttasks12months = value;
+          });
+        },
+        options: [
+          {'value': 'On family farm', 'title': 'On family farm'},
+          {'value': 'As a hired labourer on another farm', 'title': 'As a hired labourer on another farm'},
+          {'value': 'School farms/compounds', 'title': 'School farms/compounds'},
+          {'value': 'Teachers farms (during communal labour)', 'title': 'Teachers farms (during communal labour)'},
+          {'value': 'Church farms or cleaning activities', 'title': 'Church farms or cleaning activities'},
+          {'value': 'Helping a community member for free', 'title': 'Helping a community member for free'},
+          {'value': 'Other', 'title': 'Other'},
+        ],
+      ),
+
+      if (_taskLocationLighttasks12months == 'Other')
+        Padding(
+          padding: const EdgeInsets.only(top: 12.0, left: 16.0, right: 16.0),
+          child: TextFormField(
+            decoration: const InputDecoration(
+              labelText: 'Please specify where the task was done',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _otherTaskLocationLighttasks12months = value;
+              });
             },
-            {'value': '1 hour', 'title': '1 hour'},
-            {'value': '2 hours', 'title': '2 hours'},
-            {'value': '3-4 hours', 'title': '3-4 hours'},
-            {'value': '4-6 hours', 'title': '4-6 hours'},
-            {'value': '6-8 hours', 'title': '6-8 hours'},
-            {
-              'value': 'More than 8 hours',
-              'title': 'More than 8 hours'
-            },
-            {'value': 'Does not apply', 'title': 'Does not apply'},
-          ],
+          ),
         ),
 
-        // Longest time spent on dangerous task during non-school day (7 days)
+      // Total hours on school days question for 12 months
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'How many hours in total did the child spend on light tasks during SCHOOL DAYS in the past 12 months?',
+        groupValue: _totalSchoolDayHoursLighttasks12months,
+        onChanged: (String? value) {
+          setState(() {
+            _totalSchoolDayHoursLighttasks12months = value;
+          });
+        },
+        options: [
+          {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+          {'value': '1-2 hours', 'title': '1-2 hours'},
+          {'value': '2-4 hours', 'title': '2-4 hours'},
+          {'value': '4-6 hours', 'title': '4-6 hours'},
+          {'value': '6-8 hours', 'title': '6-8 hours'},
+          {'value': 'More than 8 hours', 'title': 'More than 8 hours'},
+          {'value': 'Not applicable', 'title': 'Not applicable'},
+        ],
+      ),
+
+      // Total hours on non-school days question for 12 months
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'How many hours in total did the child spend on light tasks during NON-SCHOOL DAYS in the past 12 months?',
+        groupValue: _totalNonSchoolDayHoursLighttasks12months,
+        onChanged: (String? value) {
+          setState(() {
+            _totalNonSchoolDayHoursLighttasks12months = value;
+          });
+        },
+        options: [
+          {'value': 'Less than 1 hour', 'title': 'Less than 1 hour'},
+          {'value': '1-2 hours', 'title': '1-2 hours'},
+          {'value': '2-4 hours', 'title': '2-4 hours'},
+          {'value': '4-6 hours', 'title': '4-6 hours'},
+          {'value': '6-8 hours', 'title': '6-8 hours'},
+          {'value': 'More than 8 hours', 'title': 'More than 8 hours'},
+          {'value': 'Not applicable', 'title': 'Not applicable'},
+        ],
+      ),
+
+      // Adult supervision question for 12 months
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<bool>(
+        question: 'Was the child under supervision of an adult when performing this task?',
+        groupValue: _wasSupervisedDuringTaskLighttasks12months,
+        onChanged: (bool? value) {
+          setState(() {
+            _wasSupervisedDuringTaskLighttasks12months = value;
+          });
+        },
+        options: [
+          {'value': true, 'title': 'Yes'},
+          {'value': false, 'title': 'No'},
+        ],
+      ),
+
+      if (_workedOnCocoaFarm == true) ...[
         const SizedBox(height: 24),
-        _buildModernRadioGroup<String>(
-          question:
-              'What was the longest time spent on DANGEROUS tasks during a NON-SCHOOL DAY in the last 7 days?',
-          groupValue: _longestNonSchoolDayTime,
-          onChanged: (String? value) {
-            setState(() {
-              _longestNonSchoolDayTime = value;
-            });
-          },
-          options: [
-            {
-              'value': 'Less than one hour',
-              'title': 'Less than one hour'
-            },
-            {'value': '1-2 hours', 'title': '1-2 hours'},
-            {'value': '2-3 hours', 'title': '2-3 hours'},
-            {'value': '3-4 hours', 'title': '3-4 hours'},
-            {'value': '4-6 hours', 'title': '4-6 hours'},
-            {'value': '6-8 hours', 'title': '6-8 hours'},
-            {
-              'value': 'More than 8 hours',
-              'title': 'More than 8 hours'
-            },
-            {'value': 'Does not apply', 'title': 'Does not apply'},
-          ],
+        Text(
+          'Which of these tasks has child [${widget.childNumber}] performed in the last 12 months?',
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 15,
+          ),
         ),
-
-        // School day hours input for dangerous tasks (7 days)
-        const SizedBox(height: 24),
-        _buildModernTextField(
-          label:
-              'How many hours has the child worked on DANGEROUS tasks during SCHOOL DAYS in the last 7 days?',
-          controller: _schoolDayHoursDangerousController,
-          keyboardType: TextInputType.number,
-          hintText: 'Enter number of hours',
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter the number of hours';
-            }
-            final hours = double.tryParse(value);
-            if (hours == null || hours < 0) {
-              return 'Please enter a valid number';
-            }
-            return null;
-          },
-        ),
-
-        // Non-school day hours input for dangerous tasks (7 days)
-        const SizedBox(height: 24),
-        _buildModernTextField(
-          label:
-              'How many hours has the child worked on DANGEROUS tasks during NON-SCHOOL DAYS in the last 7 days?',
-          controller: _nonSchoolDayHoursController,
-          keyboardType: TextInputType.number,
-          hintText: 'Enter number of hours',
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter the number of hours';
-            }
-            final hours = double.tryParse(value);
-            if (hours == null || hours < 0) {
-              return 'Please enter a valid number';
-            }
-            return null;
-          },
-        ),
-
-        // Adult supervision question for dangerous tasks (7 days)
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<bool>(
-          question:
-              'Was the child under supervision of an adult when performing DANGEROUS tasks?',
-          groupValue: _wasSupervisedByAdult,
-          onChanged: (bool? value) {
-            setState(() {
-              _wasSupervisedByAdult = value;
-            });
-          },
-          options: [
-            {'value': true, 'title': 'Yes'},
-            {'value': false, 'title': 'No'},
-          ],
-        ),
-
-        // DANGEROUS TASKS (12 MONTHS) Section
-        _buildSectionHeader('DANGEROUS TASKS (12 MONTHS)'),
-
-        // Salary question for dangerous tasks (12 months)
-        const SizedBox(height: 24),
-        _buildModernRadioGroup<bool>(
-          question:
-              'Has the child [${widget.childNumber}] received a salary for DANGEROUS tasks in the past 12 months?',
-          groupValue: _receivedSalaryForTasks,
-          onChanged: (bool? value) {
-            setState(() {
-              _receivedSalaryForTasks = value;
-            });
-          },
-          options: [
-            {'value': true, 'title': 'Yes'},
-            {'value': false, 'title': 'No'},
-          ],
-        ),
-
-        // Tasks in last 12 months for dangerous tasks
+        const SizedBox(height: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Which of the following DANGEROUS tasks has the child done in the last 12 months on the cocoa farm?',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Column(
-              children: [
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months.contains(
-                      'Use of machetes for weeding or pruning (Clearing)'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months.add(
-                            'Use of machetes for weeding or pruning (Clearing)');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months.remove(
-                            'Use of machetes for weeding or pruning (Clearing)');
-                      }
-                    });
-                  },
-                  title:
-                      'Use of machetes for weeding or pruning (Clearing)',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Felling of trees'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Felling of trees');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Felling of trees');
-                      }
-                    });
-                  },
-                  title: 'Felling of trees',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Burning of plots'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Burning of plots');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Burning of plots');
-                      }
-                    });
-                  },
-                  title: 'Burning of plots',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Game hunting with a weapon'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Game hunting with a weapon');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Game hunting with a weapon');
-                      }
-                    });
-                  },
-                  title: 'Game hunting with a weapon',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Woodcutter\'s work'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Woodcutter\'s work');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Woodcutter\'s work');
-                      }
-                    });
-                  },
-                  title: 'Woodcutter\'s work',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Charcoal production'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Charcoal production');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Charcoal production');
-                      }
-                    });
-                  },
-                  title: 'Charcoal production',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Stump removal'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Stump removal');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Stump removal');
-                      }
-                    });
-                  },
-                  title: 'Stump removal',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Digging holes'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Digging holes');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Digging holes');
-                      }
-                    });
-                  },
-                  title: 'Digging holes',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months.contains(
-                      'Working with a machete or any other sharp tool'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months.add(
-                            'Working with a machete or any other sharp tool');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months.remove(
-                            'Working with a machete or any other sharp tool');
-                      }
-                    });
-                  },
-                  title:
-                      'Working with a machete or any other sharp tool',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Handling of agrochemicals'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Handling of agrochemicals');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Handling of agrochemicals');
-                      }
-                    });
-                  },
-                  title: 'Handling of agrochemicals',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('Driving motorized vehicles'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months
-                            .add('Driving motorized vehicles');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('Driving motorized vehicles');
-                      }
-                    });
-                  },
-                  title: 'Driving motorized vehicles',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months.contains(
-                      'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months.add(
-                            'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months.remove(
-                            'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)');
-                      }
-                    });
-                  },
-                  title:
-                      'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months.contains(
-                      'Night work on farm (between 6pm and 6am)'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months.add(
-                            'Night work on farm (between 6pm and 6am)');
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months.remove(
-                            'Night work on farm (between 6pm and 6am)');
-                      }
-                    });
-                  },
-                  title: 'Night work on farm (between 6pm and 6am)',
-                ),
-                ModernCheckbox(
-                  value: _cocoaFarmTasksLast12Months
-                      .contains('None of the above'),
-                  onChanged: (bool? selected) {
-                    setState(() {
-                      if (selected == true) {
-                        _cocoaFarmTasksLast12Months.clear();
-                        _cocoaFarmTasksLast12Months
-                            .add('None of the above');
-                      } else {
-                        _cocoaFarmTasksLast12Months
-                            .remove('None of the above');
-                      }
-                    });
-                  },
-                  title: 'None of the above',
-                ),
-              ],
-            ),
+            _buildModernTaskCheckbox12Months('Collect and gather fruits, pods, seeds after harvesting'),
+            _buildModernTaskCheckbox12Months('Extracting cocoa beans after shelling by an adult'),
+            _buildModernTaskCheckbox12Months('Wash beans, fruits, vegetables or tubers'),
+            _buildModernTaskCheckbox12Months('Prepare the germinators and pour the seeds into the germinators'),
+            _buildModernTaskCheckbox12Months('Collecting firewood'),
+            _buildModernTaskCheckbox12Months('Help measure distances between plants during transplanting'),
+            _buildModernTaskCheckbox12Months('Sort and spread the beans, cereals and other vegetables for drying'),
+            _buildModernTaskCheckbox12Months('Putting cuttings on the mounds'),
+            _buildModernTaskCheckbox12Months('Holding bags or filling them with small containers for packaging de produits agricoles'),
+            _buildModernTaskCheckbox12Months('Covering stored agricultural products with tarps'),
+            _buildModernTaskCheckbox12Months('Shell or dehusk seeds, plants and fruits by hand'),
+            _buildModernTaskCheckbox12Months('Sowing seeds'),
+            _buildModernTaskCheckbox12Months('Transplant or put in the ground the cuttings or plants'),
+            _buildModernTaskCheckbox12Months('Harvesting legumes, fruits and other leafy products (corn, beans, soybeans, various vegetables)'),
+            _buildModernTaskCheckbox12Months('None'),
           ],
         ),
       ],
+    ],
+  );
+}
+      
+  
+  
+  
+
+ Widget _buildDangerousTasksSection() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionHeader('DANGEROUS TASKS (7 DAYS)'),
+
+      // Salary question for dangerous tasks (7 days)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<bool>(
+        question: 'Has the child [${widget.childNumber}] received a salary for this task?',
+        groupValue: _hasReceivedSalaryDangeroustask7days,
+        onChanged: (bool? value) {
+          setState(() {
+            _hasReceivedSalaryDangeroustask7days = value;
+          });
+        },
+        options: [
+          {'value': true, 'title': 'Yes'},
+          {'value': false, 'title': 'No'},
+        ],
+      ),
+
+      // Task location question for dangerous tasks (7 days)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'Where was this task done?',
+        groupValue: _taskLocationDangeroustask7days,
+        onChanged: (String? value) {
+          setState(() {
+            _taskLocationDangeroustask7days = value;
+          });
+        },
+        options: [
+          {'value': 'On family farm', 'title': 'On family farm'},
+          {'value': 'As a hired labourer on another farm', 'title': 'As a hired labourer on another farm'},
+          {'value': 'School farms/compounds', 'title': 'School farms/compounds'},
+          {'value': 'Teachers farms (during communal labour)', 'title': 'Teachers farms (during communal labour)'},
+          {'value': 'Church farms or cleaning activities', 'title': 'Church farms or cleaning activities'},
+          {'value': 'Helping a community member for free', 'title': 'Helping a community member for free'},
+          {'value': 'Other', 'title': 'Other'},
+        ],
+      ),
+
+      if (_taskLocationDangeroustask7days == 'Other') ...[
+        const SizedBox(height: 16),
+        _buildModernTextField(
+          label: 'Please specify',
+          controller: _otherLocationDangeroustask7daysController,
+        ),
+      ],
+
+      // Longest time spent on dangerous task during school day (7 days)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'What was the longest time spent on the task during a SCHOOL DAY in the last 7 days?',
+        groupValue: _longestSchoolDayTimeDangeroustask7days,
+        onChanged: (String? value) {
+          setState(() {
+            _longestSchoolDayTimeDangeroustask7days = value;
+          });
+        },
+        options: [
+          {'value': 'Less than one hour', 'title': 'Less than one hour'},
+          {'value': '1 hour', 'title': '1 hour'},
+          {'value': '2 hours', 'title': '2 hours'},
+          {'value': '3-4 hours', 'title': '3-4 hours'},
+          {'value': '4-6 hours', 'title': '4-6 hours'},
+          {'value': '6-8 hours', 'title': '6-8 hours'},
+          {'value': 'More than 8 hours', 'title': 'More than 8 hours'},
+          {'value': 'Does not apply', 'title': 'Does not apply'},
+        ],
+      ),
+
+      // Longest time spent on dangerous task during non-school day (7 days)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'What was the longest time spent on the task during a NON-SCHOOL DAY in the last 7 days?',
+        groupValue: _longestNonSchoolDayTimeDangeroustask7days,
+        onChanged: (String? value) {
+          setState(() {
+            _longestNonSchoolDayTimeDangeroustask7days = value;
+          });
+        },
+        options: [
+          {'value': 'Less than one hour', 'title': 'Less than one hour'},
+          {'value': '1-2 hours', 'title': '1-2 hours'},
+          {'value': '2-3 hours', 'title': '2-3 hours'},
+          {'value': '3-4 hours', 'title': '3-4 hours'},
+          {'value': '4-6 hours', 'title': '4-6 hours'},
+          {'value': '6-8 hours', 'title': '6-8 hours'},
+          {'value': 'More than 8 hours', 'title': 'More than 8 hours'},
+          {'value': 'Does not apply', 'title': 'Does not apply'},
+        ],
+      ),
+
+      // School day hours input for dangerous tasks (7 days)
+      const SizedBox(height: 24),
+      _buildModernTextField(
+        label: 'How many hours has the child worked on DANGEROUS tasks during SCHOOL DAYS in the last 7 days?',
+        controller: _schoolDayHoursDangeroustask7daysController,
+        keyboardType: TextInputType.number,
+        hintText: 'Enter number of hours',
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter the number of hours';
+          }
+          final hours = double.tryParse(value);
+          if (hours == null || hours < 0) {
+            return 'Please enter a valid number';
+          }
+          return null;
+        },
+      ),
+
+      // Non-school day hours input for dangerous tasks (7 days)
+      const SizedBox(height: 24),
+      _buildModernTextField(
+        label: 'How many hours has the child worked on DANGEROUS tasks during NON-SCHOOL DAYS in the last 7 days?',
+        controller: _nonSchoolDayHoursDangeroustask7daysController,
+        keyboardType: TextInputType.number,
+        hintText: 'Enter number of hours',
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter the number of hours';
+          }
+          final hours = double.tryParse(value);
+          if (hours == null || hours < 0) {
+            return 'Please enter a valid number';
+          }
+          return null;
+        },
+      ),
+
+      // Adult supervision question for dangerous tasks (7 days)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<bool>(
+        question: 'Was the child under supervision of an adult when performing DANGEROUS tasks?',
+        groupValue: _wasSupervisedByAdultDangeroustask7days,
+        onChanged: (bool? value) {
+          setState(() {
+            _wasSupervisedByAdultDangeroustask7days = value;
+          });
+        },
+        options: [
+          {'value': true, 'title': 'Yes'},
+          {'value': false, 'title': 'No'},
+        ],
+      ),
+    
+  
+
+// Tasks in last 12 months for dangerous tasks
+Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text(
+      'Which of the following DANGEROUS tasks has the child done in the last 12 months on the cocoa farm?',
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+    const SizedBox(height: 8),
+    Column(
+      children: [
+        _buildDangerousTaskCheckbox12Months(
+          'Use of machetes for weeding or pruning (Clearing)',
+          'use_machetes_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Felling of trees',
+          'felling_trees_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Burning of plots',
+          'burning_plots_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Game hunting with a weapon',
+          'game_hunting_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Woodcutter\'s work',
+          'woodcutter_work_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Charcoal production',
+          'charcoal_production_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Stump removal',
+          'stump_removal_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Digging holes',
+          'digging_holes_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Working with a machete or any other sharp tool',
+          'sharp_tools_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Handling of agrochemicals',
+          'agrochemicals_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Driving motorized vehicles',
+          'driving_vehicles_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)',
+          'heavy_loads_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'Night work on farm (between 6pm and 6am)',
+          'night_work_dangeroustask12months'
+        ),
+        _buildDangerousTaskCheckbox12Months(
+          'None of the above',
+          'none_dangeroustask12months',
+          isNoneOption: true
+        ),
+      ],
+    ),
+  ],
+),
+      ],
     );
   }
+
+Widget _buildDangerousTasksSection12Months() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionHeader('DANGEROUS TASKS (12 MONTHS)'),
+
+      // Salary question for dangerous tasks (12 months)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<bool>(
+        question: 'Has the child [${widget.childNumber}] received a salary for this task?',
+        groupValue: _hasReceivedSalaryDangeroustask12months,
+        onChanged: (bool? value) {
+          setState(() {
+            _hasReceivedSalaryDangeroustask12months = value;
+          });
+        },
+        options: [
+          {'value': true, 'title': 'Yes'},
+          {'value': false, 'title': 'No'},
+        ],
+      ),
+
+      // Task location question for dangerous tasks (12 months)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'Where was this task done?',
+        groupValue: _taskLocationDangeroustask12months,
+        onChanged: (String? value) {
+          setState(() {
+            _taskLocationDangeroustask12months = value;
+          });
+        },
+        options: [
+          {'value': 'On family farm', 'title': 'On family farm'},
+          {'value': 'As a hired labourer on another farm', 'title': 'As a hired labourer on another farm'},
+          {'value': 'School farms/compounds', 'title': 'School farms/compounds'},
+          {'value': 'Teachers farms (during communal labour)', 'title': 'Teachers farms (during communal labour)'},
+          {'value': 'Church farms or cleaning activities', 'title': 'Church farms or cleaning activities'},
+          {'value': 'Helping a community member for free', 'title': 'Helping a community member for free'},
+          {'value': 'Other', 'title': 'Other'},
+        ],
+      ),
+
+      if (_taskLocationDangeroustask12months == 'Other') ...[
+        const SizedBox(height: 16),
+        _buildModernTextField(
+          label: 'Please specify',
+          controller: _otherLocationDangeroustask12monthsController,
+        ),
+      ],
+
+      // Longest time spent on dangerous task during school day (12 months)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'What was the longest time spent on the task during a SCHOOL DAY in the last 12 months?',
+        groupValue: _longestSchoolDayTimeDangeroustask12months,
+        onChanged: (String? value) {
+          setState(() {
+            _longestSchoolDayTimeDangeroustask12months = value;
+          });
+        },
+        options: [
+          {'value': 'Less than one hour', 'title': 'Less than one hour'},
+          {'value': '1 hour', 'title': '1 hour'},
+          {'value': '2 hours', 'title': '2 hours'},
+          {'value': '3-4 hours', 'title': '3-4 hours'},
+          {'value': '4-6 hours', 'title': '4-6 hours'},
+          {'value': '6-8 hours', 'title': '6-8 hours'},
+          {'value': 'More than 8 hours', 'title': 'More than 8 hours'},
+          {'value': 'Does not apply', 'title': 'Does not apply'},
+        ],
+      ),
+
+      // Longest time spent on dangerous task during non-school day (12 months)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<String>(
+        question: 'What was the longest time spent on the task during a NON-SCHOOL DAY in the last 12 months?',
+        groupValue: _longestNonSchoolDayTimeDangeroustask12months,
+        onChanged: (String? value) {
+          setState(() {
+            _longestNonSchoolDayTimeDangeroustask12months = value;
+          });
+        },
+        options: [
+          {'value': 'Less than one hour', 'title': 'Less than one hour'},
+          {'value': '1-2 hours', 'title': '1-2 hours'},
+          {'value': '2-3 hours', 'title': '2-3 hours'},
+          {'value': '3-4 hours', 'title': '3-4 hours'},
+          {'value': '4-6 hours', 'title': '4-6 hours'},
+          {'value': '6-8 hours', 'title': '6-8 hours'},
+          {'value': 'More than 8 hours', 'title': 'More than 8 hours'},
+          {'value': 'Does not apply', 'title': 'Does not apply'},
+        ],
+      ),
+
+      // School day hours input for dangerous tasks (12 months)
+      const SizedBox(height: 24),
+      _buildModernTextField(
+        label: 'How many hours has the child worked on DANGEROUS tasks during SCHOOL DAYS in the last 12 months?',
+        controller: _schoolDayHoursDangeroustask12monthsController,
+        keyboardType: TextInputType.number,
+        hintText: 'Enter number of hours',
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter the number of hours';
+          }
+          final hours = double.tryParse(value);
+          if (hours == null || hours < 0) {
+            return 'Please enter a valid number';
+          }
+          return null;
+        },
+      ),
+
+      // Non-school day hours input for dangerous tasks (12 months)
+      const SizedBox(height: 24),
+      _buildModernTextField(
+        label: 'How many hours has the child worked on DANGEROUS tasks during NON-SCHOOL DAYS in the last 12 months?',
+        controller: _nonSchoolDayHoursDangeroustask12monthsController,
+        keyboardType: TextInputType.number,
+        hintText: 'Enter number of hours',
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter the number of hours';
+          }
+          final hours = double.tryParse(value);
+          if (hours == null || hours < 0) {
+            return 'Please enter a valid number';
+          }
+          return null;
+        },
+      ),
+
+      // Adult supervision question for dangerous tasks (12 months)
+      const SizedBox(height: 24),
+      _buildModernRadioGroup<bool>(
+        question: 'Was the child under supervision of an adult when performing DANGEROUS tasks?',
+        groupValue: _wasSupervisedByAdultDangeroustask12months,
+        onChanged: (bool? value) {
+          setState(() {
+            _wasSupervisedByAdultDangeroustask12months = value;
+          });
+        },
+        options: [
+          {'value': true, 'title': 'Yes'},
+          {'value': false, 'title': 'No'},
+        ],
+      ),
+
+      // Tasks in last 12 months for dangerous tasks
+      const SizedBox(height: 24),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Which of the following DANGEROUS tasks has the child done in the last 12 months on the cocoa farm?',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Column(
+            children: [
+              _buildDangerousTaskCheckbox12Months(
+                'Use of machetes for weeding or pruning (Clearing)',
+                'use_machetes'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Felling of trees',
+                'felling_trees'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Burning of plots',
+                'burning_plots'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Game hunting with a weapon',
+                'game_hunting'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Woodcutter\'s work',
+                'woodcutter_work'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Charcoal production',
+                'charcoal_production'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Stump removal',
+                'stump_removal'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Digging holes',
+                'digging_holes'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Working with a machete or any other sharp tool',
+                'sharp_tools'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Handling of agrochemicals',
+                'agrochemicals'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Driving motorized vehicles',
+                'driving_vehicles'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Carrying heavy loads (Boys: 14-16 years old>15kg / 16-17 years old>20kg; Girls: 14-16 years old>8Kg/16-17 years old>10Kg)',
+                'heavy_loads'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'Night work on farm (between 6pm and 6am)',
+                'night_work'
+              ),
+              _buildDangerousTaskCheckbox12Months(
+                'None of the above',
+                'none',
+                isNoneOption: true
+              ),
+            ],
+         
+          )
+        ],
+      
+        
+      ),
+          // For whom does the child work?
+      _buildModernRadioGroup<String>(
+        question: 'For whom does the child work?',
+        groupValue: _workRelationship,
+        onChanged: (String? value) {
+          setState(() {
+            _workRelationship = value;
+          });
+        },
+        options: [
+          {'value': 'parents', 'title': 'For his/her parents'},
+          {'value': 'family_not_parents', 'title': 'For family, not parents'},
+          {'value': 'family_friends', 'title': 'For family friends'},
+          {'value': 'other', 'title': 'Other'},
+        ],
+      ),
+
+      // Additional field if "Other" is selected
+      if (_workRelationship == 'other')
+        _buildModernTextField(
+          label: 'Please specify',
+          controller: _otherWorkRelationshipController,
+          isRequired: true,
+        ),
+
+      
+    ],
+    
+  );
+}        
+    
+
+
 
   Widget _buildHealthAndSafetySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader('HEALTH AND SAFETY'),
+
+
 
         // Has the child ever applied or sprayed agrochemicals on the farm?
         _buildModernRadioGroup<bool>(
@@ -4054,7 +3938,7 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
+              // const SizedBox(height: 15),
               
               // Basic Information Section
               _buildBasicInformationSection(),
@@ -4088,6 +3972,7 @@ if (_isCurrentlyEnrolled == true && _attendedSchoolLast7Days == false) ...[
               _buildDangerousTasksSection(),
 
               SizedBox( height: 20,),
+              _buildDangerousTasksSection12Months(),
               
               // Health and Safety Section
               _buildHealthAndSafetySection(),
