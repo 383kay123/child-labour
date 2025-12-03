@@ -21,4 +21,7 @@ class TableNames {
   static const String farmersTBL = 'farmers_from_server';
   static const String districtsTBL = 'districts';
    static const String societyDataTBL = 'society_data';
+   static const String society = 'societies';
+   static const String staffTBL = 'staff';
+   static const String staffDistrictsTBL = 'staff_districts';
 }

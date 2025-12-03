@@ -357,7 +357,7 @@ class _FarmersListScreenState extends State<FarmersListScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: const Text('Farmers Directory'),
+        title: const Text('Farmers List'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

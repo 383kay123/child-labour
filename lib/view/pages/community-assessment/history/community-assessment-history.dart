@@ -4,15 +4,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:human_rights_monitor/controller/api/auth/auth_api.dart';
 import 'package:human_rights_monitor/controller/api/get_methods.dart';
 import 'package:human_rights_monitor/controller/db/db_tables/helpers/community_db_helper.dart';
-import 'package:human_rights_monitor/controller/models/pci/pci.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/society_repo.dart';
+import 'package:human_rights_monitor/controller/models/auth/user_model.dart';
+import 'package:human_rights_monitor/controller/models/community-assessment-model.dart';
+import 'package:human_rights_monitor/controller/models/societies/societies_model.dart';
+import 'package:human_rights_monitor/view/pages/community-assessment/community-assessment-controller.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../controller/models/community-assessment-model.dart';
 import '../../../theme/app_theme.dart';
 import '../assessment_detail_screen.dart';
-
 
 class CommunityAssessmentHistory extends StatefulWidget {
   const CommunityAssessmentHistory({super.key});
@@ -26,9 +29,13 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final CommunityDBHelper _dbHelper = CommunityDBHelper.instance;
+  final CommunityAssessmentController controller =
+      Get.put(CommunityAssessmentController());
   List<CommunityAssessmentModel> _pendingAssessments = [];
   List<CommunityAssessmentModel> _submittedAssessments = [];
   bool _isLoading = true;
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -37,142 +44,174 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
     _loadAssessments();
   }
 
- Future<void> _loadAssessments() async {
-  if (!mounted) return;
+  Future<void> _loadAssessments() async {
+    if (!mounted) return;
 
-  setState(() => _isLoading = true);
-  try {
-    final allAssessments = await _dbHelper.getAllCommunityAssessments();
-    print('All assessments from DB:');
-    allAssessments.forEach((a) {
-      print('ID: ${a['id']}, Community: ${a['community_name']}, Status: ${a['status']}, Raw data: ${a['raw_data']}');
-    });
+    setState(() => _isLoading = true);
+    try {
+      final allAssessments = await _dbHelper.getAllCommunityAssessments();
+      print('All assessments from DB:');
+      allAssessments.forEach((a) {
+        print(
+            'ID: ${a['id']}, Community: ${a['community_name']}, Status: ${a['status']}, Raw data: ${a['raw_data']}');
+      });
 
-    final pending = allAssessments.where((a) => (a['status'] ?? 0) == 0).map((e) {
-      // FIXED: Properly extract community name with better fallback logic
-      String? communityName = e['community_name'];
-      
-      // If community_name is null or empty, try to extract from raw_data
-      if (communityName == null || communityName.isEmpty) {
-        try {
-          final rawData = e['raw_data'];
-          if (rawData != null && rawData is String && rawData.isNotEmpty) {
-            final parsedData = jsonDecode(rawData);
-            if (parsedData is Map) {
-              communityName = parsedData['community'] ?? 
-                             parsedData['communityName'] ?? 
-                             parsedData['community_name'];
+      final pending = allAssessments
+          .where((a) => (a['status'] ?? 0) == 0)
+          .map((e) {
+            // FIXED: Properly extract community name with better fallback logic
+            String? communityName = e['community_name'];
+
+            // If community_name is null or empty, try to extract from raw_data
+            if (communityName == null || communityName.isEmpty) {
+              try {
+                final rawData = e['raw_data'];
+                if (rawData != null && rawData is String && rawData.isNotEmpty) {
+                  final parsedData = jsonDecode(rawData);
+                  if (parsedData is Map) {
+                    communityName = parsedData['community'] ??
+                        parsedData['communityName'] ??
+                        parsedData['community_name'];
+                  }
+                }
+              } catch (e) {
+                debugPrint('Error parsing raw_data: $e');
+              }
             }
-          }
-        } catch (e) {
-          debugPrint('Error parsing raw_data: $e');
-        }
-      }
-      
-      // Final fallback
-      communityName = communityName ?? 'Community Assessment';
 
-      return CommunityAssessmentModel.fromMap({
-        'id': e['id'],
-        'community_name': communityName, // FIXED: Use snake_case key
-        'community_score': e['community_score'] ?? e['communityScore'] ?? 0,
-        'status': e['status'] ?? 0,
-        'region': e['region'],
-        'total_population': e['total_population'],
-        'total_children': e['total_children'],
-        'primary_schools_count': e['primary_schools_count'],
-        'has_protected_water': e['has_protected_water'],
-        'hires_adult_labor': e['hires_adult_labor'],
-        'child_labor_awareness': e['child_labor_awareness'],
-        'has_women_leaders': e['has_women_leaders'],
-        'q1': e['q1'],
-        'q2': e['q2'],
-        'q3': e['q3'],
-        'q4': e['q4'],
-        'q5': e['q5'],
-        'q6': e['q6'],
-        'q7a': e['q7a'],
-        'q7b': e['q7b'],
-        'q7c': e['q7c'],
-        'q8': e['q8'],
-        'q9': e['q9'],
-        'q10': e['q10'],
-        'date_created': e['date_created'],
-      });
-    }).toList();
+            // Final fallback
+            communityName = communityName ?? 'Community Assessment';
 
-    final submitted = allAssessments.where((a) => (a['status'] ?? 0) == 1).map((e) {
-      // FIXED: Same logic for submitted assessments
-      String? communityName = e['community_name'];
-      
-      if (communityName == null || communityName.isEmpty) {
-        try {
-          final rawData = e['raw_data'];
-          if (rawData != null && rawData is String && rawData.isNotEmpty) {
-            final parsedData = jsonDecode(rawData);
-            if (parsedData is Map) {
-              communityName = parsedData['community'] ?? 
-                             parsedData['communityName'] ?? 
-                             parsedData['community_name'];
+            return CommunityAssessmentModel.fromMap({
+              'id': e['id'],
+              'community_name': communityName, // FIXED: Use snake_case key
+              'community_score': e['community_score'] ?? e['communityScore'] ?? 0,
+              'status': e['status'] ?? 0,
+              'region': e['region'],
+              'total_population': e['total_population'],
+              'total_children': e['total_children'],
+              'primary_schools_count': e['primary_schools_count'],
+              'has_protected_water': e['has_protected_water'],
+              'hires_adult_labor': e['hires_adult_labor'],
+              'child_labor_awareness': e['child_labor_awareness'],
+              'has_women_leaders': e['has_women_leaders'],
+              'q1': e['q1'],
+              'q2': e['q2'],
+              'q3': e['q3'],
+              'q4': e['q4'],
+              'q5': e['q5'],
+              'q6': e['q6'],
+              'q7a': e['q7a'],
+              'q7b': e['q7b'],
+              'q7c': e['q7c'],
+              'q8': e['q8'],
+              'q9': e['q9'],
+              'q10': e['q10'],
+              'date_created': e['date_created'],
+            });
+          })
+          .toList();
+
+      final submitted = allAssessments
+          .where((a) => (a['status'] ?? 0) == 1)
+          .map((e) {
+            // FIXED: Same logic for submitted assessments
+            String? communityName = e['community_name'];
+
+            if (communityName == null || communityName.isEmpty) {
+              try {
+                final rawData = e['raw_data'];
+                if (rawData != null && rawData is String && rawData.isNotEmpty) {
+                  final parsedData = jsonDecode(rawData);
+                  if (parsedData is Map) {
+                    communityName = parsedData['community'] ??
+                        parsedData['communityName'] ??
+                        parsedData['community_name'];
+                  }
+                }
+              } catch (e) {
+                debugPrint('Error parsing raw_data: $e');
+              }
             }
-          }
-        } catch (e) {
-          debugPrint('Error parsing raw_data: $e');
-        }
+
+            communityName = communityName ?? 'Community Assessment';
+
+            return CommunityAssessmentModel.fromMap({
+              'id': e['id'],
+              'community_name': communityName, // FIXED: Use snake_case key
+              'community_score': e['community_score'] ?? e['communityScore'] ?? 0,
+              'status': e['status'] ?? 1,
+              'region': e['region'],
+              'total_population': e['total_population'],
+              'total_children': e['total_children'],
+              'primary_schools_count': e['primary_schools_count'],
+              'has_protected_water': e['has_protected_water'],
+              'hires_adult_labor': e['hires_adult_labor'],
+              'child_labor_awareness': e['child_labor_awareness'],
+              'has_women_leaders': e['has_women_leaders'],
+              'q1': e['q1'],
+              'q2': e['q2'],
+              'q3': e['q3'],
+              'q4': e['q4'],
+              'q5': e['q5'],
+              'q6': e['q6'],
+              'q7a': e['q7a'],
+              'q7b': e['q7b'],
+              'q7c': e['q7c'],
+              'q8': e['q8'],
+              'q9': e['q9'],
+              'q10': e['q10'],
+              'date_created': e['date_created'],
+            });
+          })
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _pendingAssessments = pending;
+          _submittedAssessments = submitted;
+          _isLoading = false;
+        });
       }
-      
-      communityName = communityName ?? 'Community Assessment';
-
-      return CommunityAssessmentModel.fromMap({
-        'id': e['id'],
-        'community_name': communityName, // FIXED: Use snake_case key
-        'community_score': e['community_score'] ?? e['communityScore'] ?? 0,
-        'status': e['status'] ?? 1,
-        'region': e['region'],
-        'total_population': e['total_population'],
-        'total_children': e['total_children'],
-        'primary_schools_count': e['primary_schools_count'],
-        'has_protected_water': e['has_protected_water'],
-        'hires_adult_labor': e['hires_adult_labor'],
-        'child_labor_awareness': e['child_labor_awareness'],
-        'has_women_leaders': e['has_women_leaders'],
-        'q1': e['q1'],
-        'q2': e['q2'],
-        'q3': e['q3'],
-        'q4': e['q4'],
-        'q5': e['q5'],
-        'q6': e['q6'],
-        'q7a': e['q7a'],
-        'q7b': e['q7b'],
-        'q7c': e['q7c'],
-        'q8': e['q8'],
-        'q9': e['q9'],
-        'q10': e['q10'],
-        'date_created': e['date_created'],
-      });
-    }).toList();
-
-    if (mounted) {
-      setState(() {
-        _pendingAssessments = pending;
-        _submittedAssessments = submitted;
-        _isLoading = false;
-      });
+    } catch (e) {
+      debugPrint('Error loading assessments: $e');
+      if (mounted) {
+        _showSnackBar(
+          'Error',
+          'Failed to load assessments: $e',
+          Colors.red,
+        );
+      }
+      setState(() => _isLoading = false);
     }
-  } catch (e) {
-    debugPrint('Error loading assessments: $e');
-    Get.snackbar(
-      'Error',
-      'Failed to load assessments: $e',
-      backgroundColor: AppTheme.errorColor,
-      colorText: Colors.white,
-    );
-    setState(() => _isLoading = false);
   }
-}
+
+  // Helper method to safely show snackbars
+  void _showSnackBar(String title, String message, Color backgroundColor) {
+    if (!mounted) return;
+    
+    try {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: backgroundColor,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint('Error showing snackbar: $e');
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
+    // Don't dispose the controller here if it's shared with other widgets
+    // Get.delete<CommunityAssessmentController>();
     super.dispose();
   }
 
@@ -411,11 +450,15 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
       ),
     )
         .then((_) {
-      _loadAssessments();
+      if (mounted) {
+        _loadAssessments();
+      }
     });
   }
 
   Future<void> _deleteAssessment(CommunityAssessmentModel assessment) async {
+    if (!mounted) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -431,13 +474,12 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
             ),
             const SizedBox(width: 12),
             Expanded(
-              // Add this
               child: Text(
                 'Delete Assessment',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
                 ),
-                overflow: TextOverflow.ellipsis, // Add this
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -475,27 +517,19 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
           });
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Assessment deleted successfully'),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
+            _showSnackBar(
+              'Success',
+              'Assessment deleted successfully',
+              Colors.green,
             );
           }
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting assessment: $e'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
+          _showSnackBar(
+            'Error',
+            'Error deleting assessment: $e',
+            Colors.red,
           );
         }
       }
@@ -516,108 +550,167 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
   }
 
   Future<void> _submitAssessment(CommunityAssessmentModel assessment) async {
-  // Show loading indicator
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Submitting assessment...'),
-        backgroundColor: Colors.blue,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
+    // Store context locally before async operations
+    final localContext = context;
+    if (!mounted) return;
 
-  try {
-    // // Get the current user ID (you'll need to implement this)
-    // final currentUser = await _getCurrentUser();
-    // final userId = int.tryParse(currentUser?.id ?? '0') ?? 0;
-    
-    // // Get the community ID (you'll need to ensure this is set when creating the assessment)
-    // final communityId = assessment.communityId ?? 0;
+    // Show loading indicator
+    _showSnackBar('Info', 'Submitting assessment...', Colors.blue);
 
-    // Calculate scores based on assessment answers
-    final accessToProtectedWater = assessment.q1 == 'Yes' ? 1.0 : 0.0;
-    final hireAdultLabourers = assessment.q2 == 'Yes' ? 1.0 : 0.0;
-    final awarenessRaisingSession = assessment.q3 == 'Yes' ? 1.0 : 0.0;
-    final womenLeaders = assessment.q4 == 'Yes' ? 1.0 : 0.0;
-    
-    // Calculate total index (you'll need to adjust this based on your scoring logic)
-    final totalIndex = (accessToProtectedWater + 
-                       hireAdultLabourers + 
-                       awarenessRaisingSession + 
-                       womenLeaders) / 4.0;
+    UserModel? user = await AuthService.getCurrentStaff();
 
-    // Convert assessment to SocietyData
-    final societyData = SocietyData(
-      enumerator: 0,
-      society: 0,
-    
-      accessToProtectedWater: accessToProtectedWater,
-      hireAdultLabourers: hireAdultLabourers,
-      awarenessRaisingSession: awarenessRaisingSession,
-      womenLeaders: womenLeaders,
-      preSchool: assessment.q5 == 'Yes' ? 1.0 : 0.0, 
-      primarySchool: (assessment.q7a ?? 0).toDouble(),
-      separateToilets: assessment.schoolsWithToilets == 'Yes' ? 1.0 : 0.0,
-      provideFood: assessment.schoolsWithFood == 'Yes' ? 1.0 : 0.0,
-      scholarships: assessment.q9 == 'Yes' ? 1.0 : 0.0, 
-      corporalPunishment: assessment.schoolsNoCorporalPunishment == 'Yes' ? 1.0 : 0.0,
-    );
+    // Get society ID from assessment data
+    int? societyId;
+    try {
+      // First try to get it from the assessment's raw data
+      if (assessment.rawData != null) {
+        final rawData = jsonDecode(assessment.rawData!);
+        societyId = rawData['society_id'] ??
+            rawData['society'] ??
+            (rawData['societyId'] is int ? rawData['societyId'] : null);
 
-    debugPrint('Submitting data: ${societyData.toJson()}');
-    
-    // Submit the data
-    final api = GetService();
-    final apiSuccess = await api.postPCIData(societyData.toJson());
+        // If societyId is still null, try to find it in the raw_data string if it exists
+        if (societyId == null && rawData['raw_data'] is String) {
+          try {
+            final nestedData = jsonDecode(rawData['raw_data']);
+            societyId = nestedData['society_id'] ?? nestedData['society'];
+          } catch (e) {
+            debugPrint('Error parsing nested raw_data: $e');
+          }
+        }
+      }
 
-    if (apiSuccess) {
-      // Update local status to submitted (2)
-      await _dbHelper.updateAssessmentStatus(assessment.id!, 2);
+      // If we still don't have a society ID, try to get it from the selected society
+      if (societyId == null) {
+        final societyRepo = SocietyRepository();
+        final societies = await societyRepo.getAllSocieties();
+        if (societies.isNotEmpty) {
+          // Try to find a society that matches the assessment's community name
+          final matchingSociety = societies.firstWhere(
+            (s) =>
+                s.society?.toLowerCase() ==
+                assessment.communityName?.toLowerCase(),
+            orElse: () => Society(),
+          );
+          societyId = matchingSociety.id;
+        }
+      }
+
+      // If we still don't have a society ID, show an error
+      if (societyId == null) {
+        if (mounted) {
+          _showSnackBar(
+            'Error',
+            'Could not determine society. Please sync societies first.',
+            Colors.red,
+          );
+        }
+        return;
+      }
+
+      debugPrint('ℹ️ Using society ID: $societyId');
+    } catch (e) {
+      debugPrint('Error getting society ID: $e');
+      if (mounted) {
+        _showSnackBar('Error', 'Error: ${e.toString()}', Colors.red);
+      }
+      return;
+    }
+
+    if (user == null) {
+      if (mounted) {
+        _showSnackBar(
+          'Error',
+          'User not found. Please log in again.',
+          Colors.red,
+        );
+      }
+      return;
+    }
+
+    // Create a map with the required fields in snake_case
+    final pciData = {
+      'enumerator': user.id.toString(),
+      'society': societyId,
+      'access_to_protected_water': assessment.q1 == 'Yes' ? 1.0 : 0.0,
+      'hire_adult_labourers': assessment.q2 == 'Yes' ? 1.0 : 0.0,
+      'awareness_raising_session': assessment.q3 == 'Yes' ? 1.0 : 0.0,
+      'women_leaders': assessment.q4 == 'Yes' ? 1.0 : 0.0,
+      'pre_school': assessment.q5 == 'Yes' ? 1.0 : 0.0,
+      'primary_school': (assessment.q7a ?? 0).toDouble(),
+      'separate_toilets':
+          (assessment.schoolsWithToilets ?? 'No') == 'Yes' ? 1.0 : 0.0,
+      'provide_food': (assessment.schoolsWithFood ?? 'No') == 'Yes' ? 1.0 : 0.0,
+      'scholarships': assessment.q9 == 'Yes' ? 1.0 : 0.0,
+      'corporal_punishment':
+          (assessment.schoolsNoCorporalPunishment ?? 'No') == 'Yes' ? 1.0 : 0.0,
+      'total_index': _calculateScore(assessment).toDouble(),
+    };
+
+    debugPrint('Submitting data: $pciData');
+
+    try {
+      // Submit the data
+      final api = GetService();
+      final apiSuccess = await api.postPCIData(pciData);
+
+      if (apiSuccess) {
+        // Only update status if API call was successful
+        await _dbHelper.updateAssessmentStatus(assessment.id!, 2);
+
+        if (mounted) {
+          setState(() {
+            _pendingAssessments.removeWhere((a) => a.id == assessment.id);
+            // Create a new instance with updated status
+            final submittedAssessment = assessment.copyWith(status: 2);
+            _submittedAssessments.add(submittedAssessment);
+          });
+
+          if (mounted) {
+            _showSnackBar(
+              'Success',
+              'Assessment submitted and synced successfully',
+              Colors.green,
+            );
+          }
+        }
+      } else if (mounted) {
+        // If API call failed but didn't throw an exception
+        _showSnackBar(
+          'Error',
+          'Failed to submit assessment. Please try again.',
+          Colors.red,
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Error in _submitAssessment: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      // If API fails, save as pending (status 1)
+      await _dbHelper.updateAssessmentStatus(assessment.id!, 1);
 
       if (mounted) {
         setState(() {
-          _pendingAssessments.removeWhere((a) => a.id == assessment.id);
-          _submittedAssessments.add(assessment.copyWith(status: 2));
+          // Update the assessment status in the UI
+          final index =
+              _pendingAssessments.indexWhere((a) => a.id == assessment.id);
+          if (index != -1) {
+            _pendingAssessments[index] =
+                _pendingAssessments[index].copyWith(status: 1);
+          }
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Assessment submitted and synced successfully'),
-              backgroundColor: Colors.green,
-            ),
+          _showSnackBar(
+            'Info',
+            'Error: ${e.toString()}. Saved as draft.',
+            Colors.orange,
           );
         }
       }
-    } else {
-      throw Exception('Server returned failure status');
-    }
-  } catch (e, stackTrace) {
-    debugPrint('Error in _submitAssessment: $e');
-    debugPrint('Stack trace: $stackTrace');
-    
-    // If API fails, save as pending (status 1)
-    await _dbHelper.updateAssessmentStatus(assessment.id!, 1);
-    
-    if (mounted) {
-      setState(() {
-        // Update the assessment status in the UI
-        final index = _pendingAssessments.indexWhere((a) => a.id == assessment.id);
-        if (index != -1) {
-          _pendingAssessments[index] = _pendingAssessments[index].copyWith(status: 1);
-        }
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}. Saved as draft.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
     }
   }
-}
+
   Widget _buildAssessmentCard(
       CommunityAssessmentModel assessment, BuildContext context) {
     final isSubmitted = assessment.status == 1;
@@ -766,10 +859,10 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                                       ),
                                     ),
                                     Text(
-                                      '$score%',
+                                      '$score/10',
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
-                                        color: _getScoreColor(score),
+                                        color: _getScoreColor(score * 10),
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -788,7 +881,7 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
                                         builder: (context, constraints) {
                                           return Container(
                                             width: constraints.maxWidth *
-                                                (score / 100),
+                                                (score / 10),
                                             decoration: BoxDecoration(
                                               color: _getScoreColor(score),
                                               borderRadius:
@@ -889,23 +982,24 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
     );
   }
 
-  // Fixed score calculation with proper null checking
+  // Calculate score out of 10
   int _calculateScore(CommunityAssessmentModel assessment) {
     int score = 0;
 
-    // Use null-safe checks with == true comparison
-    if ((assessment.q1 == 'Yes') == true) score++;
-    if ((assessment.q2 == 'Yes') == true) score++;
-    if ((assessment.q3 == 'Yes') == true) score++;
-    if ((assessment.q4 == 'Yes') == true) score++;
-    if ((assessment.q5 == 'Yes') == true) score++;
-    if ((assessment.q6 == 'Yes') == true) score++;
+    // Each "Yes" answer or q7a == 1 adds 1 to the score
+    if (assessment.q1 == 'Yes') score++;
+    if (assessment.q2 == 'Yes') score++;
+    if (assessment.q3 == 'Yes') score++;
+    if (assessment.q4 == 'Yes') score++;
+    if (assessment.q5 == 'Yes') score++;
+    if (assessment.q6 == 'Yes') score++;
     if (assessment.q7a == 1) score++;
-    if ((assessment.q8 == 'Yes') == true) score++;
-    if ((assessment.q9 == 'Yes') == true) score++;
-    if ((assessment.q10 == 'Yes') == true) score++;
+    if (assessment.q8 == 'Yes') score++;
+    if (assessment.q9 == 'Yes') score++;
+    if (assessment.q10 == 'Yes') score++;
 
-    return (score / 10 * 100).round();
+    // Return the raw score out of 10
+    return score;
   }
 
   // Helper method to check if assessment has details to display
@@ -953,8 +1047,8 @@ class _CommunityAssessmentHistoryState extends State<CommunityAssessmentHistory>
   }
 
   Color _getScoreColor(int score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
+    if (score >= 8) return Colors.green;
+    if (score >= 6) return Colors.orange;
     return Colors.red;
   }
 }

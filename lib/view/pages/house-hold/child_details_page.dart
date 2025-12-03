@@ -3938,7 +3938,7 @@ Widget _buildDangerousTasksSection12Months() {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
+              // const SizedBox(height: 15),
               
               // Basic Information Section
               _buildBasicInformationSection(),
