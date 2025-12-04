@@ -1094,54 +1094,52 @@ class _ProducerDetailsFormState extends State<ProducerDetailsForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Ghana Card Question
-          _buildQuestionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Does ${widget.personName} have a Ghana card?',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-                const SizedBox(height: _Spacing.sm),
-                Row(
-                  children: [
-                    _buildRadioOption(
-                      value: 'yes',
-                      groupValue: _hasGhanaCard?.toLowerCase(),
-                      label: 'Yes',
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          _hasGhanaCard = value;
-                          _selectedIdType = null;
-                          _otherIdController.clear();
-                          _ghanaCardIdController.clear();
-                          _updateParentDetails();
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 20),
-                    _buildRadioOption(
-                      value: 'no',
-                      groupValue: _hasGhanaCard?.toLowerCase(),
-                      label: 'No',
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          _hasGhanaCard = value;
-                          _ghanaCardIdController.clear();
-                          _updateParentDetails();
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ],
+        // Ghana Card Question
+_buildQuestionCard(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Does ${widget.personName} have a Ghana card?',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
             ),
+      ),
+      const SizedBox(height: _Spacing.sm),
+      Wrap(
+        spacing: 20,
+        children: [
+          _buildRadioOption(
+            value: 'yes',
+            groupValue: _hasGhanaCard,
+            label: 'Yes',
+            onChanged: (value) {
+              setState(() {
+                _hasGhanaCard = value;
+                _selectedIdType = null;
+                _otherIdController.clear();
+                _ghanaCardIdController.clear();
+                _updateParentDetails();
+              });
+            },
           ),
-
+          _buildRadioOption(
+            value: 'no',
+            groupValue: _hasGhanaCard,
+            label: 'No',
+            onChanged: (value) {
+              setState(() {
+                _hasGhanaCard = value;
+                _ghanaCardIdController.clear();
+                _updateParentDetails();
+              });
+            },
+          ),
+        ],
+      ),
+    ],
+  ),
+),
           // Ghana Card ID (shown when 'yes' is selected)
           if (_hasGhanaCard?.toLowerCase() == 'yes')
             _buildQuestionCard(

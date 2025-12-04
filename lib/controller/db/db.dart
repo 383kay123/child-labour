@@ -17,6 +17,7 @@ import 'db_tables/monitoring_table.dart';
 class LocalDBHelper {
   static final LocalDBHelper instance = LocalDBHelper._init();
   static Database? _database;
+  static const int _databaseVersion = 2; // Incremented from 1 to 2
 
   LocalDBHelper._init();
    static const String id = 'id';
@@ -110,6 +111,87 @@ class LocalDBHelper {
     )
   ''');
 
+ await db.execute('''
+     CREATE TABLE farmer_interviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  enumerator INTEGER,
+  farmer INTEGER,
+  interview_start_time TEXT,
+  gps_point TEXT,
+  community_type TEXT,
+  farmer_resides_in_community TEXT,
+  latitude TEXT,
+  longitude TEXT,
+  farmer_residing_community TEXT,
+  farmer_available TEXT,
+  reason_unavailable TEXT,
+  reason_unavailable_other TEXT,
+  available_answer_by TEXT,
+  refusal_toa_participate_reason_survey TEXT,
+  total_adults INTEGER,
+  is_name_correct TEXT,
+  exact_name TEXT,
+  nationality TEXT,
+  country_origin TEXT,
+  country_origin_other TEXT,
+  is_owner TEXT,
+  owner_status_01 TEXT,
+  owner_status_00 TEXT,
+  children_present TEXT,
+  num_children_5_to_17 INTEGER,
+  feedback_enum TEXT,
+  picture_of_respondent TEXT,
+  signature_producer TEXT,
+  end_gps TEXT,
+  end_time TEXT,
+  sensitized_good_parenting TEXT,
+  sensitized_child_protection TEXT,
+  sensitized_safe_labour TEXT,
+  number_of_female_adults INTEGER,
+  number_of_male_adults INTEGER,
+  picture_sensitization TEXT,
+  feedback_observations TEXT,
+  school_fees_owed TEXT,
+  parent_remediation TEXT,
+  parent_remediation_other TEXT,
+  community_remediation TEXT,
+  community_remediation_other TEXT,
+  name_owner TEXT,
+  first_name_owner TEXT,
+  nationality_owner TEXT,
+  country_origin_owner TEXT,
+  country_origin_owner_other TEXT,
+  manager_work_length INTEGER,
+  recruited_workers TEXT,
+  worker_recruitment_type TEXT,
+  worker_agreement_type TEXT,
+  worker_agreement_other TEXT,
+  tasks_clarified TEXT,
+  additional_tasks TEXT,
+  refusal_action TEXT,
+  refusal_action_other TEXT,
+  salary_status TEXT,
+  recruit_1 TEXT,
+  recruit_2 TEXT,
+  recruit_3 TEXT,
+  conditions_1 TEXT,
+  conditions_2 TEXT,
+  conditions_3 TEXT,
+  conditions_4 TEXT,
+  conditions_5 TEXT,
+  leaving_1 TEXT,
+  leaving_2 TEXT,
+  consent_recruitment TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for better query performance
+CREATE INDEX idx_farmer ON farmer_interviews(farmer);
+CREATE INDEX idx_enumerator ON farmer_interviews(enumerator);
+CREATE INDEX idx_created_at ON farmer_interviews(created_at);
+CREATE INDEX idx_name_owner ON farmer_interviews(name_owner, first_name_owner);
+    ''');
 
 
 //      await db.execute('''
@@ -150,6 +232,148 @@ class LocalDBHelper {
       )
     ''');
 
+
+     await db.execute('''
+      CREATE TABLE IF NOT EXISTS child_details (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cover_page_id INTEGER NOT NULL,
+        household_id INTEGER NOT NULL,
+        child_number INTEGER NOT NULL,
+        
+        -- Basic Information
+        is_farmer_child INTEGER,
+        child_list_number TEXT,
+        birth_date TEXT,
+        birth_year INTEGER,
+        can_be_surveyed_now INTEGER,
+        survey_not_possible_reasons TEXT,
+        other_survey_reason TEXT,
+        respondent_type TEXT,
+        other_respondent_type TEXT,
+        child_name TEXT,
+        child_surname TEXT,
+        child_gender TEXT,
+        child_age INTEGER,
+        has_birth_certificate INTEGER,
+        no_birth_certificate_reason TEXT,
+        born_in_community TEXT,
+        birth_country TEXT,
+        relationship_to_head TEXT,
+        other_relationship TEXT,
+        not_with_family_reasons TEXT,
+        other_not_with_family_reason TEXT,
+        child_agreed_with_decision INTEGER,
+        has_spoken_with_parents INTEGER,
+        time_in_household TEXT,
+        who_accompanied_child TEXT,
+        other_accompanied TEXT,
+        father_residence TEXT,
+        father_country TEXT,
+        other_father_country TEXT,
+        mother_residence TEXT,
+        mother_country TEXT,
+        other_mother_country TEXT,
+        
+        -- Education Information
+        is_currently_enrolled INTEGER,
+        school_name TEXT,
+        school_type TEXT,
+        grade_level TEXT,
+        school_attendance_frequency TEXT,
+        available_school_supplies TEXT,
+        has_ever_been_to_school INTEGER,
+        left_school_year TEXT,
+        attended_school_last_7_days INTEGER,
+        reason_not_attended_school TEXT,
+        other_reason_not_attended TEXT,
+        missed_school_days INTEGER,
+        absence_reasons TEXT,
+        other_absence_reason TEXT,
+        worked_in_house INTEGER,
+        worked_on_cocoa_farm INTEGER,
+        cocoa_farm_tasks TEXT,
+        work_frequency TEXT,
+        observed_working INTEGER,
+        received_remuneration INTEGER,
+        was_supervised_by_adult_lighttasks7days INTEGER,
+        longest_light_duty_time_lighttasks7days TEXT,
+        longest_non_school_day_time_lighttasks7days TEXT,
+        tasks_last_12_months TEXT,
+        task_location_lighttasks7days TEXT,
+        other_location_lighttasks7days TEXT,
+        school_day_task_hours_lighttasks7days TEXT,
+        non_school_day_task_hours_lighttasks7days TEXT,
+        education_level TEXT,
+        can_write_sentences TEXT,
+        reason_for_leaving_school TEXT,
+        other_reason_for_leaving_school TEXT,
+        reason_never_attended_school TEXT,
+        other_reason_never_attended TEXT,
+        
+        -- Work Information
+        work_for_whom TEXT,
+        other_work_for_whom TEXT,
+        why_work_reasons TEXT,
+        other_why_work_reason TEXT,
+        
+        -- Light Tasks 12 Months
+        received_remuneration_lighttasks12months INTEGER,
+        longest_school_day_time_lighttasks12months TEXT,
+        longest_non_school_day_time_lighttasks12months TEXT,
+        task_location_lighttasks12months TEXT,
+        other_task_location_lighttasks12months TEXT,
+        total_school_day_hours_lighttasks12months TEXT,
+        total_non_school_day_hours_lighttasks12months TEXT,
+        was_supervised_during_task_lighttasks12months INTEGER,
+        
+        -- Dangerous Tasks 7 Days
+        has_received_salary_dangeroustask7days INTEGER,
+        task_location_dangeroustask7days TEXT,
+        other_location_dangeroustask7days TEXT,
+        longest_school_day_time_dangeroustask7days TEXT,
+        longest_non_school_day_time_dangeroustask7days TEXT,
+        school_day_hours_dangeroustask7days TEXT,
+        non_school_day_hours_dangeroustask7days TEXT,
+        was_supervised_by_adult_dangeroustask7days INTEGER,
+        
+        -- Dangerous Tasks 12 Months
+        has_received_salary_dangeroustask12months INTEGER,
+        task_location_dangeroustask12months TEXT,
+        other_location_dangeroustask12months TEXT,
+        longest_school_day_time_dangeroustask12months TEXT,
+        longest_non_school_day_time_dangeroustask12months TEXT,
+        school_day_hours_dangeroustask12months TEXT,
+        non_school_day_hours_dangeroustask12months TEXT,
+        was_supervised_by_adult_dangeroustask12months INTEGER,
+        dangerous_tasks_12_months TEXT,
+        
+        -- Health and Safety
+        applied_agrochemicals INTEGER,
+        on_farm_during_application INTEGER,
+        suffered_injury INTEGER,
+        how_wounded TEXT,
+        when_wounded TEXT,
+        often_feel_pains INTEGER,
+        help_received TEXT,
+        other_help TEXT,
+        
+        -- Photo Consent
+        parent_consent_photo INTEGER,
+        no_consent_reason TEXT,
+        child_photo_path TEXT,
+        
+        -- Metadata
+        is_synced INTEGER DEFAULT 0,
+        sync_status INTEGER DEFAULT 0,
+        synced_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_surveyed INTEGER DEFAULT 0,
+        
+        UNIQUE(household_id, child_number)
+      )
+    ''');
+
      
   }
 
@@ -158,11 +382,11 @@ class LocalDBHelper {
     final path = join(dbPath, filePath);
     
     debugPrint('🔄 Initializing database at: $path');
-    debugPrint('📊 Database version: 7');
+    debugPrint('📊 Database version: 8');
 
     return await openDatabase(
       path,
-      version: 7, // Incremented to add staff_districts table
+      version: 8, // Incremented to add cover_page_id column
       onCreate: _createAllTables,
       onUpgrade: _upgradeDatabase,
       onOpen: (db) {
@@ -183,6 +407,86 @@ class LocalDBHelper {
     debugPrint('📊 Creating monitoring table...');
     await MonitoringTable.createTable(db);
     await MonitoringTable.createIndexes(db);
+    
+    // Create child_details table with cover_page_id
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS child_details (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cover_page_id INTEGER NOT NULL,
+        household_id INTEGER NOT NULL,
+        child_number INTEGER NOT NULL,
+        is_farmer_child INTEGER,
+        child_list_number TEXT,
+        birth_date TEXT,
+        birth_year INTEGER,
+        can_be_surveyed_now INTEGER,
+        survey_not_possible_reasons TEXT,
+        other_survey_reason TEXT,
+        respondent_type TEXT,
+        other_respondent_type TEXT,
+        child_name TEXT,
+        child_surname TEXT,
+        child_gender TEXT,
+        child_age INTEGER,
+        has_birth_certificate INTEGER,
+        no_birth_certificate_reason TEXT,
+        born_in_community TEXT,
+        birth_country TEXT,
+        relationship_to_head TEXT,
+        other_relationship TEXT,
+        not_with_family_reasons TEXT,
+        other_not_with_family_reason TEXT,
+        child_agreed_with_decision INTEGER,
+        has_spoken_with_parents INTEGER,
+        time_in_household TEXT,
+        who_accompanied_child TEXT,
+        other_accompanied TEXT,
+        father_residence TEXT,
+        father_country TEXT,
+        other_father_country TEXT,
+        mother_residence TEXT,
+        mother_country TEXT,
+        other_mother_country TEXT,
+        is_currently_enrolled INTEGER,
+        school_name TEXT,
+        school_type TEXT,
+        grade_level TEXT,
+        school_attendance_frequency TEXT,
+        available_school_supplies TEXT,
+        has_ever_been_to_school INTEGER,
+        left_school_year TEXT,
+        attended_school_last_7_days INTEGER,
+        reason_not_attended_school TEXT,
+        other_reason_not_attended TEXT,
+        missed_school_days INTEGER,
+        absence_reasons TEXT,
+        other_absence_reason TEXT,
+        worked_in_house INTEGER,
+        worked_on_cocoa_farm INTEGER,
+        cocoa_farm_tasks TEXT,
+        work_frequency TEXT,
+        observed_working INTEGER,
+        received_remuneration INTEGER,
+        was_supervised_by_adult_lighttasks7days INTEGER,
+        longest_light_duty_time_lighttasks7days TEXT,
+        longest_non_school_day_time_lighttasks7days TEXT,
+        tasks_last_12_months TEXT,
+        task_location_lighttasks7days TEXT,
+        other_location_lighttasks7days TEXT,
+        school_day_task_hours_lighttasks7days TEXT,
+        non_school_day_task_hours_lighttasks7days TEXT,
+        education_level TEXT,
+        can_write_sentences TEXT,
+        reason_for_leaving_school TEXT,
+        other_reason_for_leaving_school TEXT,
+        reason_never_attended_school TEXT,
+        other_reason_never_attended TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_synced INTEGER DEFAULT 0,
+        sync_status INTEGER DEFAULT 0
+      )
+    ''');
     
     // Create staff_districts table
     debugPrint('🔗 Creating staff_districts table...');
@@ -217,7 +521,6 @@ class LocalDBHelper {
         sync_status INTEGER DEFAULT 0
       )
     ''');
-
     debugPrint('📈 Creating index on farm_identification_id...');
     // Create index on farm_identification_id for better query performance
     await db.execute('''
@@ -235,6 +538,28 @@ class LocalDBHelper {
   Future<void> _upgradeDatabase(
       Database db, int oldVersion, int newVersion) async {
     debugPrint('🔄 Upgrading database from version $oldVersion to $newVersion');
+    
+    if (oldVersion < 8) {
+      // Add cover_page_id to child_details table
+      try {
+        // Check if the column already exists to avoid errors
+        final columns = await db.rawQuery('PRAGMA table_info(child_details)');
+        final hasCoverPageId = columns.any((col) => col['name'] == 'cover_page_id');
+        
+        if (!hasCoverPageId) {
+          await db.execute('ALTER TABLE child_details ADD COLUMN cover_page_id INTEGER NOT NULL DEFAULT 0');
+          debugPrint('✅ Added cover_page_id column to child_details table');
+        }
+      } catch (e) {
+        debugPrint('❌ Error adding cover_page_id column: $e');
+        // If the table doesn't exist, it will be created with the new schema
+        if (e.toString().contains('no such table')) {
+          debugPrint('ℹ️ child_details table does not exist, it will be created with the new schema');
+        } else {
+          rethrow;
+        }
+      }
+    }
     
     if (oldVersion < 7) {
       // Create the new staff_districts table

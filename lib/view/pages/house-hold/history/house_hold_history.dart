@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
@@ -62,34 +64,75 @@ class _SurveyListPageState extends State<SurveyListPage> with SingleTickerProvid
   }
 
   Future<void> _loadSurveys() async {
-    if (_hasError) return;
-    
-    print('🔄 [SurveyList] Starting to load surveys...');
+  if (_hasError) {
+    setState(() => _hasError = false);
+  }
+  
+  debugPrint('🔄 [SurveyList] Starting to load surveys...');
+  if (mounted) {
     setState(() => _isLoading = true);
-    try {
-      print('🔍 [SurveyList] Calling _dbHelper.getAllSurveys()...');
-      final allSurveys = await _dbHelper.getAllSurveys();
-      print('✅ [SurveyList] Successfully loaded ${allSurveys.length} surveys');
-      
-      // Separate into pending and completed surveys based on isSubmitted flag
-      _pendingSurveys = allSurveys.where((survey) => !survey.isSubmitted).toList();
-      _completedSurveys = allSurveys.where((survey) => survey.isSubmitted).toList();
-      
-      print('📋 [SurveyList] Found ${_pendingSurveys.length} pending and ${_completedSurveys.length} completed surveys');
-      
+  }
+  
+  try {
+    debugPrint('🔍 [SurveyList] Calling _dbHelper.getAllSurveys()...');
+    final allSurveys = await _dbHelper.getAllSurveys()
+        .timeout(const Duration(seconds: 30), onTimeout: () {
+          throw TimeoutException('Database query timed out after 30 seconds');
+        });
+        
+    debugPrint('✅ [SurveyList] Successfully loaded ${allSurveys.length} surveys');
+    
+    // Separate into pending and completed surveys based on isSubmitted flag
+    _pendingSurveys = allSurveys.where((survey) => !survey.isSubmitted).toList();
+    _completedSurveys = allSurveys.where((survey) => survey.isSubmitted).toList();
+    
+    debugPrint('📋 [SurveyList] Found ${_pendingSurveys.length} pending and ${_completedSurveys.length} completed surveys');
+    
+    if (mounted) {
       setState(() {
         _isLoading = false;
+        _hasError = false;
       });
-    } catch (e, stackTrace) {
-      print('❌ [SurveyList] Error loading surveys: $e');
-      print('📜 Stack trace: $stackTrace');
+    }
+  } on TimeoutException catch (e) {
+    debugPrint('⏱️ [SurveyList] Timeout while loading surveys: $e');
+    if (mounted) {
       setState(() {
         _isLoading = false;
         _hasError = true;
       });
     }
+    _showErrorSnackBar('Request timed out. Please check your connection and try again.');
+  } catch (e, stackTrace) {
+    debugPrint('❌ [SurveyList] Error loading surveys: $e');
+    debugPrint('📜 Stack trace: $stackTrace');
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
+    }
+    
+    _showErrorSnackBar('Failed to load surveys. Please try again.');
   }
+}
 
+void _showErrorSnackBar(String message) {
+  if (!mounted) return;
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.red,
+      action: SnackBarAction(
+        label: 'Retry',
+        textColor: Colors.white,
+        onPressed: _loadSurveys,
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     if (_hasError) {

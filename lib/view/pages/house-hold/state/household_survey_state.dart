@@ -20,7 +20,7 @@ class HouseholdSurveyState extends ChangeNotifier {
   int _currentPageIndex = 0;
   int _currentChildNumber = 1;
   int _totalChildren5To17 = 0;
-  List<dynamic> _childrenDetails = [];
+  List<Map<String, dynamic>> _childrenDetails = [];
   bool _showChildDetailsPage = false;
   bool _isSubmitted = false;
   bool _isSensitizationChecked = false;
@@ -32,7 +32,7 @@ class HouseholdSurveyState extends ChangeNotifier {
   int get currentPageIndex => _currentPageIndex;
   int get currentChildNumber => _currentChildNumber;
   int get totalChildren5To17 => _totalChildren5To17;
-  List<dynamic> get childrenDetails => _childrenDetails;
+  List<Map<String, dynamic>> get childrenDetails => _childrenDetails;
   bool get showChildDetailsPage => _showChildDetailsPage;
   bool get isSubmitted => _isSubmitted;
   bool get isSensitizationChecked => _isSensitizationChecked;
@@ -77,7 +77,7 @@ class HouseholdSurveyState extends ChangeNotifier {
   }
 
   set childrenDetails(List<dynamic> value) {
-    _childrenDetails = value;
+    _childrenDetails = value.cast<Map<String, dynamic>>().toList();
     notifyListeners();
   }
 

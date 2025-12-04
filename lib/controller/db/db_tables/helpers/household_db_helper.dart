@@ -67,6 +67,27 @@ class HouseholdDBHelper {
     }
   }
 
+  /// Gets a cover page by its ID
+Future<CoverPageData?> getCoverPage(int id) async {
+  final db = await database;
+  try {
+    final List<Map<String, dynamic>> maps = await db.query(
+      TableNames.coverPageTBL,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (maps.isNotEmpty) {
+      return CoverPageData.fromMap(maps.first);
+    }
+    return null;
+  } catch (e) {
+    debugPrint('❌ Error getting cover page: $e');
+    rethrow;
+  }
+}
+
   Future<Database> get database async {
     if (_database != null && _isInitialized) {
       try {

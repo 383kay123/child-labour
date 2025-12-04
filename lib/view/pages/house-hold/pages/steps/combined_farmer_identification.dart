@@ -670,7 +670,14 @@ class _VisitInformationContentState extends State<_VisitInformationContent> {
                 ),
 
                 // Farm ownership type
-                if (_isFarmOwner != null) ...[
+              
+              ],
+            ),
+          ),
+
+        
+
+          if (_isFarmOwner != null) ...[
                   const SizedBox(height: _Spacing.md),
                   DropdownButtonFormField<String>(
                     value: _farmOwnershipType,
@@ -697,9 +704,6 @@ class _VisitInformationContentState extends State<_VisitInformationContent> {
                     },
                   ),
                 ],
-              ],
-            ),
-          ),
 
           // Show validation errors if any
           if (widget.validationErrors.isNotEmpty) ...[

@@ -159,7 +159,7 @@ class Homepage extends StatelessWidget {
                         Text(
                           'Together we protect the fundamental rights of every individual.',
                           style: GoogleFonts.inter(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w400,
                             color: Colors.white.withOpacity(0.9),
                             height: 1.5,

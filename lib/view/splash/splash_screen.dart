@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:human_rights_monitor/controller/api/auth/auth_api.dart';
+import 'package:provider/provider.dart';
+import 'package:human_rights_monitor/controller/providers/auth_provider.dart';
 import 'package:human_rights_monitor/view/screen_wrapper/screen_wrapper.dart';
-
 import '../screens/onboarding_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -32,19 +32,40 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     )..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
-          AuthService.isLoggedIn().then((isLoggedIn) {
-            if (isLoggedIn) {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const ScreenWrapper()));
-            } else {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const OnboardingScreen()));
-            }
-          });
+          _checkAuthState();
         }
       });
 
     _animationController.forward();
+  }
+
+  Future<void> _checkAuthState() async {
+    try {
+      // Get the AuthProvider instance
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Wait for the auth provider to finish initializing
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Check if user is logged in through the provider
+      if (authProvider.isLoggedIn) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (context) => const ScreenWrapper()));
+        }
+      } else {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (context) => const OnboardingScreen()));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking auth state: $e');
+      if (mounted) {
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+            builder: (context) => const OnboardingScreen()));
+      }
+    }
   }
 
   @override

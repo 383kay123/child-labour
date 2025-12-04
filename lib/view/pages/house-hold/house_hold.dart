@@ -79,21 +79,32 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   bool _isDisposed = false;
   bool _isLoading = false;
   bool _isProcessingNavigation = false;
+  bool _canUseContext = true; // Tracks if context is safe to use
 
   // Page Controller
   late final PageController _pageController;
 
   // Global Keys (One per page)
   final GlobalKey<CoverPageState> _coverPageKey = GlobalKey<CoverPageState>();
-  final GlobalKey<ConsentPageState> _consentPageKey = GlobalKey<ConsentPageState>();
-  final GlobalKey<FarmerIdentification1PageState> _farmerPageKey = GlobalKey<FarmerIdentification1PageState>();
-  final GlobalKey<CombinedFarmIdentificationPageState> _combinedPageKey = GlobalKey<CombinedFarmIdentificationPageState>();
-  final GlobalKey<ChildrenHouseholdPageState> _childrenHouseholdKey = GlobalKey<ChildrenHouseholdPageState>();
-  final GlobalKey<ChildDetailsPageState> _childDetailsPageKey = GlobalKey<ChildDetailsPageState>();
-  final GlobalKey<RemediationPageState> _remediationPageKey = GlobalKey<RemediationPageState>();
-  final GlobalKey<SensitizationPageState> _sensitizationPageKey = GlobalKey<SensitizationPageState>();
-  final GlobalKey<SensitizationQuestionsPageState> _sensitizationQuestionsKey = GlobalKey<SensitizationQuestionsPageState>();
-  final GlobalKey<EndOfCollectionPageState> _endOfCollectionKey = GlobalKey<EndOfCollectionPageState>();
+  final GlobalKey<ConsentPageState> _consentPageKey =
+      GlobalKey<ConsentPageState>();
+  final GlobalKey<FarmerIdentification1PageState> _farmerPageKey =
+      GlobalKey<FarmerIdentification1PageState>();
+  final GlobalKey<CombinedFarmIdentificationPageState> _combinedPageKey =
+      GlobalKey<CombinedFarmIdentificationPageState>();
+  final GlobalKey<ChildrenHouseholdPageState> _childrenHouseholdKey =
+      GlobalKey<ChildrenHouseholdPageState>();
+  GlobalKey<ChildDetailsPageState> _childDetailsPageKey =
+      GlobalKey<ChildDetailsPageState>();
+  final GlobalKey<RemediationPageState> _remediationPageKey =
+      GlobalKey<RemediationPageState>();
+  final GlobalKey<SensitizationPageState> _sensitizationPageKey =
+      GlobalKey<SensitizationPageState>();
+  final GlobalKey<SensitizationQuestionsPageState> _sensitizationQuestionsKey =
+      GlobalKey<SensitizationQuestionsPageState>();
+  final GlobalKey<EndOfCollectionPageState> _endOfCollectionKey =
+      GlobalKey<EndOfCollectionPageState>();
+  List<Map<String, dynamic>> _childrenDetails = [];
 
   // Form Keys (Only where needed)
   final GlobalKey<FormState> _childrenHouseholdFormKey = GlobalKey<FormState>();
@@ -108,19 +119,19 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   bool _isSavingComplete = false;
   bool _isSensitizationChecked = false;
   int _farmIdentificationId = 0;
-  
+  int? _coverPageId;
+
   // Tracking variables
   final Map<String, dynamic> _savedData = {};
 
   // Children
   int _currentChildNumber = 1;
   int _totalChildren5To17 = 0;
-  List<dynamic> _childrenDetails = [];
 
   // Data
   final SurveyState _surveyState = SurveyState();
   CoverPageData _coverData = CoverPageData.empty();
-  
+
   // Validation fields
   bool? hasSensitizedHousehold;
   bool? hasSensitizedOnProtection;
@@ -128,7 +139,8 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   final TextEditingController _femaleAdultsController = TextEditingController();
   final TextEditingController _maleAdultsController = TextEditingController();
   bool? _consentForPicture;
-  final TextEditingController _consentReasonController = TextEditingController();
+  final TextEditingController _consentReasonController =
+      TextEditingController();
   final TextEditingController _reactionController = TextEditingController();
   dynamic _sensitizationImage;
   dynamic _householdWithUserImage;
@@ -145,7 +157,6 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   // Getters
   bool get _isOnCombinedPage => _currentPageIndex == 3;
   double get _progress => (_currentPageIndex + 1) / _totalPages;
-  bool get _canUseContext => _isMounted && !_isDisposed && mounted;
 
   @override
   void initState() {
@@ -164,12 +175,12 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     if (widget.coverPageId != 0) {
       _coverData = _coverData.copyWith(id: widget.coverPageId);
     }
-    
+
     _initFarmerData();
     _loadDistricts();
     _loadFarmers();
     _loadSavedState();
-    
+
     // Check for duplicates on startup
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForDuplicateSurveys();
@@ -178,7 +189,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   Future<void> _loadDistricts() async {
     if (!_canUseContext) return;
-    
+
     setState(() {
       _isLoading = true;
       _coverData = _coverData.copyWith(
@@ -186,18 +197,20 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         townError: null,
       );
     });
-    
+
     try {
       final districtRepo = DistrictRepository();
       final districts = await districtRepo.getDistrictsOrderByName();
-      
+
       if (_canUseContext) {
         setState(() {
           _coverData = _coverData.copyWith(
-            towns: districts.map((district) => DropdownItem(
-              code: district.districtCode,
-              name: district.district,
-            )).toList(),
+            towns: districts
+                .map((district) => DropdownItem(
+                      code: district.districtCode,
+                      name: district.district,
+                    ))
+                .toList(),
             isLoadingTowns: false,
           );
         });
@@ -220,10 +233,10 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       }
     }
   }
-  
+
   Future<void> _loadFarmers() async {
     if (!_canUseContext) return;
-    
+
     setState(() {
       _isLoading = true;
       _coverData = _coverData.copyWith(
@@ -231,20 +244,22 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         farmerError: null,
       );
     });
-    
+
     try {
       final farmerRepo = FarmerRepository();
       debugPrint('🔄 Loading first 10 farmers...');
       final farmers = await farmerRepo.getFirst10Farmers();
       debugPrint('✅ Loaded ${farmers.length} farmers');
-      
+
       if (_canUseContext) {
         setState(() {
           _coverData = _coverData.copyWith(
-            farmers: farmers.map((farmer) => DropdownItem(
-              code: farmer.farmerCode,
-              name: '${farmer.firstName} ${farmer.lastName}'.trim(),
-            )).toList(),
+            farmers: farmers
+                .map((farmer) => DropdownItem(
+                      code: farmer.farmerCode,
+                      name: '${farmer.firstName} ${farmer.lastName}'.trim(),
+                    ))
+                .toList(),
             isLoadingFarmers: false,
           );
         });
@@ -278,7 +293,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       isSynced: 0,
       syncStatus: 0,
     );
-    
+
     // Initialize controllers with existing values if they exist
     if (_farmerData.ghanaCardNumber != null) {
       _farmerData.ghanaCardNumberController.text = _farmerData.ghanaCardNumber!;
@@ -292,8 +307,9 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     if (_farmerData.noConsentReason != null) {
       _farmerData.noConsentReasonController.text = _farmerData.noConsentReason!;
     }
-    _farmerData.childrenCountController.text = _farmerData.childrenCount.toString();
-    
+    _farmerData.childrenCountController.text =
+        _farmerData.childrenCount.toString();
+
     debugPrint('ℹ️ Initialized farmer data with coverPageId: ${_coverData.id}');
   }
 
@@ -318,10 +334,11 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           _surveyState.locationStatus = 'Location services disabled';
           _surveyState.isGettingLocation = false;
         });
-        _showSnackBar('Enable location services', action: SnackBarAction(
-          label: 'SETTINGS',
-          onPressed: Geolocator.openLocationSettings,
-        ));
+        _showSnackBar('Enable location services',
+            action: SnackBarAction(
+              label: 'SETTINGS',
+              onPressed: Geolocator.openLocationSettings,
+            ));
         return;
       }
 
@@ -397,7 +414,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   void _onFarmerDataChanged(FarmerIdentificationData newData) {
     safeSetState(() => _farmerData = newData);
   }
- 
+
   void _onSurveyEnd() {
     showDialog(
       context: context,
@@ -406,15 +423,15 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         content: const Text('All unsaved data will be lost.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text('CANCEL')
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CANCEL')),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text('END SURVEY', style: TextStyle(color: Colors.red)),
+            child:
+                const Text('END SURVEY', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -466,30 +483,30 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         _showSnackBar('Please complete the cover page');
         return false;
       }
-      
+
       // If we already have an ID, UPDATE the record
-      if (_coverData.id != null) {
+      if (_coverData.id != null && _coverData.id! > 0) {
         final db = await HouseholdDBHelper.instance.database;
         final data = _coverData.toMap();
-        data['updated_at'] = DateTime.now().toIso8601String(); // Add current timestamp
+        data['updated_at'] = DateTime.now().toIso8601String();
         final rowsAffected = await db.update(
           TableNames.coverPageTBL,
           data,
           where: 'id = ?',
           whereArgs: [_coverData.id],
         );
-        
+
         if (rowsAffected > 0) {
           debugPrint('✅ Cover page updated with ID: ${_coverData.id}');
+          _coverPageId = _coverData.id; // Ensure _coverPageId is set
           _savedData['cover_page'] = _coverData.toMap();
-          _showSnackBar('Cover page updated successfully', backgroundColor: Colors.green);
+          _showSnackBar('Cover page updated successfully',
+              backgroundColor: Colors.green);
           return true;
-        } else {
-          _showSnackBar('Failed to update cover page');
-          return false;
         }
+        return false;
       } else {
-        // Only create new record if we don't have an ID
+        // Only create new record if we don't have a valid ID
         final coverPageId = await _saveCoverPageData();
         if (coverPageId == null) {
           _showSnackBar('Failed to save cover page data');
@@ -497,9 +514,11 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         }
         safeSetState(() {
           _coverData = _coverData.copyWith(id: coverPageId);
+          _coverPageId = coverPageId; // Ensure _coverPageId is set
         });
         _savedData['cover_page'] = _coverData.toMap();
-        _showSnackBar('Cover page saved successfully', backgroundColor: Colors.green);
+        _showSnackBar('Cover page saved successfully',
+            backgroundColor: Colors.green);
         return true;
       }
     } catch (e) {
@@ -514,7 +533,22 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       // Ensure cover page is saved first
       if (_coverData.id == null) {
         final success = await _saveCoverPage();
-        if (!success) return false;
+        if (!success) {
+          _showSnackBar('Please complete the cover page first');
+          return false;
+        }
+      }
+
+      // Verify the cover page exists in the database
+      final db = HouseholdDBHelper.instance;
+      final coverPage = await db.getCoverPage(_coverData.id!);
+      if (coverPage == null) {
+        // If not in database, try to save it again
+        final success = await _saveCoverPage();
+        if (!success) {
+          _showSnackBar('Failed to save cover page data');
+          return false;
+        }
       }
 
       // Get the current consent page state
@@ -539,7 +573,8 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       }
 
       _savedData['consent'] = 'saved';
-      _showSnackBar('Consent saved successfully', backgroundColor: Colors.green);
+      _showSnackBar('Consent saved successfully',
+          backgroundColor: Colors.green);
       return true;
     } catch (e) {
       debugPrint('❌ Error saving consent: $e');
@@ -554,22 +589,22 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         _showSnackBar('Please complete the farmer identification');
         return false;
       }
-      
+
       safeSetState(() => _isSaving = true);
-      
+
       // Ensure cover page ID is set
       final dataWithCoverPageId = _farmerData.copyWith(
         coverPageId: _coverData.id,
       );
-      
+
       final db = HouseholdDBHelper.instance;
       final id = await db.insertFarmerIdentification(dataWithCoverPageId);
-      
+
       safeSetState(() {
         _farmerData = dataWithCoverPageId.copyWith(id: id);
         _farmIdentificationId = id;
       });
-      
+
       _savedData['farmer_identification'] = dataWithCoverPageId.toMap();
       debugPrint('✅ Farmer identification saved with ID: $id');
       return true;
@@ -585,7 +620,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   Future<bool> _saveCombinedFarm() async {
     try {
       debugPrint('🔄 [Combined Farm] Starting save process...');
-      
+
       final state = _combinedPageKey.currentState;
       if (state == null) {
         debugPrint('❌ [Combined Farm] State is null');
@@ -617,17 +652,19 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
       // Save to database
       final db = HouseholdDBHelper.instance;
-      final farmId = await db.insertCombinedFarmerIdentification(dataWithCoverId);
-      
+      final farmId =
+          await db.insertCombinedFarmerIdentification(dataWithCoverId);
+
       debugPrint('✅ [Combined Farm] Saved with ID: $farmId');
-      
+
       _savedData['combined_farm'] = {
         'id': farmId,
         'cover_page_id': _coverData.id,
         'saved_at': DateTime.now().toIso8601String(),
       };
-      
-      _showSnackBar('Farm information saved successfully', backgroundColor: Colors.green);
+
+      _showSnackBar('Farm information saved successfully',
+          backgroundColor: Colors.green);
       return true;
     } catch (e, stackTrace) {
       debugPrint('❌ [Combined Farm] Error: $e');
@@ -651,10 +688,11 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
     // Save the form data
     await _childrenHouseholdKey.currentState!.saveFormData();
-    
+
     // Get the current data
-    final childrenHousehold = _childrenHouseholdKey.currentState!.getHouseholdData();
-    
+    final childrenHousehold =
+        _childrenHouseholdKey.currentState!.getHouseholdData();
+
     // Update with the current cover page ID
     final updatedHousehold = childrenHousehold.copyWith(
       coverPageId: _coverData.id,
@@ -662,25 +700,28 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
     // Save to database
     try {
-      debugPrint('💾 Saving children household with coverPageId: ${_coverData.id}');
+      debugPrint(
+          '💾 Saving children household with coverPageId: ${_coverData.id}');
       debugPrint('📋 Children 5-17 count: ${updatedHousehold.children5To17}');
-      
-      await HouseholdDBHelper.instance.insertChildrenHousehold(updatedHousehold);
-      
+
+      await HouseholdDBHelper.instance
+          .insertChildrenHousehold(updatedHousehold);
+
       // Get the count directly from the form data
       final count = updatedHousehold.children5To17 ?? 0;
-      
+
       safeSetState(() {
-        _totalChildren5To17 = count;
-        _currentChildNumber = 1;
+        // _totalChildren5To17 = count;
+        // _currentChildNumber = 1;
       });
-      
+
       _savedData['children_household'] = {
         'children_count': count,
         'total_children_5_to_17': _totalChildren5To17
       };
-      
-      _showSnackBar('Children household data saved successfully', backgroundColor: Colors.green);
+
+      _showSnackBar('Children household data saved successfully',
+          backgroundColor: Colors.green);
       return true;
     } catch (e) {
       debugPrint('❌ Error saving children household data: $e');
@@ -689,22 +730,10 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     }
   }
 
-  Future<bool> _saveChildDetails() async {
-    try {
-      await _saveCurrentChildData();
-      _savedData['child_$_currentChildNumber'] = 'saved';
-      debugPrint('✅ Child $_currentChildNumber details saved');
-      return true;
-    } catch (e) {
-      debugPrint('❌ Error saving child details: $e');
-      return false;
-    }
-  }
-
   Future<bool> _saveRemediation() async {
     try {
       debugPrint('🔄 [Remediation] Starting save process...');
-      
+
       final state = _remediationPageKey.currentState;
       if (state == null) {
         debugPrint('❌ [Remediation] State is null');
@@ -719,25 +748,26 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
       // Get the remediation data from the state
       final remediationFormData = state.getFormData();
-      
+
       final saved = await state.saveData(_coverData.id!);
       if (!saved) {
         _showSnackBar('Failed to save remediation data');
         return false;
       }
-      
+
       // Store the remediation data
       remediationData = await _getRemediationByCoverPageId(_coverData.id!);
-      
+
       _savedData['remediation'] = {
         'saved': true,
         'cover_page_id': _coverData.id,
         'data': remediationFormData,
         'timestamp': DateTime.now().toIso8601String()
       };
-      
+
       debugPrint('✅ [Remediation] Saved successfully');
-      _showSnackBar('Remediation data saved successfully', backgroundColor: Colors.green);
+      _showSnackBar('Remediation data saved successfully',
+          backgroundColor: Colors.green);
       return true;
     } catch (e, stackTrace) {
       debugPrint('❌ [Remediation] Error: $e');
@@ -750,12 +780,12 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   Future<bool> _saveSensitization() async {
     try {
       debugPrint('🔄 [Sensitization] Starting save process...');
-      
+
       if (!_isSensitizationChecked) {
         _showSnackBar('Please acknowledge the sensitization information');
         return false;
       }
-      
+
       final state = _sensitizationPageKey.currentState;
       if (state == null) {
         // Create sensitization data directly
@@ -768,12 +798,12 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           isSynced: false,
           syncStatus: 0,
         );
-        
+
         final db = HouseholdDBHelper.instance;
         final id = await db.insertSensitization(sensitizationData);
-        
+
         debugPrint('✅ [Sensitization] Direct save successful with ID: $id');
-        
+
         _savedData['sensitization'] = {
           'id': id,
           'cover_page_id': _coverData.id,
@@ -787,14 +817,15 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           _showSnackBar('Failed to save sensitization');
           return false;
         }
-        
+
         _savedData['sensitization'] = {
           'cover_page_id': _coverData.id,
           'is_acknowledged': true,
         };
       }
-      
-      _showSnackBar('Sensitization saved successfully', backgroundColor: Colors.green);
+
+      _showSnackBar('Sensitization saved successfully',
+          backgroundColor: Colors.green);
       return true;
     } catch (e, stackTrace) {
       debugPrint('❌ [Sensitization] Error: $e');
@@ -807,8 +838,10 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   Future<bool> _saveSensitizationQuestions() async {
     try {
       debugPrint('🔄 [Sensitization Questions] Starting save process...');
-      debugPrint('🔍 [Sensitization Questions] Using coverPageId: ${_coverData.id}');
-      debugPrint('🔍 [Sensitization Questions] _coverData: ${_coverData.toMap()}');
+      debugPrint(
+          '🔍 [Sensitization Questions] Using coverPageId: ${_coverData.id}');
+      debugPrint(
+          '🔍 [Sensitization Questions] _coverData: ${_coverData.toMap()}');
 
       final state = _sensitizationQuestionsKey.currentState;
       if (state == null) {
@@ -818,23 +851,28 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       }
 
       // Save using cover page ID
-      debugPrint('💾 [Sensitization Questions] Calling saveData with coverPageId: ${_coverData.id}');
+      debugPrint(
+          '💾 [Sensitization Questions] Calling saveData with coverPageId: ${_coverData.id}');
       final saved = await state.saveData(_coverData.id!);
-      
+
       if (!saved) {
-        debugPrint('❌ [Sensitization Questions] Save failed - validation error');
+        debugPrint(
+            '❌ [Sensitization Questions] Save failed - validation error');
         _showSnackBar('Please complete all sensitization questions');
         return false;
       }
-      
+
       _savedData['sensitization_questions'] = {
         'cover_page_id': _coverData.id,
         'saved_at': DateTime.now().toIso8601String(),
       };
-      
-      debugPrint('✅ [Sensitization Questions] Saved successfully with coverPageId: ${_coverData.id}');
-      debugPrint('📋 [Sensitization Questions] Saved data: ${_savedData['sensitization_questions']}');
-      _showSnackBar('Sensitization questions saved successfully', backgroundColor: Colors.green);
+
+      debugPrint(
+          '✅ [Sensitization Questions] Saved successfully with coverPageId: ${_coverData.id}');
+      debugPrint(
+          '📋 [Sensitization Questions] Saved data: ${_savedData['sensitization_questions']}');
+      _showSnackBar('Sensitization questions saved successfully',
+          backgroundColor: Colors.green);
       return true;
     } catch (e, stackTrace) {
       debugPrint('❌ [Sensitization Questions] Error: $e');
@@ -847,7 +885,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   Future<bool> _saveEndOfCollection() async {
     try {
       debugPrint('🔄 [EndOfCollection] Starting save process...');
-      
+
       final state = _endOfCollectionKey.currentState;
       if (state == null) {
         debugPrint('❌ [EndOfCollection] State is null');
@@ -857,7 +895,8 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
       // Check if form is complete
       if (!state.isFormComplete) {
-        _showSnackBar('Please complete all required fields in End of Collection');
+        _showSnackBar(
+            'Please complete all required fields in End of Collection');
         return false;
       }
 
@@ -879,7 +918,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         gpsCoordinates: formData['gpsCoordinates'],
         latitude: formData['latitude'],
         longitude: formData['longitude'],
-        endTime: formData['endTime'] != null 
+        endTime: formData['endTime'] != null
             ? DateTime.parse(formData['endTime'])
             : null,
         remarks: formData['remarks'],
@@ -890,23 +929,25 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       );
 
       debugPrint('💾 [EndOfCollection] Saving to database...');
-      
+
       // Save to database
       final db = HouseholdDBHelper.instance;
       final id = await db.saveEndOfCollection(endOfCollectionData);
-      
+
       if (id > 0) {
         _savedData['end_of_collection'] = {
           'id': id,
           'cover_page_id': _coverData.id,
           'saved_at': DateTime.now().toIso8601String(),
-          'has_respondent_image': endOfCollectionData.respondentImagePath != null,
+          'has_respondent_image':
+              endOfCollectionData.respondentImagePath != null,
           'has_signature': endOfCollectionData.producerSignaturePath != null,
           'has_gps': endOfCollectionData.gpsCoordinates != null,
         };
-        
+
         debugPrint('✅ [EndOfCollection] Saved successfully with ID: $id');
-        _showSnackBar('End of collection data saved successfully', backgroundColor: Colors.green);
+        _showSnackBar('End of collection data saved successfully',
+            backgroundColor: Colors.green);
         return true;
       } else {
         debugPrint('❌ [EndOfCollection] Failed to save - returned ID: $id');
@@ -926,27 +967,45 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   }
 
   void _refreshChildDetailsPage() {
-    safeSetState(() {});
+    safeSetState(() {
+      // Create new key to force widget to rebuild
+      _childDetailsPageKey = GlobalKey<ChildDetailsPageState>();
+    });
   }
 
+  // Fixed onNext method - NO duplicate complete survey calls
   // Fixed onNext method - NO duplicate complete survey calls
   Future<void> _onNext() async {
     if (_isProcessingNavigation) return;
     _isProcessingNavigation = true;
+    bool shouldNavigate = true;
 
     try {
-      bool shouldNavigate = true;
-      
       switch (_currentPageIndex) {
         case 0: // Cover Page
-          await _saveCoverPage();
+          final saved = await _saveCoverPage();
+          if (!saved) {
+            _showErrorSnackBar('Please complete the cover page');
+            _isProcessingNavigation = false;
+            return;
+          }
+          // Make sure we have a valid coverPageId before proceeding
+          if (_coverData.id == null) {
+            _showErrorSnackBar('Failed to save cover page');
+            _isProcessingNavigation = false;
+            return;
+          }
+          _coverPageId = _coverData.id; // Ensure _coverPageId is set
           break;
+
         case 1: // Consent
           await _saveConsent();
           break;
+
         case 2: // Farmer
           await _saveFarmerIdentification();
           break;
+
         case 3: // Combined Farm
           final state = _combinedPageKey.currentState;
           if (state != null) {
@@ -956,16 +1015,17 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
               _isProcessingNavigation = false;
               return;
             }
-            
+
             // Save the current page data
             await state.saveCurrentPageData();
-            
+
             // Define the subpages in order
             final pageController = state.pageController;
             final currentIndex = state.currentPageIndex;
-            
+
             // If not on the last page, go to next subpage
-            if (currentIndex < 3) { // 3 is the index of the last subpage (0-3 for 4 pages)
+            if (currentIndex < 3) {
+              // 3 is the index of the last subpage (0-3 for 4 pages)
               await pageController.nextPage(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
@@ -973,42 +1033,136 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
               _isProcessingNavigation = false;
               return;
             }
-            
+
             // If we're on the last page, save the combined farm data and proceed
             await _saveCombinedFarm();
           }
           break;
         case 4: // Children Household
-          await _saveChildrenHousehold();
-          final count = int.tryParse(_farmerData.childrenCountController.text) ?? 0;
-          if (count > 0) {
-            await _navigateToPage(5); // Go to child details
-            shouldNavigate = false;
-          } else {
-            await _navigateToPage(6); // Skip to remediation
-            shouldNavigate = false;
+          // Save children household data
+          final saved = await _saveChildrenHousehold();
+          if (!saved) {
+            _showErrorSnackBar('Please complete the children household form');
+            _isProcessingNavigation = false;
+            return;
           }
-          break;
+
+          // Check if there are children to process
+          if (_totalChildren5To17 > 0) {
+            // Reset child details and set up for first child
+            safeSetState(() {
+              _currentChildNumber = 1;
+              _childrenDetails.clear(); // Clear previous child data
+              _childDetailsPageKey = GlobalKey<ChildDetailsPageState>();
+            });
+
+            // Navigate to child details page (will show child 1)
+            await _navigateToPage(5);
+          } else {
+            // No children, skip to remediation
+            await _navigateToPage(6);
+          }
+          _isProcessingNavigation = false;
+          return; // Exit early
+
         case 5: // Child Details
-          await _saveChildDetails();
-          if (_currentChildNumber < _totalChildren5To17) {
-            safeSetState(() => _currentChildNumber++);
-            _refreshChildDetailsPage();
-            shouldNavigate = false;
-          } else {
-            await _navigateToPage(6); // Go to remediation
+          try {
+            debugPrint(
+                '🧒 Processing child $_currentChildNumber of $_totalChildren5To17');
+
+            // Try to get the current state
+            final childState = _childDetailsPageKey.currentState;
+            if (childState == null) {
+              debugPrint('❌ ChildDetailsPage state is null');
+              _showErrorSnackBar('Child details form not initialized');
+              _isProcessingNavigation = false;
+              return;
+            }
+
+            // Save the current child's data
+            debugPrint('💾 Saving child $_currentChildNumber...');
+            final result = await childState.saveData();
+
+            // Check if save was successful
+            if (result is Map<String, dynamic> && result['success'] == true) {
+              debugPrint('✅ Child $_currentChildNumber saved successfully');
+
+              // Get the child ID if available
+              if (result['childId'] != null) {
+                _childrenDetails.add({
+                  'id': result['childId'],
+                  'childNumber': _currentChildNumber,
+                  'savedAt': DateTime.now().toIso8601String()
+                });
+
+                _savedData['child_details'] = {
+                  'saved_children': _childrenDetails.length,
+                  'total_children': _totalChildren5To17
+                };
+
+                debugPrint(
+                    '📊 Child $_currentChildNumber added to saved children. Total saved: ${_childrenDetails.length}');
+              }
+
+              _showSnackBar('Child $_currentChildNumber details saved',
+                  backgroundColor: Colors.green);
+
+              // Check if we have more children to process
+              if (_currentChildNumber < _totalChildren5To17) {
+                // Prepare for next child
+                final nextChildNumber = _currentChildNumber + 1;
+                debugPrint('➡️ Setting up for child $nextChildNumber...');
+
+                safeSetState(() {
+                  _currentChildNumber = nextChildNumber;
+                  // Create a new key to force widget recreation
+                  _childDetailsPageKey = GlobalKey<ChildDetailsPageState>();
+                });
+
+                // DO NOT navigate - stay on the same page index (5)
+                // The widget will rebuild with the new key showing next child
+                debugPrint(
+                    '🔄 ChildDetailsPage will rebuild for child $nextChildNumber');
+
+                // Reset navigation flag and return early
+                _isProcessingNavigation = false;
+                return;
+              } else {
+                // All children processed
+                debugPrint(
+                    '✅ All children processed, navigating to remediation');
+
+                // Navigate to remediation page
+                await _navigateToPage(6);
+              }
+            } else {
+              // Save failed
+              final error = result is Map<String, dynamic>
+                  ? result['error'] ?? 'Unknown error'
+                  : 'Save failed';
+              debugPrint('❌ Failed to save child $_currentChildNumber: $error');
+              _showErrorSnackBar('Failed to save child details: $error');
+              shouldNavigate = false;
+            }
+          } catch (e) {
+            debugPrint('❌ Error saving child: $e');
+            _showErrorSnackBar('Error saving child: ${e.toString()}');
             shouldNavigate = false;
           }
           break;
+
         case 6: // Remediation
           await _saveRemediation();
           break;
+
         case 7: // Sensitization
           await _saveSensitization();
           break;
+
         case 8: // Sensitization Questions
           await _saveSensitizationQuestions();
           break;
+
         case 9: // End - ONLY save end of collection, NOT complete survey
           await _saveEndOfCollection();
           _showSurveyCompleteDialog();
@@ -1020,14 +1174,12 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       if (shouldNavigate && _currentPageIndex < _totalPages - 1) {
         await _navigateToPage(_currentPageIndex + 1);
       }
-      
+
       // Log current saved data state
       _logSavedData();
-      
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('❌ Error in _onNext: $e');
-      debugPrint('📜 Stack trace: $stackTrace');
-      _showSnackBar('Navigation error: $e');
+      _showErrorSnackBar('An error occurred: ${e.toString()}');
     } finally {
       _isProcessingNavigation = false;
     }
@@ -1046,10 +1198,10 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
             onPressed: () {
               // Close the dialog
               Navigator.of(context).pop();
-              
+
               // Call the completion callback
               widget.onComplete?.call();
-              
+
               // Navigate to home using ScreenWrapper
               Navigator.pushAndRemoveUntil(
                 context,
@@ -1070,10 +1222,22 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     _savedData.forEach((key, value) {
       debugPrint('   - $key: ${value != null ? 'SAVED' : 'NOT SAVED'}');
     });
-    debugPrint('   - Total pages completed: ${_savedData.length}/$_totalPages\n');
+
+    // Add child details status
+    if (_totalChildren5To17 > 0) {
+      final savedChildren = _childrenDetails.length;
+      debugPrint(
+          '   - child_details: $savedChildren/${_totalChildren5To17} children saved');
+    } else {
+      debugPrint('   - child_details: No children to process');
+    }
+
+    debugPrint(
+        '   - Total pages completed: ${_savedData.length}/$_totalPages\n');
   }
 
-  Future<RemediationModel?> _getRemediationByCoverPageId(int coverPageId) async {
+  Future<RemediationModel?> _getRemediationByCoverPageId(
+      int coverPageId) async {
     try {
       final dao = RemediationDao(dbHelper: HouseholdDBHelper.instance);
       return await dao.getByCoverPageId(coverPageId);
@@ -1088,10 +1252,10 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
     try {
       final db = HouseholdDBHelper.instance;
       final surveys = await db.getAllSurveys();
-      
+
       // Group by farmer/town to find duplicates
       final Map<String, List<SurveySummary>> grouped = {};
-      
+
       for (var survey in surveys) {
         final key = '${survey.farmerName}-${survey.community}';
         if (!grouped.containsKey(key)) {
@@ -1099,7 +1263,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         }
         grouped[key]!.add(survey);
       }
-      
+
       // Log duplicates
       grouped.forEach((key, surveys) {
         if (surveys.length > 1) {
@@ -1120,12 +1284,12 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       debugPrint('⚠️ Save operation prevented - already saving or disposed');
       return false;
     }
-    
+
     _isSaving = true;
-    
+
     try {
       final effectiveCoverPageId = coverPageId ?? _coverData.id;
-      
+
       if (effectiveCoverPageId == null) {
         _showErrorSnackBar('Error: Missing cover page ID');
         return false;
@@ -1140,21 +1304,24 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         return false;
       }
 
-     final questionsDao = SensitizationQuestionsDao(dbHelper: LocalDBHelper.instance);
+      final questionsDao =
+          SensitizationQuestionsDao(dbHelper: LocalDBHelper.instance);
       final now = DateTime.now();
-      
+
       // Check if record exists
-      final existingRecords = await questionsDao.getByCoverPageId(effectiveCoverPageId);
-      final existingRecord = existingRecords.isNotEmpty ? existingRecords.first : null;
-      
+      final existingRecords =
+          await questionsDao.getByCoverPageId(effectiveCoverPageId);
+      final existingRecord =
+          existingRecords.isNotEmpty ? existingRecords.first : null;
+
       // Use default values for empty fields
-      final femaleCount = _femaleAdultsController.text.trim().isEmpty 
-          ? "0" 
+      final femaleCount = _femaleAdultsController.text.trim().isEmpty
+          ? "0"
           : _femaleAdultsController.text.trim();
-      final maleCount = _maleAdultsController.text.trim().isEmpty 
-          ? "0" 
+      final maleCount = _maleAdultsController.text.trim().isEmpty
+          ? "0"
           : _maleAdultsController.text.trim();
-      
+
       // Create the model with ALL required fields
       final model = SensitizationQuestionsData(
         id: existingRecord?.id,
@@ -1165,7 +1332,9 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         femaleAdultsCount: femaleCount,
         maleAdultsCount: maleCount,
         consentForPicture: _consentForPicture ?? false,
-        consentReason: _consentForPicture == true ? 'Consent given' : _consentReasonController.text.trim(),
+        consentReason: _consentForPicture == true
+            ? 'Consent given'
+            : _consentReasonController.text.trim(),
         sensitizationImagePath: _sensitizationImage?.path,
         householdWithUserImagePath: _householdWithUserImage?.path,
         parentsReaction: _reactionController.text.trim(),
@@ -1187,28 +1356,53 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         result = await questionsDao.update(model, effectiveCoverPageId);
         debugPrint('✅ Updated sensitization questions, rows affected: $result');
       }
-      
+
       _showSuccessSnackBar('Sensitization questions saved successfully!');
       return result > 0;
-      
     } catch (e, stackTrace) {
       debugPrint('❌ Error saving sensitization questions: $e');
       debugPrint('Stack trace: $stackTrace');
-      
-      _showErrorSnackBar('Failed to save sensitization questions. Please try again.');
+
+      _showErrorSnackBar(
+          'Failed to save sensitization questions. Please try again.');
       return false;
     } finally {
       _isSaving = false;
     }
   }
 
+  Future<bool> _saveChildData(Map<String, dynamic> childData) async {
+    try {
+      // Save child data to your database or state
+      _childrenDetails.add(childData);
+
+      // Update the saved data status
+      _savedData['child_details'] = {
+        'saved_children': _childrenDetails.length,
+        'total_children': _totalChildren5To17
+      };
+
+      _showSuccessSnackBar('Child ${_currentChildNumber} details saved');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error saving child data: $e');
+      _showErrorSnackBar('Failed to save child details');
+      return false;
+    }
+  }
+
   Future<void> _resetFormData() async {
     final db = await HouseholdDBHelper.instance.database;
     final tables = [
-      TableNames.coverPageTBL, TableNames.consentTBL, TableNames.farmerIdentificationTBL,
-      TableNames.combinedFarmIdentificationTBL, TableNames.childrenHouseholdTBL,
-      TableNames.remediationTBL, TableNames.sensitizationTBL,
-      TableNames.sensitizationQuestionsTBL, TableNames.endOfCollectionTBL,
+      TableNames.coverPageTBL,
+      TableNames.consentTBL,
+      TableNames.farmerIdentificationTBL,
+      TableNames.combinedFarmIdentificationTBL,
+      TableNames.childrenHouseholdTBL,
+      TableNames.remediationTBL,
+      TableNames.sensitizationTBL,
+      TableNames.sensitizationQuestionsTBL,
+      TableNames.endOfCollectionTBL,
     ];
     await db.transaction((txn) => Future.wait(tables.map(txn.delete)));
 
@@ -1248,7 +1442,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         debugPrint('Using coverPageId from widget: ${widget.coverPageId}');
         _updateCoverData(_coverData.copyWith(id: widget.coverPageId));
         _initFarmerData(); // Initialize farmer data after setting cover page ID
-        
+
         // Load saved children data
         final db = await HouseholdDBHelper.instance.database;
         final childrenData = await db.query(
@@ -1256,23 +1450,26 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           where: 'cover_page_id = ?',
           whereArgs: [widget.coverPageId],
         );
-        
+
         if (childrenData.isNotEmpty) {
-          final savedChildrenCount = childrenData.first['children_count'] as int? ?? 0;
+          final savedChildrenCount =
+              childrenData.first['children_count'] as int? ?? 0;
           safeSetState(() {
             _totalChildren5To17 = savedChildrenCount;
             _currentChildNumber = 1;
           });
-          _farmerData.childrenCountController.text = savedChildrenCount.toString();
-          debugPrint('✅ Loaded saved children data: $savedChildrenCount children');
+          _farmerData.childrenCountController.text =
+              savedChildrenCount.toString();
+          debugPrint(
+              '✅ Loaded saved children data: $savedChildrenCount children');
         }
-        
+
         return;
       }
 
       // If no coverPageId is provided, create a new one
       final db = await HouseholdDBHelper.instance.database;
-      
+
       // Create a new cover page entry with default values
       final coverPage = CoverPageData(
         id: null, // Let the database auto-generate the ID
@@ -1281,19 +1478,19 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
         farmers: _coverData.farmers,
         hasUnsavedChanges: true, // Mark as having unsaved changes
       );
-      
+
       // Save the cover page to get an ID
       final coverPageId = await db.insert(
         TableNames.coverPageTBL,
         coverPage.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      
+
       if (mounted) {
         _updateCoverData(_coverData.copyWith(id: coverPageId));
         _initFarmerData(); // Initialize farmer data after setting cover page ID
       }
-      
+
       debugPrint('Created new cover page with ID: $coverPageId');
     } catch (e) {
       debugPrint('❌ Error in _loadSavedState: $e');
@@ -1316,103 +1513,122 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
   /// Validates the form with comprehensive error tracking
   bool validateForm({bool silent = false}) {
     final errors = getValidationErrors();
-    
+
     // Show first error if not in silent mode
     if (!silent && errors.isNotEmpty) {
       _showErrorSnackBar(errors.first);
       // Also log all errors for debugging
       debugPrint('🔍 Validation errors: $errors');
     }
-    
+
     return errors.isEmpty;
   }
 
   /// Helper method to get validation errors without showing snackbar
   List<String> getValidationErrors() {
     final errors = <String>[];
-    
+
     // Track exactly which fields are missing
     if (hasSensitizedHousehold == null) {
-      errors.add('Please indicate if you have sensitized the household members');
+      errors
+          .add('Please indicate if you have sensitized the household members');
     }
-    
+
     if (hasSensitizedOnProtection == null) {
       errors.add('Please indicate if you have sensitized on protection');
     }
-    
+
     if (hasSensitizedOnSafeLabour == null) {
       errors.add('Please indicate if you have sensitized on safe labor');
     }
-    
+
     // Make adult counts optional or provide default values
-    final femaleCount = _femaleAdultsController.text.trim().isEmpty 
-        ? 0 
+    final femaleCount = _femaleAdultsController.text.trim().isEmpty
+        ? 0
         : int.tryParse(_femaleAdultsController.text.trim()) ?? 0;
-    final maleCount = _maleAdultsController.text.trim().isEmpty 
-        ? 0 
+    final maleCount = _maleAdultsController.text.trim().isEmpty
+        ? 0
         : int.tryParse(_maleAdultsController.text.trim()) ?? 0;
-    
+
     if (femaleCount < 0) {
       errors.add('Please enter a valid number for female adults');
     }
-    
+
     if (maleCount < 0) {
       errors.add('Please enter a valid number for male adults');
     }
-    
+
     if (_consentForPicture == null) {
       errors.add('Please indicate if consent for picture was given');
-    } else if (_consentForPicture == false && _consentReasonController.text.trim().isEmpty) {
+    } else if (_consentForPicture == false &&
+        _consentReasonController.text.trim().isEmpty) {
       errors.add('Please provide a reason for not giving consent');
     }
-    
+
     // Image validation only if consent was given AND sensitization was done
     if (_consentForPicture == true && hasSensitizedHousehold == true) {
       if (_sensitizationImage == null) {
         errors.add('Please take a sensitization session picture');
       }
-      
+
       if (_householdWithUserImage == null) {
         errors.add('Please take a picture with the household');
       }
     }
-    
+
     if (_reactionController.text.trim().isEmpty) {
       errors.add('Please provide your observations about parents\' reactions');
     }
-    
+
     return errors;
   }
 
-  void _showSnackBar(String msg, {Color? backgroundColor, SnackBarAction? action}) {
-    if (_isDisposed) return;
-    
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: backgroundColor,
-        action: action,
-      ),
-    );
+  void _showSnackBar(String msg,
+      {Color? backgroundColor, SnackBarAction? action}) {
+    // Check if we can safely use the context
+    if (!_canUseContext || !mounted) {
+      // Log for debugging but don't show UI
+      debugPrint('SnackBar suppressed (context unavailable): $msg');
+      return;
+    }
+
+    try {
+      final messenger = ScaffoldMessenger.of(context);
+      if (!mounted) return; // Check again after getting the messenger
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: backgroundColor,
+          action: action,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      // If we can't show the snackbar, at least log it
+      debugPrint('Failed to show snackbar: $e - Message: $msg');
+    }
   }
-  
+
   void _showErrorSnackBar(String message) {
+    if (!_canUseContext || !mounted) {
+      debugPrint('Error SnackBar suppressed (context unavailable): $message');
+      return;
+    }
     _showSnackBar(
       message,
       backgroundColor: Colors.red[700],
     );
   }
-  
+
   void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-      ),
+    if (!_canUseContext || !mounted) {
+      debugPrint('Success SnackBar suppressed (context unavailable): $message');
+      return;
+    }
+    _showSnackBar(
+      message,
+      backgroundColor: Colors.green,
     );
   }
 
@@ -1422,15 +1638,15 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   String _getPageTitle(int index) {
     final titles = [
-      'Cover Page', 
-      'Consent Form', 
-      'Farmer Identification', 
+      'Cover Page',
+      'Consent Form',
+      'Farmer Identification',
       'Farm Details',
-      'Children in Household', 
+      'Children in Household',
       'Child $_currentChildNumber of $_totalChildren5To17 Details',
-      'Remediation', 
-      'Sensitization', 
-      'Sensitization Questions', 
+      'Remediation',
+      'Sensitization',
+      'Sensitization Questions',
       'End of Collection'
     ];
     return titles[index];
@@ -1438,6 +1654,7 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _canUseContext = false;
     _isMounted = false;
     _isDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
@@ -1462,9 +1679,8 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
             content: const Text('All unsaved progress will be lost.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false), 
-                child: const Text('Cancel')
-              ),
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel')),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
                 child: const Text('Exit', style: TextStyle(color: Colors.red)),
@@ -1489,14 +1705,14 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           ),
           title: Column(
             children: [
-              Text(
-                'Household Survey', 
-                style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white)
-              ),
-              Text(
-                _getPageTitle(_currentPageIndex), 
-                style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withOpacity(0.9))
-              ),
+              Text('Household Survey',
+                  style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white)),
+              Text(_getPageTitle(_currentPageIndex),
+                  style: GoogleFonts.inter(
+                      fontSize: 14, color: Colors.white.withOpacity(0.9))),
             ],
           ),
           centerTitle: true,
@@ -1511,10 +1727,9 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(4),
             child: LinearProgressIndicator(
-              value: _progress, 
-              backgroundColor: Colors.green.shade400, 
-              valueColor: const AlwaysStoppedAnimation(Colors.white)
-            ),
+                value: _progress,
+                backgroundColor: Colors.green.shade400,
+                valueColor: const AlwaysStoppedAnimation(Colors.white)),
           ),
         ),
         body: Column(
@@ -1532,19 +1747,20 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
                 onPageChanged: (i) => safeSetState(() => _currentPageIndex = i),
                 children: [
                   CoverPage(
-                    key: _coverPageKey, 
-                    data: _coverData, 
-                    onDataChanged: (newData) {
-                      // Update the cover data
-                      safeSetState(() => _coverData = newData);
-                    },
-                    onNext: _onNext
-                  ),
+                      key: _coverPageKey,
+                      data: _coverData,
+                      onDataChanged: (newData) {
+                        // Update the cover data
+                        safeSetState(() => _coverData = newData);
+                      },
+                      onNext: _onNext),
                   // Only show consent if cover page has been saved
                   _coverData.id != null
                       ? ConsentPage(
                           key: _consentPageKey,
-                          data: _consentData ?? ConsentData.empty().copyWith(coverPageId: _coverData.id),
+                          data: _consentData ??
+                              ConsentData.empty()
+                                  .copyWith(coverPageId: _coverData.id),
                           onDataChanged: _onConsentDataChanged,
                           onRecordTime: _recordInterviewTime,
                           onGetLocation: _getCurrentLocation,
@@ -1565,7 +1781,8 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
                           key: _combinedPageKey,
                           coverPageId: _coverData.id!,
                           initialPageIndex: _combinedPageSubIndex,
-                          onPageChanged: (i) => safeSetState(() => _combinedPageSubIndex = i),
+                          onPageChanged: (i) =>
+                              safeSetState(() => _combinedPageSubIndex = i),
                           onPrevious: _onPrevious,
                           onNext: _onNext,
                           onSubmit: _handleCombinedPageSubmit,
@@ -1575,28 +1792,70 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
                     key: _childrenHouseholdKey,
                     formKey: _childrenHouseholdFormKey,
                     producerDetails: {
-                      'ghanaCardNumber': _farmerData.ghanaCardNumberController.text,
+                      'ghanaCardNumber':
+                          _farmerData.ghanaCardNumberController.text,
                       'contactNumber': _farmerData.contactNumberController.text,
                     },
-                    children5To17Controller: _farmerData.childrenCountController,
+                    children5To17Controller:
+                        _farmerData.childrenCountController,
                     onPrevious: _onPrevious,
                     onNext: _onNext,
                   ),
                   ChildDetailsPage(
                     key: _childDetailsPageKey,
+                    householdId: _coverData.id!,
                     childNumber: _currentChildNumber,
+                    coverPageId: _coverData.id!,
                     totalChildren: _totalChildren5To17,
                     childrenDetails: _childrenDetails,
-                    onComplete: (result) async {
-                      await _saveCurrentChildData();
-                      if (_currentChildNumber < _totalChildren5To17) {
-                        safeSetState(() => _currentChildNumber++);
-                        _refreshChildDetailsPage();
+                    isLastChild: _currentChildNumber == _totalChildren5To17,
+                    onComplete: (childData) async {
+                      debugPrint('🎯 Child $_currentChildNumber completed');
+                      debugPrint(
+                          '📊 Total children: $_totalChildren5To17, Current child: $_currentChildNumber');
+
+                      // Add child data to our tracking list
+                      _childrenDetails.add({
+                        'childNumber': _currentChildNumber,
+                        'data': childData,
+                        'timestamp': DateTime.now().toIso8601String()
+                      });
+
+                      // Check if this was the last child
+                      final isLastChild =
+                          _currentChildNumber >= _totalChildren5To17;
+
+                      if (!isLastChild) {
+                        // Prepare for next child
+                        debugPrint('➡️ Preparing for next child...');
+
+                        // Update the child number
+                        final nextChildNumber = _currentChildNumber + 1;
+
+                        // Reset the form for the next child
+                        safeSetState(() {
+                          _currentChildNumber = nextChildNumber;
+                          // Create a NEW key to force widget recreation
+                          _childDetailsPageKey =
+                              GlobalKey<ChildDetailsPageState>();
+                        });
+
+                        // Stay on the same page (index 5) - don't navigate away
+                        // The widget will rebuild with the new key
+                        debugPrint('✅ Set up for child $nextChildNumber');
                       } else {
-                        _navigateToPage(6);
+                        // All children completed
+                        debugPrint(
+                            '✅ All $_totalChildren5To17 children completed');
+                        debugPrint('📋 Moving to remediation...');
+
+                        // Navigate to remediation page
+                        _isProcessingNavigation = false; // Reset flag
+                        await _navigateToPage(6); // Go to remediation
                       }
                     },
                   ),
+
                   RemediationPage(
                     key: _remediationPageKey,
                     onPrevious: _onPrevious,
@@ -1648,16 +1907,16 @@ class _HouseHoldState extends State<HouseHold> with WidgetsBindingObserver {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          if (_currentPageIndex > 0 || (_isOnCombinedPage && _combinedPageSubIndex > 0))
+          if (_currentPageIndex > 0 ||
+              (_isOnCombinedPage && _combinedPageSubIndex > 0))
             ElevatedButton(
-              onPressed: _onPrevious, 
-              child: const Text('Previous')
-            )
+                onPressed: _onPrevious, child: const Text('Previous'))
           else
             const SizedBox(width: 100),
           ElevatedButton(
             onPressed: _isSaving || _isSavingComplete ? null : _onNext,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade600),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600),
             child: Text(
               _currentPageIndex == _totalPages - 1 ? 'Submit' : 'Next',
               style: const TextStyle(color: Colors.white),

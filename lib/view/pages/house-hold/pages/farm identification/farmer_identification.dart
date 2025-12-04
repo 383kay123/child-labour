@@ -669,6 +669,7 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
     String? errorKey,
     bool enabled = true,
     TextCapitalization textCapitalization = TextCapitalization.none,
+    String? Function(String?)? validator,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -705,6 +706,9 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
             color: isDark ? Colors.white : Colors.black87,
             fontWeight: FontWeight.w400,
           ),
+          
+          // Add validator if provided
+          validator: validator,
           
           onChanged: (value) {
             if (onChanged != null) {
@@ -782,50 +786,49 @@ class FarmerIdentification1PageState extends State<FarmerIdentification1Page> {
   final theme = Theme.of(context);
   final isDark = theme.brightness == Brightness.dark;
   
-  // Convert the integer to string for radio button comparison
-  final hasGhanaCard = widget.data.hasGhanaCard?.toString() ?? '';
+  // Use null instead of empty string for unselected state
+  final hasGhanaCard = widget.data.hasGhanaCard?.toString();
 
-return _buildQuestionCard(
-  errorKey: 'ghanaCard',
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'Does the farmer have a Ghana Card?',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.white70 
-                      : Colors.black87,
-                  fontWeight: FontWeight.w500,
-                ),
-      ),
-      const SizedBox(height: _Spacing.md),
-      Column(
-        children: [
-          _buildRadioOption(
-            value: '1',
-            groupValue: hasGhanaCard,
-            label: 'Yes',
-            onChanged: (value) {
-              widget.onDataChanged(widget.data.updateGhanaCard(1));
-            },
-            errorKey: 'ghanaCard',
-          ),
-          _buildRadioOption(
-            value: '0',
-            groupValue: hasGhanaCard,
-            label: 'No',
-            onChanged: (value) {
-              widget.onDataChanged(widget.data.updateGhanaCard(0));
-            },
-            errorKey: 'ghanaCard',
-          ),
-        ],
-      ),
-    ],
-  ),
-);
-
+  return _buildQuestionCard(
+    errorKey: 'ghanaCard',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Does the farmer have a Ghana Card?',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white70 
+                    : Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+        const SizedBox(height: _Spacing.md),
+        Column(
+          children: [
+            _buildRadioOption(
+              value: '1',
+              groupValue: hasGhanaCard, 
+              label: 'Yes',
+              onChanged: (value) {
+                widget.onDataChanged(widget.data.updateGhanaCard(1));
+              },
+              errorKey: 'ghanaCard',
+            ),
+            _buildRadioOption(
+              value: '0',
+              groupValue: hasGhanaCard, 
+              label: 'No',
+              onChanged: (value) {
+                widget.onDataChanged(widget.data.updateGhanaCard(0));
+              },
+              errorKey: 'ghanaCard',
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
 }
   Widget _buildAlternativeIdSection() {
     final theme = Theme.of(context);
@@ -929,93 +932,102 @@ return _buildQuestionCard(
     );
   }
 
-  Widget _buildConsentSection() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    // Only show this section if we have a valid selection
-    if (widget.data.hasGhanaCard == null) {
-      return const SizedBox.shrink();
-    }
-    
-    final hasGhanaCard = widget.data.hasGhanaCard == 1;
+ Widget _buildConsentSection() {
+  final theme = Theme.of(context);
+  final isDark = theme.brightness == Brightness.dark;
+  
+  // Only show this section if we have a valid selection
+  if (widget.data.hasGhanaCard == null) {
+    return const SizedBox.shrink();
+  }
+  
+  final hasGhanaCard = widget.data.hasGhanaCard == 1;
 
-    // Only show if we have a valid ID type when Ghana Card is not selected
-    if (!hasGhanaCard && widget.data.selectedIdType == null) {
-      return const SizedBox.shrink();
-    }
+  // Get the current consent value as string
+  final consentValue = widget.data.idPictureConsent?.toString();
 
-    return Column(
-      children: [
-        _buildQuestionCard(
-          errorKey: 'consent',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                hasGhanaCard
-                    ? 'Do you consent to us taking a picture of your Ghana Card and recording the card number?'
-                    : 'Do you consent to us taking a picture of your ${_getIdTypeDisplayName(widget.data.selectedIdType)} and recording the ID number?',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87,
-                      fontWeight: FontWeight.w500,
-                    ),
-              ),
-              const SizedBox(height: _Spacing.md),
-              Column(
-                children: [
-                  _buildRadioOption(
-                    value: 'Yes',
-                    groupValue: widget.data.idPictureConsent == 1 ? 'Yes' : 'No',
-                    label: 'Yes',
-                    onChanged: (value) {
-                      // When consent is given, update the data and clear the no consent reason
-                      var newData = widget.data.updatePictureConsent(value);
-                      if (newData.noConsentReason != null) {
-                        _noConsentReasonController.clear();
-                      }
-                      widget.onDataChanged(newData);
-                    },
-                    errorKey: 'consent',
-                  ),
-                  _buildRadioOption(
-                    value: 'No',
-                    groupValue: widget.data.idPictureConsent == 1 ? 'Yes' : 'No',
-                    label: 'No',
-                    onChanged: (value) {
-                      widget.onDataChanged(widget.data.updatePictureConsent(value));
-                    },
-                    errorKey: 'consent',
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        
-        // Show reason field only when consent is 'No'
-        if (widget.data.idPictureConsent == 0)
-          Padding(
-            padding: const EdgeInsets.only(top: _Spacing.md),
-            child: _buildQuestionCard(
-              errorKey: 'noConsentReason',
-              child: _buildTextField(
-                label: 'Please specify reason',
-                controller: _noConsentReasonController,
-                hintText: 'Enter your reason for not providing consent',
-                
-                keyboardType: TextInputType.multiline,
-                maxLines: 3,
-                onChanged: (value) {
-                  // Handled by listener
-                },
-                errorKey: 'noConsentReason',
-              ),
-            ),
-          ),
-      ],
-    );
+  // Only show if we have a valid ID type when Ghana Card is not selected
+  if (!hasGhanaCard && widget.data.selectedIdType == null) {
+    return const SizedBox.shrink();
   }
 
+  return Column(
+    children: [
+      _buildQuestionCard(
+        errorKey: 'consent',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              hasGhanaCard
+                  ? 'Do you consent to us taking a picture of your Ghana Card and recording the card number?'
+                  : 'Do you consent to us taking a picture of your ${_getIdTypeDisplayName(widget.data.selectedIdType)} and recording the ID number?',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white70 
+                        : Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+            const SizedBox(height: _Spacing.md),
+            Column(
+              children: [
+                _buildRadioOption(
+                  value: '1',  
+                  groupValue: widget.data.idPictureConsent?.toString(), 
+                  label: 'Yes',
+                  onChanged: (value) {
+                    if (value == '1') {
+                      var newData = widget.data.updatePictureConsent('Yes');
+                      if (newData.noConsentReason != null) {
+                        _noConsentReasonController.clear();
+                        newData = newData.copyWith(noConsentReason: null);
+                      }
+                      if (mounted) {
+                        setState(() {
+                          widget.onDataChanged(newData);
+                        });
+                      }
+                    }
+                  },
+                  errorKey: 'consent',
+                ),
+                _buildRadioOption(
+                  value: '0',
+                  groupValue: widget.data.idPictureConsent?.toString(),
+                  label: 'No',
+                  onChanged: (value) {
+                    if (value == '0') {
+                      if (mounted) {
+                        setState(() {
+                          widget.onDataChanged(widget.data.updatePictureConsent('No'));
+                        });
+                      }
+                    }
+                  },
+                  errorKey: 'consent',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      // Show reason field only when consent is 'No'
+      if (widget.data.idPictureConsent == 'No')
+        Padding(
+          padding: const EdgeInsets.only(top: _Spacing.md),
+          child: _buildQuestionCard(
+            errorKey: 'noConsentReason',
+            child: _buildTextField(
+              label: 'Please specify reason',
+              controller: _noConsentReasonController,
+              // ... rest of your text field properties
+            ),
+          ),
+        ),
+    ],
+  );
+}
   Widget _buildIdNumberSection() {
     // Ghana Card Number Field - Only show if consent is given
     if (widget.data.hasGhanaCard == 1 && widget.data.idPictureConsent == 1) {
