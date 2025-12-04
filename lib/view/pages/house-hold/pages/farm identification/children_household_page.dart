@@ -132,7 +132,13 @@ class ChildrenHouseholdPageState extends State<ChildrenHouseholdPage>
         _children5To17Controller.text = _householdData.children5To17.toString();
       }
 
-      widget.onNext();
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Child details saved successfully!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -146,8 +152,8 @@ class ChildrenHouseholdPageState extends State<ChildrenHouseholdPage>
   }
 
   Future<void> _navigateToChildDetails(
-      BuildContext context, int totalChildren) async {
-    if (!mounted) return;
+      BuildContext context, int? totalChildren) async {
+    if (!mounted || totalChildren == null) return;
 
     try {
       int currentChild = _householdData.childrenDetails.length + 1;
@@ -170,15 +176,20 @@ class ChildrenHouseholdPageState extends State<ChildrenHouseholdPage>
           context,
           MaterialPageRoute(
             builder: (context) => ChildDetailsPage(
+              isLastChild: currentChild == totalChildren,
+              coverPageId: _householdData.coverPageId ?? 0,  
               childNumber: currentChild,
               totalChildren: totalChildren,
               childrenDetails: _householdData.childrenDetails,
+              householdId: _householdData.coverPageId ?? 0,
               onComplete: (data) {
-                // Extract the children5To17 from the data map
-                final children5To17 = data != null && data['children5To17'] != null 
-                    ? int.tryParse(data['children5To17'].toString()) ?? 0 
-                    : 0;
-                _onChildDetailsComplete(children5To17);
+                if (data != null && data['childData'] != null) {
+                  // Extract the children5To17 from the data map
+                  final children5To17 = data['children5To17'] != null 
+                      ? int.tryParse(data['children5To17'].toString()) ?? 0 
+                      : 0;
+                  _onChildDetailsComplete(children5To17);
+                }
               },
             ),
           ),

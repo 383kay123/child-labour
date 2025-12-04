@@ -1,6 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/db/db_tables/repositories/child_details.dart';
+import 'package:human_rights_monitor/controller/models/chilld_details_model.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/controller/models/dropdown_item_model.dart';
@@ -1160,23 +1163,394 @@ String _formatAgreementKey(String key) {
 }
 
  Widget _buildChildrenContent() {
-    final children = widget.surveyData.childrenHousehold;
-    if (children == null) {
-      return _buildEmptyState(_sections[4]['color']);
-    }
-    
-    return _buildScrollableContent([
-      _buildContentCard(
+  final children = widget.surveyData.childrenHousehold;
+  if (children == null) {
+    return _buildEmptyState(_sections[4]['color']);
+  }
+  
+  // Fetch child details from database using the household ID
+  return FutureBuilder<List<ChildDetailsModel>>(
+    future: _fetchChildDetails(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return _buildLoadingState();
+      }
+      
+      if (snapshot.hasError) {
+        return _buildErrorCard('Children Data', 'Error loading child details: ${snapshot.error}');
+      }
+      
+      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        return _buildScrollableContent([
+          _buildContentCard(
+            title: 'Children Overview',
+            items: {
+              'Has Children in Household': children.hasChildrenInHousehold ?? 'Not specified',
+              'Number of Children': children.numberOfChildren.toString(),
+              'Children 5 to 17 Years': children.children5To17.toString(),
+            },
+          ),
+          _buildInfoCard(
+            'Child Details',
+            'No detailed child information was collected for this survey.',
+            icon: Icons.info_outline,
+            color: Colors.blue,
+          ),
+        ]);
+      }
+      
+      final childDetails = snapshot.data!;
+      List<Widget> content = [];
+      
+      // Add overview card
+      content.add(_buildContentCard(
         title: 'Children Overview',
         items: {
           'Has Children in Household': children.hasChildrenInHousehold ?? 'Not specified',
           'Number of Children': children.numberOfChildren.toString(),
           'Children 5 to 17 Years': children.children5To17.toString(),
+          'Detailed Records Found': childDetails.length.toString(),
         },
-      ),
-    ]);
-  }
+      ));
+      
+      // Add each child's details
+      for (int i = 0; i < childDetails.length; i++) {
+        final child = childDetails[i];
+        content.addAll(_buildChildDetailsCards(child, i + 1));
+      }
+      
+      return _buildScrollableContent(content);
+    },
+  );
+}
 
+Future<List<ChildDetailsModel>> _fetchChildDetails() async {
+  try {
+    // Get the cover page ID from the survey data
+    final coverPageId = widget.surveyData.cover.id;
+    
+    if (coverPageId == null) {
+      debugPrint('Error: coverPageId is null');
+      return [];
+    }
+    
+    debugPrint('Using cover page ID: $coverPageId');
+    debugPrint('Fetching child details for cover page ID: $coverPageId');
+    
+    // Initialize the database
+    final dbHelper = LocalDBHelper.instance;
+    await dbHelper.database; // Ensure database is initialized
+    
+    // Fetch child details from the database using cover page ID
+    final childRepository = ChildRepositoryImpl();
+    final childDetails = await childRepository.getChildrenByCoverPageId(coverPageId);
+    debugPrint('Child details: ${childDetails.first.toJson()}');
+    debugPrint('Found ${childDetails.length} child records for cover page ID: $coverPageId');
+    return childDetails;
+  } catch (e) {
+    debugPrint('Error fetching child details: $e');
+    return [];
+  }
+}
+
+// This method should be in ChildRepositoryImpl class, not here
+// The method is already properly implemented in the repository
+// Remove this method from here and use the repository's method instead
+
+Widget _buildLoadingState() {
+  return Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+        SizedBox(height: 16),
+        Text(
+          'Loading Child Details...',
+          style: AppTheme.textTheme.bodyLarge,
+        ),
+      ],
+    ),
+  );
+}
+
+List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
+  List<Widget> cards = [];
+  
+  // Child Basic Information Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Basic Information',
+    items: {
+      'Database ID': child.id?.toString() ?? 'Not set',
+      'Household ID': child.householdId.toString(),
+      'Child Number': child.childNumber.toString(),
+      'Is Farmer Child': _boolToYesNo(child.isFarmerChild),
+      'Name': '${child.childName} ${child.childSurname}',
+      'Gender': child.childGender ?? 'Not specified',
+      'Age': child.childAge?.toString() ?? 'Not specified',
+      'Birth Year': child.birthYear?.toString() ?? 'Not specified',
+      'Has Birth Certificate': _boolToYesNo(child.hasBirthCertificate),
+      'Born in Community': child.bornInCommunity ?? 'Not specified',
+      'Birth Country': child.birthCountry ?? 'Not specified',
+    },
+  ));
+  
+  // Family Information Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Family Information',
+    items: {
+      'Relationship to Head': child.relationshipToHead ?? 'Not specified',
+      'Other Relationship': child.otherRelationship ?? 'Not specified',
+      'Time in Household': child.timeInHousehold ?? 'Not specified',
+      'Father Residence': child.fatherResidence ?? 'Not specified',
+      'Father Country': child.fatherCountry ?? 'Not specified',
+      'Mother Residence': child.motherResidence ?? 'Not specified',
+      'Mother Country': child.motherCountry ?? 'Not specified',
+      'Has Spoken with Parents': _boolToYesNo(child.hasSpokenWithParents),
+      'Child Agreed with Decision': _boolToYesNo(child.childAgreedWithDecision),
+    },
+  ));
+  
+  // Education Information Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Education Information',
+    items: {
+      'Currently Enrolled': _boolToYesNo(child.isCurrentlyEnrolled),
+      'School Name': child.schoolName ?? 'Not specified',
+      'School Type': child.schoolType ?? 'Not specified',
+      'Grade Level': child.gradeLevel ?? 'Not specified',
+      'Attendance Frequency': child.schoolAttendanceFrequency ?? 'Not specified',
+      'Has Ever Been to School': _boolToYesNo(child.hasEverBeenToSchool),
+      'Attended School Last 7 Days': _boolToYesNo(child.attendedSchoolLast7Days),
+      'Can Write Sentences': child.canWriteSentences ?? 'Not specified',
+      'Education Level': child.educationLevel ?? 'Not specified',
+    },
+  ));
+  
+  // Work Information Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Work Information',
+    items: {
+      'Worked in House': _boolToYesNo(child.workedInHouse),
+      'Worked on Cocoa Farm': _boolToYesNo(child.workedOnCocoaFarm),
+      'Work Frequency': child.workFrequency ?? 'Not specified',
+      'Observed Working': _boolToYesNo(child.observedWorking),
+      'Received Remuneration': _boolToYesNo(child.receivedRemuneration),
+      'Work For Whom': child.workForWhom ?? 'Not specified',
+      'Other Work For Whom': child.otherWorkForWhom ?? 'Not specified',
+    },
+  ));
+  
+  // Cocoa Farm Tasks Card
+  if (child.cocoaFarmTasks != null && child.cocoaFarmTasks!.isNotEmpty) {
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Cocoa Farm Tasks (7 Days)',
+      items: {
+        'Tasks': child.cocoaFarmTasks!.join(', '),
+      },
+      isList: true,
+      listItems: child.cocoaFarmTasks!,
+    ));
+  }
+  
+  // Tasks Last 12 Months Card
+  if (child.tasksLast12Months != null && child.tasksLast12Months!.isNotEmpty) {
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Farm Tasks (12 Months)',
+      items: {
+        'Tasks Count': child.tasksLast12Months!.length.toString(),
+      },
+      isList: true,
+      listItems: child.tasksLast12Months!,
+    ));
+  }
+  
+  // Light Tasks 7 Days Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Light Tasks (7 Days)',
+    items: {
+      'Received Remuneration': _boolToYesNo(child.receivedRemunerationLighttasks12months),
+      'Longest School Day Time': child.longestLightDutyTimeLighttasks7days ?? 'Not specified',
+      'Longest Non-School Day Time': child.longestNonSchoolDayTimeLighttasks7days ?? 'Not specified',
+      'Task Location': child.taskLocationLighttasks7days ?? 'Not specified',
+      'Other Location': child.otherLocationLighttasks7days ?? 'Not specified',
+      'School Day Hours': child.schoolDayTaskHoursLighttasks7days ?? 'Not specified',
+      'Non-School Day Hours': child.nonSchoolDayTaskHoursLighttasks7days ?? 'Not specified',
+      'Was Supervised': _boolToYesNo(child.wasSupervisedByAdultLighttasks7days),
+    },
+  ));
+  
+  // Light Tasks 12 Months Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Light Tasks (12 Months)',
+    items: {
+      'Received Remuneration': _boolToYesNo(child.receivedRemunerationLighttasks12months),
+      'Longest School Day Time': child.longestSchoolDayTimeLighttasks12months ?? 'Not specified',
+      'Longest Non-School Day Time': child.longestNonSchoolDayTimeLighttasks12months ?? 'Not specified',
+      'Task Location': child.taskLocationLighttasks12months ?? 'Not specified',
+      'Other Task Location': child.otherTaskLocationLighttasks12months ?? 'Not specified',
+      'Total School Day Hours': child.totalSchoolDayHoursLighttasks12months ?? 'Not specified',
+      'Total Non-School Day Hours': child.totalNonSchoolDayHoursLighttasks12months ?? 'Not specified',
+      'Was Supervised': _boolToYesNo(child.wasSupervisedDuringTaskLighttasks12months),
+    },
+  ));
+  
+  // Dangerous Tasks 7 Days Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Dangerous Tasks (7 Days)',
+    items: {
+      'Received Salary': _boolToYesNo(child.hasReceivedSalaryDangeroustask7days),
+      'Task Location': child.taskLocationDangeroustask7days ?? 'Not specified',
+      'Other Location': child.otherLocationDangeroustask7days ?? 'Not specified',
+      'Longest School Day Time': child.longestSchoolDayTimeDangeroustask7days ?? 'Not specified',
+      'Longest Non-School Day Time': child.longestNonSchoolDayTimeDangeroustask7days ?? 'Not specified',
+      'School Day Hours': child.schoolDayHoursDangeroustask7days ?? 'Not specified',
+      'Non-School Day Hours': child.nonSchoolDayHoursDangeroustask7days ?? 'Not specified',
+      'Was Supervised': _boolToYesNo(child.wasSupervisedByAdultDangeroustask7days),
+    },
+  ));
+  
+  // Dangerous Tasks 12 Months Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Dangerous Tasks (12 Months)',
+    items: {
+      'Received Salary': _boolToYesNo(child.hasReceivedSalaryDangeroustask12months),
+      'Task Location': child.taskLocationDangeroustask12months ?? 'Not specified',
+      'Other Location': child.otherLocationDangeroustask12months ?? 'Not specified',
+      'Longest School Day Time': child.longestSchoolDayTimeDangeroustask12months ?? 'Not specified',
+      'Longest Non-School Day Time': child.longestNonSchoolDayTimeDangeroustask12months ?? 'Not specified',
+      'School Day Hours': child.schoolDayHoursDangeroustask12months ?? 'Not specified',
+      'Non-School Day Hours': child.nonSchoolDayHoursDangeroustask12months ?? 'Not specified',
+      'Was Supervised': _boolToYesNo(child.wasSupervisedByAdultDangeroustask12months),
+    },
+  ));
+  
+  // Dangerous Tasks List Card
+  if (child.dangerousTasks12Months != null && child.dangerousTasks12Months!.isNotEmpty) {
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Dangerous Tasks List (12 Months)',
+      items: {
+        'Tasks Count': child.dangerousTasks12Months!.length.toString(),
+      },
+      isList: true,
+      listItems: child.dangerousTasks12Months!.map((task) {
+        return task.replaceAll('_dangeroustask12months', '');
+      }).toList(),
+    ));
+  }
+  
+  // Health and Safety Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Health and Safety',
+    items: {
+      'Applied Agrochemicals': _boolToYesNo(child.appliedAgrochemicals),
+      'On Farm During Application': _boolToYesNo(child.onFarmDuringApplication),
+      'Suffered Injury': _boolToYesNo(child.sufferedInjury),
+      'How Wounded': child.howWounded ?? 'Not specified',
+      'When Wounded': child.whenWounded ?? 'Not specified',
+      'Often Feel Pains': _boolToYesNo(child.oftenFeelPains),
+    },
+  ));
+  
+  // Help Received Card
+  if (child.helpReceived != null && child.helpReceived!.isNotEmpty) {
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Help Received',
+      items: {
+        'Help Types': child.helpReceived!.join(', '),
+      },
+      isList: true,
+      listItems: child.helpReceived!,
+    ));
+  }
+  
+  // Photo Consent Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Photo Consent',
+    items: {
+      'Parent Consent for Photo': _boolToYesNo(child.parentConsentPhoto),
+      'No Consent Reason': child.noConsentReason ?? 'Not specified',
+      'Child Photo Taken': (child.childPhotoPath?.isNotEmpty == true) ? 'Yes' : 'No',
+    },
+  ));
+  
+  // School Supplies Card
+  if (child.availableSchoolSupplies != null && child.availableSchoolSupplies!.isNotEmpty) {
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Available School Supplies',
+      items: {
+        'Supplies Count': child.availableSchoolSupplies!.length.toString(),
+      },
+      isList: true,
+      listItems: child.availableSchoolSupplies!,
+    ));
+  }
+  
+  if (child.absenceReasons != null && child.absenceReasons!.isNotEmpty) {
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: School Absence Reasons',
+    items: {
+      'Reasons Count': child.absenceReasons!.length.toString(),
+    },
+    isList: true,
+    listItems: child.absenceReasons!.entries
+        .where((entry) => entry.value == true)
+        .map((entry) => entry.key)
+        .toList(),
+  ));
+}
+  
+  // Work Reasons Card
+  if (child.whyWorkReasons != null && child.whyWorkReasons!.isNotEmpty) {
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Why Work Reasons',
+      items: {
+        'Reasons Count': child.whyWorkReasons!.length.toString(),
+      },
+      isList: true,
+      listItems: child.whyWorkReasons!,
+    ));
+  }
+  
+  // Not With Family Reasons Card
+  if (child.notWithFamilyReasons != null && child.notWithFamilyReasons!.isNotEmpty) {
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Not With Family Reasons',
+      items: {
+        'Reasons Count': child.notWithFamilyReasons!.length.toString(),
+      },
+      isList: true,
+      listItems: child.notWithFamilyReasons!,
+    ));
+  }
+  
+  // Reasons for Various Decisions
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Reasons for Decisions',
+    items: {
+      'Reason for Leaving School': child.reasonForLeavingSchool ?? 'Not specified',
+      'Other Reason for Leaving School': child.otherReasonForLeavingSchool ?? 'Not specified',
+      'Reason Never Attended School': child.reasonNeverAttendedSchool ?? 'Not specified',
+      'Other Reason Never Attended': child.otherReasonNeverAttended ?? 'Not specified',
+      'Reason Not Attended School': child.reasonNotAttendedSchool ?? 'Not specified',
+      'Other Reason Not Attended': child.otherReasonNotAttended ?? 'Not specified',
+      'Other Absence Reason': child.otherAbsenceReason ?? 'Not specified',
+    },
+  ));
+  
+  // Survey Details Card
+  cards.add(_buildContentCard(
+    title: 'Child $childNumber: Survey Details',
+    items: {
+      'Can Be Surveyed Now': _boolToYesNo(child.canBeSurveyedNow),
+      'Respondent Type': child.respondentType ?? 'Not specified',
+      'Other Respondent Type': child.otherRespondentType ?? 'Not specified',
+    },
+  ));
+  
+  return cards;
+}
   Widget _buildRemediationContent() {
     final remediation = widget.surveyData.remediation;
     print('Remediation data: $remediation'); // Debug print
@@ -1652,7 +2026,7 @@ Future<File?> _getImageFile(String path) async {
 
   Widget _buildContentCard({
     required String title,
-    Map<String, String>? items,
+    Map<String, dynamic>? items,
     bool isList = false,
     List<String>? listItems,
   }) {
@@ -1676,9 +2050,12 @@ Future<File?> _getImageFile(String path) async {
               title,
               style: AppTheme.textTheme.titleLarge,
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             if (items != null)
-              ...items.entries.map((entry) => _buildInfoRow(entry.key, entry.value)),
+              ...items.entries.map((entry) => _buildInfoRow(
+                    entry.key, 
+                    entry.value?.toString() ?? 'N/A',
+                  )),
             if (isList && listItems != null && listItems.isNotEmpty)
               ...listItems.map((item) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1686,7 +2063,7 @@ Future<File?> _getImageFile(String path) async {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.circle, size: 6, color: AppTheme.primaryColor),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         item,
