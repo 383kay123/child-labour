@@ -1,3 +1,4 @@
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
@@ -7,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 class ConsentDao {
-  final LocalDBHelper dbHelper;
+  final HouseholdDBHelper dbHelper;
 
   ConsentDao({required this.dbHelper});
 
@@ -16,6 +17,7 @@ class ConsentDao {
     final db = await dbHelper.database;
     
     final data = <String, dynamic>{
+      if(model.coverPageId != null) ConsentTable.coverPageId: model.coverPageId,
       if (model.consentGiven != null) ConsentTable.consentGiven: model.consentGiven! ? 1 : 0,
       if (model.declinedConsent != null) ConsentTable.declinedConsent: model.declinedConsent! ? 1 : 0,
       if (model.refusalReason != null) ConsentTable.refusalReason: model.refusalReason,
@@ -184,15 +186,15 @@ class ConsentDao {
           : null,
       locationStatus: map[ConsentTable.locationStatus],
       isGettingLocation: map[ConsentTable.isGettingLocation] == 1,
-      otherSpecController: TextEditingController(
-        text: map[ConsentTable.otherSpecification]?.toString() ?? '',
-      ),
-      otherCommunityController: TextEditingController(
-        text: map[ConsentTable.otherCommunityName]?.toString() ?? '',
-      ),
-      refusalReasonController: TextEditingController(
-        text: map[ConsentTable.refusalReason]?.toString() ?? '',
-      ),
+      // otherSpecController: TextEditingController(
+      //   text: map[ConsentTable.otherSpecification]?.toString() ?? '',
+      // ),
+      // otherCommunityController: TextEditingController(
+      //   text: map[ConsentTable.otherCommunityName]?.toString() ?? '',
+      // ),
+      // refusalReasonController: TextEditingController(
+      //   text: map[ConsentTable.refusalReason]?.toString() ?? '',
+      // ),
     );
   }
 }

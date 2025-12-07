@@ -1551,11 +1551,11 @@ Future<int> insertCombinedFarmerIdentification(CombinedFarmerIdentificationModel
 }
 
 /// Inserts a new children household record
-Future<int> insertChildrenHousehold(ChildrenHouseholdModel household) async {
+Future<int> insertChildrenHousehold(Map<String, dynamic> household) async {
   final db = await database;
   
   // Convert to map and add timestamp fields
-  final householdMap = household.toMap()
+  final householdMap = household
     ..addAll({
       'created_at': DateTime.now().toIso8601String(),
       'updated_at': DateTime.now().toIso8601String(),
@@ -1791,12 +1791,15 @@ Future<int> insertEndOfCollection(EndOfCollectionModel endOfCollection) async {
             where: 'cover_page_id = ?',
             whereArgs: [coverPageId],
           )).isNotEmpty;
+          debugPrint('✅ [HouseholdDB] Has consent: $hasConsent');
 
           final hasFarmer = (await db.query(
             TableNames.farmerIdentificationTBL,
             where: 'cover_page_id = ?',
             whereArgs: [coverPageId],
           )).isNotEmpty;
+          debugPrint('✅ [HouseholdDB] Has farmer: $hasFarmer');
+
 
           final hasCombinedFarm = (await db.query(
             TableNames.combinedFarmIdentificationTBL,
@@ -1804,11 +1807,16 @@ Future<int> insertEndOfCollection(EndOfCollectionModel endOfCollection) async {
             whereArgs: [coverPageId],
           )).isNotEmpty;
 
+          debugPrint('✅ [HouseholdDB] Has combined farm: $hasCombinedFarm');
+
           final hasChildren = (await db.query(
             TableNames.childrenHouseholdTBL,
             where: 'cover_page_id = ?',
             whereArgs: [coverPageId],
           )).isNotEmpty;
+
+          debugPrint('✅ [HouseholdDB] Has children: $hasChildren');
+
 
           final hasRemediation = (await db.query(
             TableNames.remediationTBL,
@@ -1816,11 +1824,18 @@ Future<int> insertEndOfCollection(EndOfCollectionModel endOfCollection) async {
             whereArgs: [coverPageId],
           )).isNotEmpty;
 
+          debugPrint('✅ [HouseholdDB] Has remediation: $hasRemediation');
+
+
+
           final hasSensitization = (await db.query(
             TableNames.sensitizationTBL,
             where: 'cover_page_id = ?',
             whereArgs: [coverPageId],
           )).isNotEmpty;
+
+          debugPrint('✅ [HouseholdDB] Has awareness: $hasSensitization');
+
 
           final hasSensitizationQuestions = (await db.query(
             TableNames.sensitizationQuestionsTBL,
@@ -1828,11 +1843,18 @@ Future<int> insertEndOfCollection(EndOfCollectionModel endOfCollection) async {
             whereArgs: [coverPageId],
           )).isNotEmpty;
 
+          debugPrint('✅ [HouseholdDB] Has awareness questions: $hasSensitizationQuestions');
+
+
+
           final hasEndOfCollection = (await db.query(
             TableNames.endOfCollectionTBL,
             where: 'cover_page_id = ?',
             whereArgs: [coverPageId],
           )).isNotEmpty;
+
+          debugPrint('✅ [HouseholdDB] Has end of collection: $hasEndOfCollection');
+
 
           // Get farmer data for this cover page to retrieve Ghana Card number
           String ghanaCardNumber = 'N/A';

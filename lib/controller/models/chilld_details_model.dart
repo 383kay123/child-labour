@@ -1,7 +1,7 @@
 class ChildDetailsModel {
   // Identification
   int? id;
-  int householdId;
+  int? householdId;
   int? coverPageId;
   int childNumber;
   
@@ -137,7 +137,7 @@ class ChildDetailsModel {
 
   ChildDetailsModel({
     this.id,
-    required this.householdId,
+    this.householdId,
     this.coverPageId,
     required this.childNumber,
     

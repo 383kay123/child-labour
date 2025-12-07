@@ -1,3 +1,4 @@
+import 'package:human_rights_monitor/controller/db/db_tables/helpers/household_db_helper.dart';
 import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
@@ -5,7 +6,7 @@ import 'package:human_rights_monitor/controller/db/household_tables.dart';
 
 
 class FarmerIdentificationDao {
-  final LocalDBHelper dbHelper;
+  final HouseholdDBHelper dbHelper;
 
   FarmerIdentificationDao({required this.dbHelper});
 

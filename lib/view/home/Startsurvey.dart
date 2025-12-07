@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:human_rights_monitor/controller/db/db.dart';
+import 'package:human_rights_monitor/controller/models/household_models.dart';
 import 'package:human_rights_monitor/view/pages/community-assessment/assessment-form.dart';
 import 'package:human_rights_monitor/view/pages/community-assessment/history/community-assessment-history.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/house_hold.dart';
 import 'package:human_rights_monitor/view/pages/house-hold/history/house_hold_history.dart';
 import 'package:human_rights_monitor/view/pages/Monitoring/monitoring_assessment_form.dart';
 import 'package:human_rights_monitor/view/pages/Monitoring/monitoring_assessment_history.dart';
+import 'package:human_rights_monitor/view/pages/house-hold/pages/steps/cover_page/cover_page.dart';
 import 'package:human_rights_monitor/view/screen_wrapper/screen_wrapper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -30,12 +32,11 @@ class _StartSurveyPageState extends State<StartSurveyPage> {
   Future<void> _clearSurveyData() async {
     try {
       await _dbHelper.clearAllSurveyData();
-      
+
       // Clear shared preferences for survey data
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('selected_town');
       await prefs.remove('selected_farmer');
-      
     } catch (e) {
       debugPrint('Error clearing survey data: $e');
     } finally {
@@ -49,6 +50,8 @@ class _StartSurveyPageState extends State<StartSurveyPage> {
 
   @override
   Widget build(BuildContext context) {
+    CoverPageData _coverData = CoverPageData.empty();
+
     if (_isLoading) {
       return const Scaffold(
         body: Center(
@@ -83,17 +86,29 @@ class _StartSurveyPageState extends State<StartSurveyPage> {
               // Prevent default back button behavior
               return false;
             },
-            child: HouseHold(
-              coverPageId: DateTime.now().millisecondsSinceEpoch,
-              onComplete: () {
-                // Navigate to the ScreenWrapper which contains the home screen
-                Navigator.pushAndRemoveUntil(
-                  buildContext,
-                  MaterialPageRoute(builder: (context) => const ScreenWrapper()),
-                  (route) => false,
-                );
-              },
+
+            child: CoverPageForm(
+              // onContinue: () {  },
+                // data: _coverData,
+                // onDataChanged: (newData) {
+                //   // Update the cover data
+                //   setState(() {
+                //     _coverData = newData;
+                //   });
+                // },
+                // onNext: onNext
             ),
+            // child: HouseHold(
+            //   coverPageId: DateTime.now().millisecondsSinceEpoch,
+            //   onComplete: () {
+            //     // Navigate to the ScreenWrapper which contains the home screen
+            //     Navigator.pushAndRemoveUntil(
+            //       buildContext,
+            //       MaterialPageRoute(builder: (context) => const ScreenWrapper()),
+            //       (route) => false,
+            //     );
+            //   },
+            // ),
           ),
         ),
         'historyPage': const SurveyListPage(),
@@ -201,8 +216,6 @@ class _StartSurveyPageState extends State<StartSurveyPage> {
               ),
             ),
           ),
-
-
         ],
       ),
     );

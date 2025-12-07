@@ -98,6 +98,22 @@ class SocietyRepository {
     }
   }
 
+  // Read - Get first 10 societies
+  Future<List<Society>> getFirst10Societies() async {
+    final db = await databaseHelper.database;
+
+    try {
+      final List<Map<String, dynamic>> maps = await db.query(
+        tableName,
+        limit: 10,
+      );
+      return List.generate(maps.length, (i) => Society.fromJson(maps[i]));
+    } catch (e) {
+      throw Exception('Failed to get first 10 societies: $e');
+    }
+  }
+
+
   // Read - Get societies by district ID
   Future<List<Society>> getSocietiesByDistrict(int districtId) async {
     final db = await databaseHelper.database;

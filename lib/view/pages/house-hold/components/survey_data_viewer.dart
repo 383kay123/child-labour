@@ -26,8 +26,9 @@ extension StringCasingExtension on String {
 
 class SurveyDataViewer extends StatefulWidget {
   final FullSurveyModel surveyData;
-  
-  const SurveyDataViewer({Key? key, required this.surveyData}) : super(key: key);
+
+  const SurveyDataViewer({Key? key, required this.surveyData})
+      : super(key: key);
 
   @override
   State<SurveyDataViewer> createState() => _SurveyDataViewerState();
@@ -38,59 +39,60 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
   final ScrollController _scrollController = ScrollController();
   bool _isRefreshing = false;
 
+
   final List<Map<String, dynamic>> _sections = [
-  {
-    'title': 'Cover Page',
-    'icon': Icons.description_outlined,
-    'color': AppTheme.primaryColor,
-  },
-  {
-    'title': 'Consent',
-    'icon': Icons.assignment_outlined,
-    'color': AppTheme.secondaryColor,
-  },
-  {
-    'title': 'Farmer ID',
-    'icon': Icons.perm_identity_outlined,
-    'color': AppTheme.accentColor,
-  },
-  {
-    'title': 'Farm Information',
-    'icon': Icons.agriculture_outlined,
-    'color': Colors.teal,
-  },
-  {
-    'title': 'Children',
-    'icon': Icons.child_care_outlined,
-    'color': Colors.amber,
-  },
-  {
-    'title': 'Remediation',
-    'icon': Icons.health_and_safety_outlined,
-    'color': Colors.red,
-  },
-  {
-    'title': 'Sensitization',
-    'icon': Icons.psychology_outlined,
-    'color': Colors.deepPurple,
-  },
-  {
-    'title': 'End of Collection',
-    'icon': Icons.assignment_turned_in_outlined,
-    'color': Colors.green,
-  },
-];
+    {
+      'title': 'Cover Page',
+      'icon': Icons.description_outlined,
+      'color': AppTheme.primaryColor,
+    },
+    {
+      'title': 'Consent',
+      'icon': Icons.assignment_outlined,
+      'color': AppTheme.secondaryColor,
+    },
+    {
+      'title': 'Farmer ID',
+      'icon': Icons.perm_identity_outlined,
+      'color': AppTheme.accentColor,
+    },
+    {
+      'title': 'Farm Information',
+      'icon': Icons.agriculture_outlined,
+      'color': Colors.teal,
+    },
+    {
+      'title': 'Children',
+      'icon': Icons.child_care_outlined,
+      'color': Colors.amber,
+    },
+    {
+      'title': 'Remediation',
+      'icon': Icons.health_and_safety_outlined,
+      'color': Colors.red,
+    },
+    {
+      'title': 'Sensitization',
+      'icon': Icons.psychology_outlined,
+      'color': Colors.deepPurple,
+    },
+    {
+      'title': 'End of Collection',
+      'icon': Icons.assignment_turned_in_outlined,
+      'color': Colors.green,
+    },
+  ];
 
   Future<void> _refreshData() async {
     if (_isRefreshing) return;
-    
+
     setState(() {
       _isRefreshing = true;
     });
 
     try {
       await Future.delayed(const Duration(seconds: 1));
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -138,7 +140,8 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
               ),
               SizedBox(height: 16),
               Text(
@@ -174,7 +177,7 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
 
   Widget _buildHeader() {
     final currentSection = _sections[_selectedSection];
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -237,7 +240,9 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: hasData ? AppTheme.primaryColor.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
+        color: hasData
+            ? AppTheme.primaryColor.withOpacity(0.1)
+            : Colors.amber.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -327,7 +332,7 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                 final section = entry.value;
                 final isSelected = _selectedSection == index;
                 final hasData = _getSectionData(index) != null;
-                
+
                 return _buildDesktopNavItem(
                   section: section,
                   index: index,
@@ -371,9 +376,11 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
           child: Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isSelected ? section['color'].withOpacity(0.1) : Colors.transparent,
+              color: isSelected
+                  ? section['color'].withOpacity(0.1)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
-              border: isSelected 
+              border: isSelected
                   ? Border.all(
                       color: section['color'].withOpacity(0.3),
                       width: 1,
@@ -387,7 +394,9 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                   children: [
                     Icon(
                       section['icon'],
-                      color: isSelected ? section['color'] : AppTheme.textSecondary,
+                      color: isSelected
+                          ? section['color']
+                          : AppTheme.textSecondary,
                       size: 20,
                     ),
                     if (hasData && !isSelected) ...[
@@ -413,7 +422,8 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                   style: GoogleFonts.poppins(
                     fontSize: 10,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? section['color'] : AppTheme.textSecondary,
+                    color:
+                        isSelected ? section['color'] : AppTheme.textSecondary,
                     height: 1.2,
                   ),
                 ),
@@ -447,7 +457,7 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
               final section = _sections[index];
               final isSelected = _selectedSection == index;
               final hasData = _getSectionData(index) != null;
-              
+
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: _buildMobileNavItem(
@@ -490,10 +500,14 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? section['color'].withOpacity(0.1) : Colors.transparent,
+            color: isSelected
+                ? section['color'].withOpacity(0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? section['color'].withOpacity(0.3) : Colors.grey.shade300,
+              color: isSelected
+                  ? section['color'].withOpacity(0.3)
+                  : Colors.grey.shade300,
               width: 1,
             ),
           ),
@@ -504,7 +518,8 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                 children: [
                   Icon(
                     section['icon'],
-                    color: isSelected ? section['color'] : AppTheme.textSecondary,
+                    color:
+                        isSelected ? section['color'] : AppTheme.textSecondary,
                     size: 18,
                   ),
                   if (hasData && !isSelected) ...[
@@ -576,7 +591,7 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        sectionData != null 
+                        sectionData != null
                             ? 'Complete data overview'
                             : 'Section not completed',
                         style: AppTheme.textTheme.bodyMedium,
@@ -586,7 +601,8 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                 ),
                 if (sectionData != null) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -594,7 +610,8 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, size: 14, color: AppTheme.primaryColor),
+                        Icon(Icons.check_circle,
+                            size: 14, color: AppTheme.primaryColor),
                         SizedBox(width: 4),
                         Text(
                           'Complete',
@@ -609,7 +626,8 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                   ),
                 ] else ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(12),
@@ -617,7 +635,8 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.pending, size: 14, color: Colors.grey.shade600),
+                        Icon(Icons.pending,
+                            size: 14, color: Colors.grey.shade600),
                         SizedBox(width: 4),
                         Text(
                           'Pending',
@@ -635,7 +654,7 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
             ),
           ),
           Expanded(
-            child: sectionData != null 
+            child: sectionData != null
                 ? _buildSectionContent()
                 : _buildEmptyState(currentSection['color']),
           ),
@@ -644,88 +663,112 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
     );
   }
 
- Widget _buildSectionContent() {
-  debugPrint('Building section: ${_sections[_selectedSection]['title']}');
-  
-  try {
-    switch (_selectedSection) {
-      case 0:
-        if (widget.surveyData.cover == null) {
-          return _buildErrorCard('Cover Page', 'No cover page data available');
-        }
-        return _buildCoverPageContent();
-        
-      case 1:
-        if (widget.surveyData.consent == null) {
-          return _buildErrorCard('Consent', 'No consent data available');
-        }
-        return _buildConsentContent();
-        
-      case 2:
-        if (widget.surveyData.farmer == null) {
-          return _buildErrorCard('Farmer Identification', 'No farmer identification data available');
-        }
-        return _buildFarmerIdentificationContent();
-        
-      case 3:
-        if (widget.surveyData.combinedFarm == null) {
-          return _buildErrorCard('Farm Information', 'No farm information available');
-        }
-        return _buildFarmInformationContent();
-        
-      case 4:
-        if (widget.surveyData.childrenHousehold == null) {
-          return _buildErrorCard('Children', 'No children data available');
-        }
-        return _buildChildrenContent();
-        
-      case 5:
-        if (widget.surveyData.remediation == null) {
-          return _buildErrorCard('Remediation', 'No remediation data available');
-        }
-        return _buildRemediationContent();
-        
-     case 6: {
-  final hasSensitization = widget.surveyData.sensitization != null;
-  final hasQuestions = widget.surveyData.sensitizationQuestions?.isNotEmpty == true;
-  
-  debugPrint('🔍 [SurveyViewer] Sensitization check - hasSensitization: $hasSensitization, hasQuestions: $hasQuestions');
-  debugPrint('🔍 [SurveyViewer] Sensitization data: ${widget.surveyData.sensitization?.toMap()}');
-  debugPrint('🔍 [SurveyViewer] Questions count: ${widget.surveyData.sensitizationQuestions?.length ?? 0}');
-  
-  // Always try to show the content if we have either sensitization data or questions
-  if (hasSensitization || hasQuestions) {
-    return _buildSensitizationContent();
-  }
-  
-  // Only show "not completed" if we have neither
-  return _buildInfoCard(
-    'Sensitization', 
-    'This section was not completed during the survey.\n\nSensitization data is optional and may not be collected for all surveys.',
-    icon: Icons.info_outline,
-    color: Colors.blue,
-  );
-}
+  Widget _buildSectionContent() {
+    debugPrint('Building section: ${_sections[_selectedSection]['title']}');
 
-        
-      case 7: // NEW SECTION
-        if (widget.surveyData.endOfCollection == null) {
-          return _buildErrorCard('End of Collection', 'No end of collection data available');
-        }
-        return _buildEndOfCollectionContent();
-        
-      default:
-        return _buildEmptyState(_sections[_selectedSection]['color']);
+    try {
+      switch (_selectedSection) {
+        case 0:
+          debugPrint(
+              "THE COVER DATA ::::::::::::::: ${widget.surveyData.cover.toMap()}");
+          if (widget.surveyData.cover == null) {
+            return _buildErrorCard(
+                'Cover Page', 'No cover page data available');
+          }
+          return _buildCoverPageContent();
+
+        case 1:
+          debugPrint(
+              "THE COVER DATA ::::::::::::::: ${widget.surveyData.consent!.toMap()}");
+          if (widget.surveyData.consent == null) {
+            return _buildErrorCard('Consent', 'No consent data available');
+          }
+          return _buildConsentContent();
+
+        case 2:
+          debugPrint(
+              "THE COVER DATA ::::::::::::::: ${widget.surveyData.farmer!.toMap()}");
+          if (widget.surveyData.farmer == null) {
+            return _buildErrorCard('Farmer Identification',
+                'No farmer identification data available');
+          }
+          return _buildFarmerIdentificationContent();
+
+        case 3:
+          debugPrint(
+              "THE COVER DATA ::::::::::::::: ${widget.surveyData.combinedFarm!.toMap()}");
+          if (widget.surveyData.combinedFarm == null) {
+            return _buildErrorCard(
+                'Farm Information', 'No farm information available');
+          }
+          return _buildFarmInformationContent();
+
+        case 4:
+          debugPrint(
+              "THE COVER DATA ::::::::::::::: ${widget.surveyData.childrenHousehold!.toMap()}");
+          if (widget.surveyData.childrenHousehold == null) {
+            return _buildErrorCard('Children', 'No children data available');
+          }
+          return _buildChildrenContent();
+
+        case 5:
+          debugPrint(
+              "THE COVER DATA ::::::::::::::: ${widget.surveyData.remediation!.toMap()}");
+          if (widget.surveyData.remediation == null) {
+            return _buildErrorCard(
+                'Remediation', 'No remediation data available');
+          }
+          return _buildRemediationContent();
+
+        case 6:
+          {
+            debugPrint(
+                "THE COVER DATA ::::::::::::::: ${widget.surveyData.sensitization!.toMap()}");
+            final hasSensitization = widget.surveyData.sensitization != null;
+            final hasQuestions =
+                widget.surveyData.sensitizationQuestions?.isNotEmpty == true;
+
+            debugPrint(
+                '🔍 [SurveyViewer] Sensitization check - hasSensitization: $hasSensitization, hasQuestions: $hasQuestions');
+            debugPrint(
+                '🔍 [SurveyViewer] Sensitization data: ${widget.surveyData.sensitization?.toMap()}');
+            debugPrint(
+                '🔍 [SurveyViewer] Questions count: ${widget.surveyData.sensitizationQuestions?.length ?? 0}');
+
+            // Always try to show the content if we have either sensitization data or questions
+            if (hasSensitization || hasQuestions) {
+              return _buildSensitizationContent();
+            }
+
+            // Only show "not completed" if we have neither
+            return _buildInfoCard(
+              'Sensitization',
+              'This section was not completed during the survey.\n\nSensitization data is optional and may not be collected for all surveys.',
+              icon: Icons.info_outline,
+              color: Colors.blue,
+            );
+          }
+
+        case 7: // NEW SECTION
+          if (widget.surveyData.endOfCollection == null) {
+            return _buildErrorCard(
+                'End of Collection', 'No end of collection data available');
+          }
+          return _buildEndOfCollectionContent();
+
+        default:
+          return _buildEmptyState(_sections[_selectedSection]['color']);
+      }
+    } catch (e, stackTrace) {
+      debugPrint(
+          'Error building section ${_sections[_selectedSection]['title']}: $e');
+      return _buildErrorCard(
+        'Error',
+        'Failed to load ${_sections[_selectedSection]['title']} data.',
+      );
     }
-  } catch (e, stackTrace) {
-    debugPrint('Error building section ${_sections[_selectedSection]['title']}: $e');
-    return _buildErrorCard(
-      'Error', 
-      'Failed to load ${_sections[_selectedSection]['title']} data.',
-    );
   }
-}
-  
+
   Widget _buildErrorCard(String title, String message) {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -747,7 +790,8 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
                 SizedBox(width: 8),
                 Text(
                   title,
-                  style: AppTheme.textTheme.titleLarge?.copyWith(color: AppTheme.errorColor),
+                  style: AppTheme.textTheme.titleLarge
+                      ?.copyWith(color: AppTheme.errorColor),
                 ),
               ],
             ),
@@ -801,17 +845,17 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
     final cover = widget.surveyData.cover;
     final townName = _getTownName(cover.selectedTownCode, cover.towns);
     final farmerName = _getFarmerName(cover.selectedFarmerCode, cover.farmers);
-    
+
     return _buildScrollableContent([
       _buildContentCard(
         title: 'Basic Information',
         items: {
-          'Database ID': cover.id?.toString() ?? 'Not set',
-          'Selected Town': townName,
-          'Selected Farmer': farmerName,
+          // 'Database ID': cover.id?.toString() ?? 'Not set',
+          'Society': townName,
+          'Farmer': farmerName,
         },
       ),
-      if (cover.member != null) 
+      if (cover.member != null)
         _buildContentCard(
           title: 'Member Information',
           items: Map<String, String>.from(cover.member!),
@@ -821,21 +865,22 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
 
   Widget _buildConsentContent() {
     final consent = widget.surveyData.consent;
-    
+
     if (consent == null) {
       return _buildEmptyState(_sections[1]['color']);
     }
-    
+
     return _buildScrollableContent([
       _buildContentCard(
         title: 'Consent Details',
         items: {
-          'Database ID': consent.id?.toString() ?? 'Not set',
+          // 'Database ID': consent.id?.toString() ?? 'Not set',
           'Community Type': consent.communityType ?? 'Not specified',
-          'Resides in Community': consent.residesInCommunityConsent ?? 'Not specified',
+          'Resides in Community':
+              consent.residesInCommunityConsent ?? 'Not specified',
           'Farmer Available': consent.farmerAvailable ?? 'Not specified',
           'Consent Given': _boolToYesNo(consent.consentGiven),
-         'Consent Timestamp': _formatDateTime(consent.consentTimestamp) ?? 'Not specified',
+          // 'Consent Timestamp': _formatDateTime(consent.consentTimestamp) ?? 'Not specified',
         },
       ),
     ]);
@@ -843,7 +888,9 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
 
   Widget _buildFarmerIdentificationContent() {
     final farmer = widget.surveyData.farmer;
-    
+
+    debugPrint("THE FARMER ::::::::::: ${widget.surveyData.farmer}");
+
     if (farmer == null) {
       return _buildScrollableContent([
         _buildContentCard(
@@ -854,7 +901,7 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
         ),
       ]);
     }
-    
+
     return _buildScrollableContent([
       _buildContentCard(
         title: 'Identification Details',
@@ -870,715 +917,798 @@ class _SurveyDataViewerState extends State<SurveyDataViewer> {
     ]);
   }
 
-Widget _buildFarmInformationContent() {
-  final combinedFarm = widget.surveyData.combinedFarm;
-  
-  debugPrint('🔍 [SurveyViewer] Building Farm Information Content');
-  debugPrint('🔍 [SurveyViewer] Combined Farm Data: ${combinedFarm != null ? "Available" : "Null"}');
-  
-  if (combinedFarm == null) {
-    return _buildErrorCard(
-      'Farm Information', 
-      'No farm information data is available. This section may not have been completed.'
-    );
-  }
-  
-  try {
-    final visitInfo = combinedFarm.visitInformation;
-    final ownerInfo = combinedFarm.ownerInformation;
-    final workersInfo = combinedFarm.workersInFarm;
-    final adultsInfo = combinedFarm.adultsInformation;
-    
-    List<Widget> content = [];
-    
-    // Basic Info Card
-    content.add(_buildContentCard(
-      title: 'Farm Information Overview',
-      items: {
-        'Database ID': combinedFarm.id?.toString() ?? 'Not set',
-        'Cover Page ID': combinedFarm.coverPageId?.toString() ?? 'Not set',
-        'Created': _formatDateTime(combinedFarm.createdAt) ?? 'Not available',
-        'Last Updated': _formatDateTime(combinedFarm.updatedAt) ?? 'Not available',
-      },
-    ));
-    
-    // Visit Information
-    if (visitInfo != null) {
-      final visitItems = <String, String>{};
-      
-      // Name verification
-      if (visitInfo.respondentNameCorrect != null) {
-        visitItems['Respondent Name Correct'] = visitInfo.respondentNameCorrect! ? 'Yes' : 'No';
-        if (!visitInfo.respondentNameCorrect! && visitInfo.correctedRespondentName != null) {
-          visitItems['Corrected Name'] = visitInfo.correctedRespondentName!;
-          if (visitInfo.respondentOtherNames != null) {
-            visitItems['Other Names'] = visitInfo.respondentOtherNames!;
-          }
-        }
-      }
-      
-      // Nationality
-      if (visitInfo.respondentNationality != null) {
-        visitItems['Nationality'] = visitInfo.respondentNationality!;
-        if (visitInfo.respondentNationality == 'Non-Ghanaian') {
-          if (visitInfo.countryOfOrigin != null) {
-            visitItems['Country of Origin'] = visitInfo.countryOfOrigin!;
-            if (visitInfo.countryOfOrigin == 'Other' && visitInfo.otherCountry != null) {
-              visitItems['Other Country'] = visitInfo.otherCountry!;
+  Widget _buildFarmInformationContent() {
+    final combinedFarm = widget.surveyData.combinedFarm;
+
+    debugPrint('🔍 [SurveyViewer] Building Farm Information Content');
+    debugPrint(
+        '🔍 [SurveyViewer] Combined Farm Data: ${combinedFarm != null ? "Available" : "Null"}');
+
+    if (combinedFarm == null) {
+      return _buildErrorCard('Farm Information',
+          'No farm information data is available. This section may not have been completed.');
+    }
+
+    try {
+      final visitInfo = combinedFarm.visitInformation;
+      final ownerInfo = combinedFarm.ownerInformation;
+      final workersInfo = combinedFarm.workersInFarm;
+      final adultsInfo = combinedFarm.adultsInformation;
+
+      List<Widget> content = [];
+
+      // Basic Info Card
+      content.add(_buildContentCard(
+        title: 'Farm Information Overview',
+        items: {
+          'Database ID': combinedFarm.id?.toString() ?? 'Not set',
+          'Cover Page ID': combinedFarm.coverPageId?.toString() ?? 'Not set',
+          'Created': _formatDateTime(combinedFarm.createdAt) ?? 'Not available',
+          'Last Updated':
+              _formatDateTime(combinedFarm.updatedAt) ?? 'Not available',
+        },
+      ));
+
+      // Visit Information
+      if (visitInfo != null) {
+        final visitItems = <String, String>{};
+
+        // Name verification
+        if (visitInfo.respondentNameCorrect != null) {
+          visitItems['Respondent Name Correct'] =
+              visitInfo.respondentNameCorrect! ? 'Yes' : 'No';
+          if (!visitInfo.respondentNameCorrect! &&
+              visitInfo.correctedRespondentName != null) {
+            visitItems['Corrected Name'] = visitInfo.correctedRespondentName!;
+            if (visitInfo.respondentOtherNames != null) {
+              visitItems['Other Names'] = visitInfo.respondentOtherNames!;
             }
           }
         }
-      }
-      
-      // Farm ownership
-      if (visitInfo.isFarmOwner != null) {
-        visitItems['Is Farm Owner'] = visitInfo.isFarmOwner! ? 'Yes' : 'No';
-        if (visitInfo.farmOwnershipType != null) {
-          visitItems['Ownership Type'] = visitInfo.farmOwnershipType!;
-        }
-      }
-      
-      // Location data
-      if (visitInfo.location != null) {
-        visitItems['Location'] = visitInfo.location!;
-      }
-      if (visitInfo.gpsCoordinates != null) {
-        visitItems['GPS Coordinates'] = visitInfo.gpsCoordinates!;
-      }
-      
-      if (visitItems.isNotEmpty) {
-        content.add(_buildContentCard(
-          title: 'Visit Information',
-          items: visitItems,
-        ));
-      }
-    }
-    
-    // Owner Information
-    if (ownerInfo != null) {
-      final ownerItems = <String, String>{};
-      
-      if (ownerInfo.ownerName.isNotEmpty) {
-        ownerItems['Owner Name'] = ownerInfo.ownerName;
-      }
-      if (ownerInfo.ownerFirstName.isNotEmpty) {
-        ownerItems['Owner First Name'] = ownerInfo.ownerFirstName;
-      }
-      if (ownerInfo.nationality != null) {
-        ownerItems['Nationality'] = ownerInfo.nationality == 'Non-Ghanaian' 
-            ? 'Non-Ghanaian' 
-            : 'Ghanaian';
-        
-        if (ownerInfo.nationality == 'Non-Ghanaian' && ownerInfo.specificNationality != null) {
-          ownerItems['Country'] = ownerInfo.specificNationality!;
-          if (ownerInfo.specificNationality == 'other' && ownerInfo.otherNationality.isNotEmpty) {
-            ownerItems['Other Country'] = ownerInfo.otherNationality;
-          }
-        }
-      }
-      if (ownerInfo.yearsWithOwner.isNotEmpty) {
-        ownerItems['Years with Owner'] = '${ownerInfo.yearsWithOwner} years';
-      }
-      
-      if (ownerItems.isNotEmpty) {
-        content.add(_buildContentCard(
-          title: 'Owner Information',
-          items: ownerItems,
-        ));
-      }
-    }
-    
-    // Workers Information
-    if (workersInfo != null) {
-      final workersItems = <String, String>{};
-      
-      if (workersInfo.hasRecruitedWorker != null) {
-        workersItems['Recruited Workers (Past Year)'] = workersInfo.hasRecruitedWorker == '1' ? 'Yes' : 'No';
-        
-        if (workersInfo.hasRecruitedWorker == '1') {
-          // Labor types
-          final laborTypes = <String>[];
-          if (workersInfo.permanentLabor) laborTypes.add('Permanent');
-          if (workersInfo.casualLabor) laborTypes.add('Casual');
-          if (laborTypes.isNotEmpty) {
-            workersItems['Labor Types'] = laborTypes.join(', ');
-          }
-          
-          // Agreement type
-          if (workersInfo.workerAgreementType != null) {
-            workersItems['Agreement Type'] = workersInfo.workerAgreementType!;
-            if (workersInfo.workerAgreementType == 'Other (specify)' && workersInfo.otherAgreement.isNotEmpty) {
-              workersItems['Other Agreement'] = workersInfo.otherAgreement;
+
+        // Nationality
+        if (visitInfo.respondentNationality != null) {
+          visitItems['Nationality'] = visitInfo.respondentNationality!;
+          if (visitInfo.respondentNationality == 'Non-Ghanaian') {
+            if (visitInfo.countryOfOrigin != null) {
+              visitItems['Country of Origin'] = visitInfo.countryOfOrigin!;
+              if (visitInfo.countryOfOrigin == 'Other' &&
+                  visitInfo.otherCountry != null) {
+                visitItems['Other Country'] = visitInfo.otherCountry!;
+              }
             }
           }
-          
-          // Other worker-related fields
-          if (workersInfo.tasksClarified != null) {
-            workersItems['Tasks Clarified'] = workersInfo.tasksClarified!;
-          }
-          if (workersInfo.additionalTasks != null) {
-            workersItems['Additional Tasks'] = workersInfo.additionalTasks!;
-          }
-          if (workersInfo.refusalAction != null) {
-            workersItems['Refusal Action'] = workersInfo.refusalAction!;
-          }
-          if (workersInfo.salaryPaymentFrequency != null) {
-            workersItems['Salary Payment'] = workersInfo.salaryPaymentFrequency!;
-          }
-        } else if (workersInfo.everRecruitedWorker != null) {
-          workersItems['Ever Recruited Before'] = workersInfo.everRecruitedWorker!;
         }
-      }
-      
-      if (workersItems.isNotEmpty) {
-        content.add(_buildContentCard(
-          title: 'Workers Information',
-          items: workersItems,
-        ));
-      }
-      
-      // Agreement responses
-      if (workersInfo.agreementResponses.isNotEmpty) {
-        final agreementItems = <String, String>{};
-        workersInfo.agreementResponses.forEach((key, value) {
-          if (value != null) {
-            agreementItems[_formatAgreementKey(key)] = value;
+
+        // Farm ownership
+        if (visitInfo.isFarmOwner != null) {
+          visitItems['Is Farm Owner'] = visitInfo.isFarmOwner! ? 'Yes' : 'No';
+          if (visitInfo.farmOwnershipType != null) {
+            visitItems['Ownership Type'] = visitInfo.farmOwnershipType!;
           }
-        });
-        
-        if (agreementItems.isNotEmpty) {
+        }
+
+        // Location data
+        if (visitInfo.location != null) {
+          visitItems['Location'] = visitInfo.location!;
+        }
+        if (visitInfo.gpsCoordinates != null) {
+          visitItems['GPS Coordinates'] = visitInfo.gpsCoordinates!;
+        }
+
+        if (visitItems.isNotEmpty) {
           content.add(_buildContentCard(
-            title: 'Worker Agreement Responses',
-            items: agreementItems,
+            title: 'Visit Information',
+            items: visitItems,
           ));
         }
       }
-    }
-    
-    // Adults Information
-    if (adultsInfo != null) {
-      if (adultsInfo.numberOfAdults != null && adultsInfo.numberOfAdults! > 0) {
-        content.add(_buildContentCard(
-          title: 'Household Adults (${adultsInfo.numberOfAdults})',
-          items: {
-            'Total Adults': adultsInfo.numberOfAdults.toString(),
-          },
-        ));
-        
-        // Display each household member
-        if (adultsInfo.members.isNotEmpty) {
-          for (int i = 0; i < adultsInfo.members.length; i++) {
-            final member = adultsInfo.members[i];
-            final details = member.producerDetails;
-            
-            final memberItems = <String, String>{};
-            memberItems['Name'] = member.name.isNotEmpty ? member.name : 'Unnamed Member ${i + 1}';
-            
-            if (details != null) {
-              if (details.gender != null) {
-                memberItems['Gender'] = details.gender!;
-              }
-              if (details.nationality != null) {
-                memberItems['Nationality'] = details.nationality == 'non_ghanaian' ? 'Non-Ghanaian' : 'Ghanaian';
-                if (details.nationality == 'non_ghanaian' && details.selectedCountry != null) {
-                  memberItems['Country'] = details.selectedCountry!;
-                  if (details.selectedCountry == 'Other' && details.otherCountry != null) {
-                    memberItems['Other Country'] = details.otherCountry!;
-                  }
-                }
-              }
-              if (details.yearOfBirth != null) {
-                memberItems['Year of Birth'] = details.yearOfBirth.toString();
-              }
-              if (details.relationshipToRespondent != null) {
-                memberItems['Relationship'] = details.relationshipToRespondent!;
-                if (details.relationshipToRespondent == 'other' && details.otherRelationship != null) {
-                  memberItems['Other Relationship'] = details.otherRelationship!;
-                }
-              }
-              if (details.hasBirthCertificate != null) {
-                // Handle different possible string representations of boolean values
-                final birthCert = details.hasBirthCertificate!.toLowerCase();
-                if (birthCert == 'true' || birthCert == '1' || birthCert == 'yes') {
-                  memberItems['Birth Certificate'] = 'Yes';
-                } else if (birthCert == 'false' || birthCert == '0' || birthCert == 'no') {
-                  memberItems['Birth Certificate'] = 'No';
-                } else {
-                  // If it's some other string value, use it as is
-                  memberItems['Birth Certificate'] = details.hasBirthCertificate!;
-                }
-              }
-              if (details.occupation != null) {
-                memberItems['Occupation'] = details.occupation!;
-                if (details.occupation == 'other' && details.otherOccupation != null) {
-                  memberItems['Other Occupation'] = details.otherOccupation!;
-                }
+
+      // Owner Information
+      if (ownerInfo != null) {
+        final ownerItems = <String, String>{};
+
+        if (ownerInfo.ownerName.isNotEmpty) {
+          ownerItems['Owner Name'] = ownerInfo.ownerName;
+        }
+        if (ownerInfo.ownerFirstName.isNotEmpty) {
+          ownerItems['Owner First Name'] = ownerInfo.ownerFirstName;
+        }
+        if (ownerInfo.nationality != null) {
+          ownerItems['Nationality'] = ownerInfo.nationality == 'Non-Ghanaian'
+              ? 'Non-Ghanaian'
+              : 'Ghanaian';
+
+          if (ownerInfo.nationality == 'Non-Ghanaian' &&
+              ownerInfo.specificNationality != null) {
+            ownerItems['Country'] = ownerInfo.specificNationality!;
+            if (ownerInfo.specificNationality == 'other' &&
+                ownerInfo.otherNationality.isNotEmpty) {
+              ownerItems['Other Country'] = ownerInfo.otherNationality;
+            }
+          }
+        }
+        if (ownerInfo.yearsWithOwner.isNotEmpty) {
+          ownerItems['Years with Owner'] = '${ownerInfo.yearsWithOwner} years';
+        }
+
+        if (ownerItems.isNotEmpty) {
+          content.add(_buildContentCard(
+            title: 'Owner Information',
+            items: ownerItems,
+          ));
+        }
+      }
+
+      // Workers Information
+      if (workersInfo != null) {
+        final workersItems = <String, String>{};
+
+        if (workersInfo.hasRecruitedWorker != null) {
+          workersItems['Recruited Workers (Past Year)'] =
+              workersInfo.hasRecruitedWorker == '1' ? 'Yes' : 'No';
+
+          if (workersInfo.hasRecruitedWorker == '1') {
+            // Labor types
+            final laborTypes = <String>[];
+            if (workersInfo.permanentLabor) laborTypes.add('Permanent');
+            if (workersInfo.casualLabor) laborTypes.add('Casual');
+            if (laborTypes.isNotEmpty) {
+              workersItems['Labor Types'] = laborTypes.join(', ');
+            }
+
+            // Agreement type
+            if (workersInfo.workerAgreementType != null) {
+              workersItems['Agreement Type'] = workersInfo.workerAgreementType!;
+              if (workersInfo.workerAgreementType == 'Other (specify)' &&
+                  workersInfo.otherAgreement.isNotEmpty) {
+                workersItems['Other Agreement'] = workersInfo.otherAgreement;
               }
             }
-            
+
+            // Other worker-related fields
+            if (workersInfo.tasksClarified != null) {
+              workersItems['Tasks Clarified'] = workersInfo.tasksClarified!;
+            }
+            if (workersInfo.additionalTasks != null) {
+              workersItems['Additional Tasks'] = workersInfo.additionalTasks!;
+            }
+            if (workersInfo.refusalAction != null) {
+              workersItems['Refusal Action'] = workersInfo.refusalAction!;
+            }
+            if (workersInfo.salaryPaymentFrequency != null) {
+              workersItems['Salary Payment'] =
+                  workersInfo.salaryPaymentFrequency!;
+            }
+          } else if (workersInfo.everRecruitedWorker != null) {
+            workersItems['Ever Recruited Before'] =
+                workersInfo.everRecruitedWorker!;
+          }
+        }
+
+        if (workersItems.isNotEmpty) {
+          content.add(_buildContentCard(
+            title: 'Workers Information',
+            items: workersItems,
+          ));
+        }
+
+        // Agreement responses
+        if (workersInfo.agreementResponses.isNotEmpty) {
+          final agreementItems = <String, String>{};
+          workersInfo.agreementResponses.forEach((key, value) {
+            if (value != null) {
+              agreementItems[_formatAgreementKey(key)] = value;
+            }
+          });
+
+          if (agreementItems.isNotEmpty) {
             content.add(_buildContentCard(
-              title: 'Household Member ${i + 1}',
-              items: memberItems,
+              title: 'Worker Agreement Responses',
+              items: agreementItems,
             ));
           }
         }
-      } else {
-        content.add(_buildContentCard(
-          title: 'Household Adults',
-          items: {'Status': 'No adult members recorded'},
-        ));
       }
+
+      // Adults Information
+      if (adultsInfo != null) {
+        if (adultsInfo.numberOfAdults != null &&
+            adultsInfo.numberOfAdults! > 0) {
+          content.add(_buildContentCard(
+            title: 'Household Adults (${adultsInfo.numberOfAdults})',
+            items: {
+              'Total Adults': adultsInfo.numberOfAdults.toString(),
+            },
+          ));
+
+          // Display each household member
+          if (adultsInfo.members.isNotEmpty) {
+            for (int i = 0; i < adultsInfo.members.length; i++) {
+              final member = adultsInfo.members[i];
+              final details = member.producerDetails;
+
+              final memberItems = <String, String>{};
+              memberItems['Name'] = member.name.isNotEmpty
+                  ? member.name
+                  : 'Unnamed Member ${i + 1}';
+
+              if (details != null) {
+                if (details.gender != null) {
+                  memberItems['Gender'] = details.gender!;
+                }
+                if (details.nationality != null) {
+                  memberItems['Nationality'] =
+                      details.nationality == 'non_ghanaian'
+                          ? 'Non-Ghanaian'
+                          : 'Ghanaian';
+                  if (details.nationality == 'non_ghanaian' &&
+                      details.selectedCountry != null) {
+                    memberItems['Country'] = details.selectedCountry!;
+                    if (details.selectedCountry == 'Other' &&
+                        details.otherCountry != null) {
+                      memberItems['Other Country'] = details.otherCountry!;
+                    }
+                  }
+                }
+                if (details.yearOfBirth != null) {
+                  memberItems['Year of Birth'] = details.yearOfBirth.toString();
+                }
+                if (details.relationshipToRespondent != null) {
+                  memberItems['Relationship'] =
+                      details.relationshipToRespondent!;
+                  if (details.relationshipToRespondent == 'other' &&
+                      details.otherRelationship != null) {
+                    memberItems['Other Relationship'] =
+                        details.otherRelationship!;
+                  }
+                }
+                if (details.hasBirthCertificate != null) {
+                  // Handle different possible string representations of boolean values
+                  final birthCert = details.hasBirthCertificate!.toLowerCase();
+                  if (birthCert == 'true' ||
+                      birthCert == '1' ||
+                      birthCert == 'yes') {
+                    memberItems['Birth Certificate'] = 'Yes';
+                  } else if (birthCert == 'false' ||
+                      birthCert == '0' ||
+                      birthCert == 'no') {
+                    memberItems['Birth Certificate'] = 'No';
+                  } else {
+                    // If it's some other string value, use it as is
+                    memberItems['Birth Certificate'] =
+                        details.hasBirthCertificate!;
+                  }
+                }
+                if (details.occupation != null) {
+                  memberItems['Occupation'] = details.occupation!;
+                  if (details.occupation == 'other' &&
+                      details.otherOccupation != null) {
+                    memberItems['Other Occupation'] = details.otherOccupation!;
+                  }
+                }
+              }
+
+              content.add(_buildContentCard(
+                title: 'Household Member ${i + 1}',
+                items: memberItems,
+              ));
+            }
+          }
+        } else {
+          content.add(_buildContentCard(
+            title: 'Household Adults',
+            items: {'Status': 'No adult members recorded'},
+          ));
+        }
+      }
+
+      return _buildScrollableContent(content);
+    } catch (e, stackTrace) {
+      debugPrint('❌ [SurveyViewer] Error building farm information: $e');
+      debugPrint('📜 Stack trace: $stackTrace');
+
+      return _buildErrorCard(
+        'Farm Information - Error',
+        'An error occurred while displaying farm information.\n\nError: $e',
+      );
     }
-    
-    return _buildScrollableContent(content);
-    
-  } catch (e, stackTrace) {
-    debugPrint('❌ [SurveyViewer] Error building farm information: $e');
-    debugPrint('📜 Stack trace: $stackTrace');
-    
-    return _buildErrorCard(
-      'Farm Information - Error', 
-      'An error occurred while displaying farm information.\n\nError: $e',
-    );
   }
-}
 
 // Helper method to format agreement keys
-String _formatAgreementKey(String key) {
-  final keyMap = {
-    'salary_workers': 'Withhold Salary',
-    'recruit_1': 'Debt Repayment Work',
-    'recruit_2': 'Hide Work Nature',
-    'recruit_3': 'Always Available',
-    'conditions_1': 'Restrict Movement',
-    'conditions_2': 'Family Communication',
-    'conditions_3': 'Living Conditions',
-    'conditions_4': 'Interfere Private Life',
-    'conditions_5': 'Restrict Leaving',
-    'leaving_1': 'Stay for Unpaid Salary',
-    'leaving_2': 'Cannot Leave with Debt',
-  };
-  
-  return keyMap[key] ?? key;
-}
+  String _formatAgreementKey(String key) {
+    final keyMap = {
+      'salary_workers': 'Withhold Salary',
+      'recruit_1': 'Debt Repayment Work',
+      'recruit_2': 'Hide Work Nature',
+      'recruit_3': 'Always Available',
+      'conditions_1': 'Restrict Movement',
+      'conditions_2': 'Family Communication',
+      'conditions_3': 'Living Conditions',
+      'conditions_4': 'Interfere Private Life',
+      'conditions_5': 'Restrict Leaving',
+      'leaving_1': 'Stay for Unpaid Salary',
+      'leaving_2': 'Cannot Leave with Debt',
+    };
 
- Widget _buildChildrenContent() {
-  final children = widget.surveyData.childrenHousehold;
-  if (children == null) {
-    return _buildEmptyState(_sections[4]['color']);
+    return keyMap[key] ?? key;
   }
-  
-  // Fetch child details from database using the household ID
-  return FutureBuilder<List<ChildDetailsModel>>(
-    future: _fetchChildDetails(),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return _buildLoadingState();
-      }
-      
-      if (snapshot.hasError) {
-        return _buildErrorCard('Children Data', 'Error loading child details: ${snapshot.error}');
-      }
-      
-      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-        return _buildScrollableContent([
-          _buildContentCard(
-            title: 'Children Overview',
-            items: {
-              'Has Children in Household': children.hasChildrenInHousehold ?? 'Not specified',
-              'Number of Children': children.numberOfChildren.toString(),
-              'Children 5 to 17 Years': children.children5To17.toString(),
-            },
-          ),
-          _buildInfoCard(
-            'Child Details',
-            'No detailed child information was collected for this survey.',
-            icon: Icons.info_outline,
-            color: Colors.blue,
-          ),
-        ]);
-      }
-      
-      final childDetails = snapshot.data!;
-      List<Widget> content = [];
-      
-      // Add overview card
-      content.add(_buildContentCard(
-        title: 'Children Overview',
-        items: {
-          'Has Children in Household': children.hasChildrenInHousehold ?? 'Not specified',
-          'Number of Children': children.numberOfChildren.toString(),
-          'Children 5 to 17 Years': children.children5To17.toString(),
-          'Detailed Records Found': childDetails.length.toString(),
-        },
-      ));
-      
-      // Add each child's details
-      for (int i = 0; i < childDetails.length; i++) {
-        final child = childDetails[i];
-        content.addAll(_buildChildDetailsCards(child, i + 1));
-      }
-      
-      return _buildScrollableContent(content);
-    },
-  );
-}
 
-Future<List<ChildDetailsModel>> _fetchChildDetails() async {
-  try {
-    // Get the cover page ID from the survey data
-    final coverPageId = widget.surveyData.cover.id;
-    
-    if (coverPageId == null) {
-      debugPrint('Error: coverPageId is null');
+  Widget _buildChildrenContent() {
+    final children = widget.surveyData.childrenHousehold;
+    if (children == null) {
+      return _buildEmptyState(_sections[4]['color']);
+    }
+
+    // Fetch child details from database using the household ID
+    return FutureBuilder<List<ChildDetailsModel>>(
+      future: _fetchChildDetails(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildLoadingState();
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorCard('Children Data',
+              'Error loading child details: ${snapshot.error}');
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return _buildScrollableContent([
+            _buildContentCard(
+              title: 'Children Overview',
+              items: {
+                'Has Children in Household':
+                    children.hasChildrenInHousehold ?? 'Not specified',
+                'Number of Children': children.numberOfChildren.toString(),
+                'Children 5 to 17 Years': children.children5To17.toString(),
+              },
+            ),
+            _buildInfoCard(
+              'Child Details',
+              'No detailed child information was collected for this survey.',
+              icon: Icons.info_outline,
+              color: Colors.blue,
+            ),
+          ]);
+        }
+
+        final childDetails = snapshot.data!;
+        List<Widget> content = [];
+
+        // Add overview card
+        content.add(_buildContentCard(
+          title: 'Children Overview',
+          items: {
+            'Has Children in Household':
+                children.hasChildrenInHousehold ?? 'Not specified',
+            'Number of Children': children.numberOfChildren.toString(),
+            'Children 5 to 17 Years': children.children5To17.toString(),
+            'Detailed Records Found': childDetails.length.toString(),
+          },
+        ));
+
+        // Add each child's details
+        for (int i = 0; i < childDetails.length; i++) {
+          final child = childDetails[i];
+          content.addAll(_buildChildDetailsCards(child, i + 1));
+        }
+
+        return _buildScrollableContent(content);
+      },
+    );
+  }
+
+  Future<List<ChildDetailsModel>> _fetchChildDetails() async {
+    try {
+      // Get the cover page ID from the survey data
+      final coverPageId = widget.surveyData.cover.id;
+
+      if (coverPageId == null) {
+        debugPrint('Error: coverPageId is null');
+        return [];
+      }
+
+      debugPrint('Using cover page ID: $coverPageId');
+      debugPrint('Fetching child details for cover page ID: $coverPageId');
+
+      // Initialize the database
+      final dbHelper = LocalDBHelper.instance;
+      await dbHelper.database; // Ensure database is initialized
+
+      // Fetch child details from the database using cover page ID
+      final childRepository = ChildRepositoryImpl();
+      final childDetails =
+          await childRepository.getChildrenByCoverPageId(coverPageId);
+      debugPrint('Child details: ${childDetails.first.toJson()}');
+      debugPrint(
+          'Found ${childDetails.length} child records for cover page ID: $coverPageId');
+      return childDetails;
+    } catch (e) {
+      debugPrint('Error fetching child details: $e');
       return [];
     }
-    
-    debugPrint('Using cover page ID: $coverPageId');
-    debugPrint('Fetching child details for cover page ID: $coverPageId');
-    
-    // Initialize the database
-    final dbHelper = LocalDBHelper.instance;
-    await dbHelper.database; // Ensure database is initialized
-    
-    // Fetch child details from the database using cover page ID
-    final childRepository = ChildRepositoryImpl();
-    final childDetails = await childRepository.getChildrenByCoverPageId(coverPageId);
-    debugPrint('Child details: ${childDetails.first.toJson()}');
-    debugPrint('Found ${childDetails.length} child records for cover page ID: $coverPageId');
-    return childDetails;
-  } catch (e) {
-    debugPrint('Error fetching child details: $e');
-    return [];
   }
-}
 
 // This method should be in ChildRepositoryImpl class, not here
 // The method is already properly implemented in the repository
 // Remove this method from here and use the repository's method instead
 
-Widget _buildLoadingState() {
-  return Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Loading Child Details...',
-          style: AppTheme.textTheme.bodyLarge,
-        ),
-      ],
-    ),
-  );
-}
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Loading Child Details...',
+            style: AppTheme.textTheme.bodyLarge,
+          ),
+        ],
+      ),
+    );
+  }
 
-List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
-  List<Widget> cards = [];
-  
-  // Child Basic Information Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Basic Information',
-    items: {
-      'Database ID': child.id?.toString() ?? 'Not set',
-      'Household ID': child.householdId.toString(),
-      'Child Number': child.childNumber.toString(),
-      'Is Farmer Child': _boolToYesNo(child.isFarmerChild),
-      'Name': '${child.childName} ${child.childSurname}',
-      'Gender': child.childGender ?? 'Not specified',
-      'Age': child.childAge?.toString() ?? 'Not specified',
-      'Birth Year': child.birthYear?.toString() ?? 'Not specified',
-      'Has Birth Certificate': _boolToYesNo(child.hasBirthCertificate),
-      'Born in Community': child.bornInCommunity ?? 'Not specified',
-      'Birth Country': child.birthCountry ?? 'Not specified',
-    },
-  ));
-  
-  // Family Information Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Family Information',
-    items: {
-      'Relationship to Head': child.relationshipToHead ?? 'Not specified',
-      'Other Relationship': child.otherRelationship ?? 'Not specified',
-      'Time in Household': child.timeInHousehold ?? 'Not specified',
-      'Father Residence': child.fatherResidence ?? 'Not specified',
-      'Father Country': child.fatherCountry ?? 'Not specified',
-      'Mother Residence': child.motherResidence ?? 'Not specified',
-      'Mother Country': child.motherCountry ?? 'Not specified',
-      'Has Spoken with Parents': _boolToYesNo(child.hasSpokenWithParents),
-      'Child Agreed with Decision': _boolToYesNo(child.childAgreedWithDecision),
-    },
-  ));
-  
-  // Education Information Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Education Information',
-    items: {
-      'Currently Enrolled': _boolToYesNo(child.isCurrentlyEnrolled),
-      'School Name': child.schoolName ?? 'Not specified',
-      'School Type': child.schoolType ?? 'Not specified',
-      'Grade Level': child.gradeLevel ?? 'Not specified',
-      'Attendance Frequency': child.schoolAttendanceFrequency ?? 'Not specified',
-      'Has Ever Been to School': _boolToYesNo(child.hasEverBeenToSchool),
-      'Attended School Last 7 Days': _boolToYesNo(child.attendedSchoolLast7Days),
-      'Can Write Sentences': child.canWriteSentences ?? 'Not specified',
-      'Education Level': child.educationLevel ?? 'Not specified',
-    },
-  ));
-  
-  // Work Information Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Work Information',
-    items: {
-      'Worked in House': _boolToYesNo(child.workedInHouse),
-      'Worked on Cocoa Farm': _boolToYesNo(child.workedOnCocoaFarm),
-      'Work Frequency': child.workFrequency ?? 'Not specified',
-      'Observed Working': _boolToYesNo(child.observedWorking),
-      'Received Remuneration': _boolToYesNo(child.receivedRemuneration),
-      'Work For Whom': child.workForWhom ?? 'Not specified',
-      'Other Work For Whom': child.otherWorkForWhom ?? 'Not specified',
-    },
-  ));
-  
-  // Cocoa Farm Tasks Card
-  if (child.cocoaFarmTasks != null && child.cocoaFarmTasks!.isNotEmpty) {
+  List<Widget> _buildChildDetailsCards(
+      ChildDetailsModel child, int childNumber) {
+    List<Widget> cards = [];
+
+    // Child Basic Information Card
     cards.add(_buildContentCard(
-      title: 'Child $childNumber: Cocoa Farm Tasks (7 Days)',
+      title: 'Child $childNumber: Basic Information',
       items: {
-        'Tasks': child.cocoaFarmTasks!.join(', '),
+        'Database ID': child.id?.toString() ?? 'Not set',
+        'Household ID': child.householdId.toString(),
+        'Child Number': child.childNumber.toString(),
+        'Is Farmer Child': _boolToYesNo(child.isFarmerChild),
+        'Name': '${child.childName} ${child.childSurname}',
+        'Gender': child.childGender ?? 'Not specified',
+        'Age': child.childAge?.toString() ?? 'Not specified',
+        'Birth Year': child.birthYear?.toString() ?? 'Not specified',
+        'Has Birth Certificate': _boolToYesNo(child.hasBirthCertificate),
+        'Born in Community': child.bornInCommunity ?? 'Not specified',
+        'Birth Country': child.birthCountry ?? 'Not specified',
       },
-      isList: true,
-      listItems: child.cocoaFarmTasks!,
     ));
-  }
-  
-  // Tasks Last 12 Months Card
-  if (child.tasksLast12Months != null && child.tasksLast12Months!.isNotEmpty) {
+
+    // Family Information Card
     cards.add(_buildContentCard(
-      title: 'Child $childNumber: Farm Tasks (12 Months)',
+      title: 'Child $childNumber: Family Information',
       items: {
-        'Tasks Count': child.tasksLast12Months!.length.toString(),
+        'Relationship to Head': child.relationshipToHead ?? 'Not specified',
+        'Other Relationship': child.otherRelationship ?? 'Not specified',
+        'Time in Household': child.timeInHousehold ?? 'Not specified',
+        'Father Residence': child.fatherResidence ?? 'Not specified',
+        'Father Country': child.fatherCountry ?? 'Not specified',
+        'Mother Residence': child.motherResidence ?? 'Not specified',
+        'Mother Country': child.motherCountry ?? 'Not specified',
+        'Has Spoken with Parents': _boolToYesNo(child.hasSpokenWithParents),
+        'Child Agreed with Decision':
+            _boolToYesNo(child.childAgreedWithDecision),
       },
-      isList: true,
-      listItems: child.tasksLast12Months!,
     ));
-  }
-  
-  // Light Tasks 7 Days Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Light Tasks (7 Days)',
-    items: {
-      'Received Remuneration': _boolToYesNo(child.receivedRemunerationLighttasks12months),
-      'Longest School Day Time': child.longestLightDutyTimeLighttasks7days ?? 'Not specified',
-      'Longest Non-School Day Time': child.longestNonSchoolDayTimeLighttasks7days ?? 'Not specified',
-      'Task Location': child.taskLocationLighttasks7days ?? 'Not specified',
-      'Other Location': child.otherLocationLighttasks7days ?? 'Not specified',
-      'School Day Hours': child.schoolDayTaskHoursLighttasks7days ?? 'Not specified',
-      'Non-School Day Hours': child.nonSchoolDayTaskHoursLighttasks7days ?? 'Not specified',
-      'Was Supervised': _boolToYesNo(child.wasSupervisedByAdultLighttasks7days),
-    },
-  ));
-  
-  // Light Tasks 12 Months Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Light Tasks (12 Months)',
-    items: {
-      'Received Remuneration': _boolToYesNo(child.receivedRemunerationLighttasks12months),
-      'Longest School Day Time': child.longestSchoolDayTimeLighttasks12months ?? 'Not specified',
-      'Longest Non-School Day Time': child.longestNonSchoolDayTimeLighttasks12months ?? 'Not specified',
-      'Task Location': child.taskLocationLighttasks12months ?? 'Not specified',
-      'Other Task Location': child.otherTaskLocationLighttasks12months ?? 'Not specified',
-      'Total School Day Hours': child.totalSchoolDayHoursLighttasks12months ?? 'Not specified',
-      'Total Non-School Day Hours': child.totalNonSchoolDayHoursLighttasks12months ?? 'Not specified',
-      'Was Supervised': _boolToYesNo(child.wasSupervisedDuringTaskLighttasks12months),
-    },
-  ));
-  
-  // Dangerous Tasks 7 Days Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Dangerous Tasks (7 Days)',
-    items: {
-      'Received Salary': _boolToYesNo(child.hasReceivedSalaryDangeroustask7days),
-      'Task Location': child.taskLocationDangeroustask7days ?? 'Not specified',
-      'Other Location': child.otherLocationDangeroustask7days ?? 'Not specified',
-      'Longest School Day Time': child.longestSchoolDayTimeDangeroustask7days ?? 'Not specified',
-      'Longest Non-School Day Time': child.longestNonSchoolDayTimeDangeroustask7days ?? 'Not specified',
-      'School Day Hours': child.schoolDayHoursDangeroustask7days ?? 'Not specified',
-      'Non-School Day Hours': child.nonSchoolDayHoursDangeroustask7days ?? 'Not specified',
-      'Was Supervised': _boolToYesNo(child.wasSupervisedByAdultDangeroustask7days),
-    },
-  ));
-  
-  // Dangerous Tasks 12 Months Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Dangerous Tasks (12 Months)',
-    items: {
-      'Received Salary': _boolToYesNo(child.hasReceivedSalaryDangeroustask12months),
-      'Task Location': child.taskLocationDangeroustask12months ?? 'Not specified',
-      'Other Location': child.otherLocationDangeroustask12months ?? 'Not specified',
-      'Longest School Day Time': child.longestSchoolDayTimeDangeroustask12months ?? 'Not specified',
-      'Longest Non-School Day Time': child.longestNonSchoolDayTimeDangeroustask12months ?? 'Not specified',
-      'School Day Hours': child.schoolDayHoursDangeroustask12months ?? 'Not specified',
-      'Non-School Day Hours': child.nonSchoolDayHoursDangeroustask12months ?? 'Not specified',
-      'Was Supervised': _boolToYesNo(child.wasSupervisedByAdultDangeroustask12months),
-    },
-  ));
-  
-  // Dangerous Tasks List Card
-  if (child.dangerousTasks12Months != null && child.dangerousTasks12Months!.isNotEmpty) {
+
+    // Education Information Card
     cards.add(_buildContentCard(
-      title: 'Child $childNumber: Dangerous Tasks List (12 Months)',
+      title: 'Child $childNumber: Education Information',
       items: {
-        'Tasks Count': child.dangerousTasks12Months!.length.toString(),
+        'Currently Enrolled': _boolToYesNo(child.isCurrentlyEnrolled),
+        'School Name': child.schoolName ?? 'Not specified',
+        'School Type': child.schoolType ?? 'Not specified',
+        'Grade Level': child.gradeLevel ?? 'Not specified',
+        'Attendance Frequency':
+            child.schoolAttendanceFrequency ?? 'Not specified',
+        'Has Ever Been to School': _boolToYesNo(child.hasEverBeenToSchool),
+        'Attended School Last 7 Days':
+            _boolToYesNo(child.attendedSchoolLast7Days),
+        'Can Write Sentences': child.canWriteSentences ?? 'Not specified',
+        'Education Level': child.educationLevel ?? 'Not specified',
       },
-      isList: true,
-      listItems: child.dangerousTasks12Months!.map((task) {
-        return task.replaceAll('_dangeroustask12months', '');
-      }).toList(),
     ));
-  }
-  
-  // Health and Safety Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Health and Safety',
-    items: {
-      'Applied Agrochemicals': _boolToYesNo(child.appliedAgrochemicals),
-      'On Farm During Application': _boolToYesNo(child.onFarmDuringApplication),
-      'Suffered Injury': _boolToYesNo(child.sufferedInjury),
-      'How Wounded': child.howWounded ?? 'Not specified',
-      'When Wounded': child.whenWounded ?? 'Not specified',
-      'Often Feel Pains': _boolToYesNo(child.oftenFeelPains),
-    },
-  ));
-  
-  // Help Received Card
-  if (child.helpReceived != null && child.helpReceived!.isNotEmpty) {
+
+    // Work Information Card
     cards.add(_buildContentCard(
-      title: 'Child $childNumber: Help Received',
+      title: 'Child $childNumber: Work Information',
       items: {
-        'Help Types': child.helpReceived!.join(', '),
+        'Worked in House': _boolToYesNo(child.workedInHouse),
+        'Worked on Cocoa Farm': _boolToYesNo(child.workedOnCocoaFarm),
+        'Work Frequency': child.workFrequency ?? 'Not specified',
+        'Observed Working': _boolToYesNo(child.observedWorking),
+        'Received Remuneration': _boolToYesNo(child.receivedRemuneration),
+        'Work For Whom': child.workForWhom ?? 'Not specified',
+        'Other Work For Whom': child.otherWorkForWhom ?? 'Not specified',
       },
-      isList: true,
-      listItems: child.helpReceived!,
     ));
-  }
-  
-  // Photo Consent Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Photo Consent',
-    items: {
-      'Parent Consent for Photo': _boolToYesNo(child.parentConsentPhoto),
-      'No Consent Reason': child.noConsentReason ?? 'Not specified',
-      'Child Photo Taken': (child.childPhotoPath?.isNotEmpty == true) ? 'Yes' : 'No',
-    },
-  ));
-  
-  // School Supplies Card
-  if (child.availableSchoolSupplies != null && child.availableSchoolSupplies!.isNotEmpty) {
+
+    // Cocoa Farm Tasks Card
+    if (child.cocoaFarmTasks != null && child.cocoaFarmTasks!.isNotEmpty) {
+      cards.add(_buildContentCard(
+        title: 'Child $childNumber: Cocoa Farm Tasks (7 Days)',
+        items: {
+          'Tasks': child.cocoaFarmTasks!.join(', '),
+        },
+        isList: true,
+        listItems: child.cocoaFarmTasks!,
+      ));
+    }
+
+    // Tasks Last 12 Months Card
+    if (child.tasksLast12Months != null &&
+        child.tasksLast12Months!.isNotEmpty) {
+      cards.add(_buildContentCard(
+        title: 'Child $childNumber: Farm Tasks (12 Months)',
+        items: {
+          'Tasks Count': child.tasksLast12Months!.length.toString(),
+        },
+        isList: true,
+        listItems: child.tasksLast12Months!,
+      ));
+    }
+
+    // Light Tasks 7 Days Card
     cards.add(_buildContentCard(
-      title: 'Child $childNumber: Available School Supplies',
+      title: 'Child $childNumber: Light Tasks (7 Days)',
       items: {
-        'Supplies Count': child.availableSchoolSupplies!.length.toString(),
+        'Received Remuneration':
+            _boolToYesNo(child.receivedRemunerationLighttasks12months),
+        'Longest School Day Time':
+            child.longestLightDutyTimeLighttasks7days ?? 'Not specified',
+        'Longest Non-School Day Time':
+            child.longestNonSchoolDayTimeLighttasks7days ?? 'Not specified',
+        'Task Location': child.taskLocationLighttasks7days ?? 'Not specified',
+        'Other Location': child.otherLocationLighttasks7days ?? 'Not specified',
+        'School Day Hours':
+            child.schoolDayTaskHoursLighttasks7days ?? 'Not specified',
+        'Non-School Day Hours':
+            child.nonSchoolDayTaskHoursLighttasks7days ?? 'Not specified',
+        'Was Supervised':
+            _boolToYesNo(child.wasSupervisedByAdultLighttasks7days),
       },
-      isList: true,
-      listItems: child.availableSchoolSupplies!,
     ));
-  }
-  
-  if (child.absenceReasons != null && child.absenceReasons!.isNotEmpty) {
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: School Absence Reasons',
-    items: {
-      'Reasons Count': child.absenceReasons!.length.toString(),
-    },
-    isList: true,
-    listItems: child.absenceReasons!.entries
-        .where((entry) => entry.value == true)
-        .map((entry) => entry.key)
-        .toList(),
-  ));
-}
-  
-  // Work Reasons Card
-  if (child.whyWorkReasons != null && child.whyWorkReasons!.isNotEmpty) {
+
+    // Light Tasks 12 Months Card
     cards.add(_buildContentCard(
-      title: 'Child $childNumber: Why Work Reasons',
+      title: 'Child $childNumber: Light Tasks (12 Months)',
       items: {
-        'Reasons Count': child.whyWorkReasons!.length.toString(),
+        'Received Remuneration':
+            _boolToYesNo(child.receivedRemunerationLighttasks12months),
+        'Longest School Day Time':
+            child.longestSchoolDayTimeLighttasks12months ?? 'Not specified',
+        'Longest Non-School Day Time':
+            child.longestNonSchoolDayTimeLighttasks12months ?? 'Not specified',
+        'Task Location':
+            child.taskLocationLighttasks12months ?? 'Not specified',
+        'Other Task Location':
+            child.otherTaskLocationLighttasks12months ?? 'Not specified',
+        'Total School Day Hours':
+            child.totalSchoolDayHoursLighttasks12months ?? 'Not specified',
+        'Total Non-School Day Hours':
+            child.totalNonSchoolDayHoursLighttasks12months ?? 'Not specified',
+        'Was Supervised':
+            _boolToYesNo(child.wasSupervisedDuringTaskLighttasks12months),
       },
-      isList: true,
-      listItems: child.whyWorkReasons!,
     ));
-  }
-  
-  // Not With Family Reasons Card
-  if (child.notWithFamilyReasons != null && child.notWithFamilyReasons!.isNotEmpty) {
+
+    // Dangerous Tasks 7 Days Card
     cards.add(_buildContentCard(
-      title: 'Child $childNumber: Not With Family Reasons',
+      title: 'Child $childNumber: Dangerous Tasks (7 Days)',
       items: {
-        'Reasons Count': child.notWithFamilyReasons!.length.toString(),
+        'Received Salary':
+            _boolToYesNo(child.hasReceivedSalaryDangeroustask7days),
+        'Task Location':
+            child.taskLocationDangeroustask7days ?? 'Not specified',
+        'Other Location':
+            child.otherLocationDangeroustask7days ?? 'Not specified',
+        'Longest School Day Time':
+            child.longestSchoolDayTimeDangeroustask7days ?? 'Not specified',
+        'Longest Non-School Day Time':
+            child.longestNonSchoolDayTimeDangeroustask7days ?? 'Not specified',
+        'School Day Hours':
+            child.schoolDayHoursDangeroustask7days ?? 'Not specified',
+        'Non-School Day Hours':
+            child.nonSchoolDayHoursDangeroustask7days ?? 'Not specified',
+        'Was Supervised':
+            _boolToYesNo(child.wasSupervisedByAdultDangeroustask7days),
       },
-      isList: true,
-      listItems: child.notWithFamilyReasons!,
     ));
+
+    // Dangerous Tasks 12 Months Card
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Dangerous Tasks (12 Months)',
+      items: {
+        'Received Salary':
+            _boolToYesNo(child.hasReceivedSalaryDangeroustask12months),
+        'Task Location':
+            child.taskLocationDangeroustask12months ?? 'Not specified',
+        'Other Location':
+            child.otherLocationDangeroustask12months ?? 'Not specified',
+        'Longest School Day Time':
+            child.longestSchoolDayTimeDangeroustask12months ?? 'Not specified',
+        'Longest Non-School Day Time':
+            child.longestNonSchoolDayTimeDangeroustask12months ??
+                'Not specified',
+        'School Day Hours':
+            child.schoolDayHoursDangeroustask12months ?? 'Not specified',
+        'Non-School Day Hours':
+            child.nonSchoolDayHoursDangeroustask12months ?? 'Not specified',
+        'Was Supervised':
+            _boolToYesNo(child.wasSupervisedByAdultDangeroustask12months),
+      },
+    ));
+
+    // Dangerous Tasks List Card
+    if (child.dangerousTasks12Months != null &&
+        child.dangerousTasks12Months!.isNotEmpty) {
+      cards.add(_buildContentCard(
+        title: 'Child $childNumber: Dangerous Tasks List (12 Months)',
+        items: {
+          'Tasks Count': child.dangerousTasks12Months!.length.toString(),
+        },
+        isList: true,
+        listItems: child.dangerousTasks12Months!.map((task) {
+          return task.replaceAll('_dangeroustask12months', '');
+        }).toList(),
+      ));
+    }
+
+    // Health and Safety Card
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Health and Safety',
+      items: {
+        'Applied Agrochemicals': _boolToYesNo(child.appliedAgrochemicals),
+        'On Farm During Application':
+            _boolToYesNo(child.onFarmDuringApplication),
+        'Suffered Injury': _boolToYesNo(child.sufferedInjury),
+        'How Wounded': child.howWounded ?? 'Not specified',
+        'When Wounded': child.whenWounded ?? 'Not specified',
+        'Often Feel Pains': _boolToYesNo(child.oftenFeelPains),
+      },
+    ));
+
+    // Help Received Card
+    if (child.helpReceived != null && child.helpReceived!.isNotEmpty) {
+      cards.add(_buildContentCard(
+        title: 'Child $childNumber: Help Received',
+        items: {
+          'Help Types': child.helpReceived!.join(', '),
+        },
+        isList: true,
+        listItems: child.helpReceived!,
+      ));
+    }
+
+    // Photo Consent Card
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Photo Consent',
+      items: {
+        'Parent Consent for Photo': _boolToYesNo(child.parentConsentPhoto),
+        'No Consent Reason': child.noConsentReason ?? 'Not specified',
+        'Child Photo Taken':
+            (child.childPhotoPath?.isNotEmpty == true) ? 'Yes' : 'No',
+      },
+    ));
+
+    // School Supplies Card
+    if (child.availableSchoolSupplies != null &&
+        child.availableSchoolSupplies!.isNotEmpty) {
+      cards.add(_buildContentCard(
+        title: 'Child $childNumber: Available School Supplies',
+        items: {
+          'Supplies Count': child.availableSchoolSupplies!.length.toString(),
+        },
+        isList: true,
+        listItems: child.availableSchoolSupplies!,
+      ));
+    }
+
+    if (child.absenceReasons != null && child.absenceReasons!.isNotEmpty) {
+      cards.add(_buildContentCard(
+        title: 'Child $childNumber: School Absence Reasons',
+        items: {
+          'Reasons Count': child.absenceReasons!.length.toString(),
+        },
+        isList: true,
+        listItems: child.absenceReasons!.entries
+            .where((entry) => entry.value == true)
+            .map((entry) => entry.key)
+            .toList(),
+      ));
+    }
+
+    // Work Reasons Card
+    if (child.whyWorkReasons != null && child.whyWorkReasons!.isNotEmpty) {
+      cards.add(_buildContentCard(
+        title: 'Child $childNumber: Why Work Reasons',
+        items: {
+          'Reasons Count': child.whyWorkReasons!.length.toString(),
+        },
+        isList: true,
+        listItems: child.whyWorkReasons!,
+      ));
+    }
+
+    // Not With Family Reasons Card
+    if (child.notWithFamilyReasons != null &&
+        child.notWithFamilyReasons!.isNotEmpty) {
+      cards.add(_buildContentCard(
+        title: 'Child $childNumber: Not With Family Reasons',
+        items: {
+          'Reasons Count': child.notWithFamilyReasons!.length.toString(),
+        },
+        isList: true,
+        listItems: child.notWithFamilyReasons!,
+      ));
+    }
+
+    // Reasons for Various Decisions
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Reasons for Decisions',
+      items: {
+        'Reason for Leaving School':
+            child.reasonForLeavingSchool ?? 'Not specified',
+        'Other Reason for Leaving School':
+            child.otherReasonForLeavingSchool ?? 'Not specified',
+        'Reason Never Attended School':
+            child.reasonNeverAttendedSchool ?? 'Not specified',
+        'Other Reason Never Attended':
+            child.otherReasonNeverAttended ?? 'Not specified',
+        'Reason Not Attended School':
+            child.reasonNotAttendedSchool ?? 'Not specified',
+        'Other Reason Not Attended':
+            child.otherReasonNotAttended ?? 'Not specified',
+        'Other Absence Reason': child.otherAbsenceReason ?? 'Not specified',
+      },
+    ));
+
+    // Survey Details Card
+    cards.add(_buildContentCard(
+      title: 'Child $childNumber: Survey Details',
+      items: {
+        'Can Be Surveyed Now': _boolToYesNo(child.canBeSurveyedNow),
+        'Respondent Type': child.respondentType ?? 'Not specified',
+        'Other Respondent Type': child.otherRespondentType ?? 'Not specified',
+      },
+    ));
+
+    return cards;
   }
-  
-  // Reasons for Various Decisions
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Reasons for Decisions',
-    items: {
-      'Reason for Leaving School': child.reasonForLeavingSchool ?? 'Not specified',
-      'Other Reason for Leaving School': child.otherReasonForLeavingSchool ?? 'Not specified',
-      'Reason Never Attended School': child.reasonNeverAttendedSchool ?? 'Not specified',
-      'Other Reason Never Attended': child.otherReasonNeverAttended ?? 'Not specified',
-      'Reason Not Attended School': child.reasonNotAttendedSchool ?? 'Not specified',
-      'Other Reason Not Attended': child.otherReasonNotAttended ?? 'Not specified',
-      'Other Absence Reason': child.otherAbsenceReason ?? 'Not specified',
-    },
-  ));
-  
-  // Survey Details Card
-  cards.add(_buildContentCard(
-    title: 'Child $childNumber: Survey Details',
-    items: {
-      'Can Be Surveyed Now': _boolToYesNo(child.canBeSurveyedNow),
-      'Respondent Type': child.respondentType ?? 'Not specified',
-      'Other Respondent Type': child.otherRespondentType ?? 'Not specified',
-    },
-  ));
-  
-  return cards;
-}
+
   Widget _buildRemediationContent() {
     final remediation = widget.surveyData.remediation;
     print('Remediation data: $remediation'); // Debug print
-    print('Cover page ID: ${widget.surveyData.cover?.id}'); // Check cover page ID
-    
+    print(
+        'Cover page ID: ${widget.surveyData.cover?.id}'); // Check cover page ID
+
     if (remediation == null) {
       print('No remediation data found for this survey'); // Debug print
       return _buildEmptyState(_sections[5]['color']);
     }
-    
-  return _buildScrollableContent([
-  _buildContentCard(
-    title: 'Support Information',
-    items: {
-      'Has School Fees': _boolToYesNo(remediation.hasSchoolFees),
-      'Child Protection Education': _boolToYesNo(remediation.childProtectionEducation),
-      'School Kits Support': _boolToYesNo(remediation.schoolKitsSupport),
-      'IGA Support': _boolToYesNo(remediation.igaSupport),
-      'Other Support': _boolToYesNo(remediation.otherSupport),
-      if (remediation.otherSupport && remediation.otherSupportDetails != null)
-        'Other Support Details': remediation.otherSupportDetails!,
-      if (remediation.communityAction != null)
-        'Community Action': remediation.communityAction!,
-      if (remediation.communityAction == 'Other' && remediation.otherCommunityActionDetails != null)
-        'Other Community Action Details': remediation.otherCommunityActionDetails!,
-    },
-  ),
-]);
+
+    return _buildScrollableContent([
+      _buildContentCard(
+        title: 'Support Information',
+        items: {
+          'Has School Fees': _boolToYesNo(remediation.hasSchoolFees),
+          'Child Protection Education':
+              _boolToYesNo(remediation.childProtectionEducation),
+          'School Kits Support': _boolToYesNo(remediation.schoolKitsSupport),
+          'IGA Support': _boolToYesNo(remediation.igaSupport),
+          'Other Support': _boolToYesNo(remediation.otherSupport),
+          if (remediation.otherSupport &&
+              remediation.otherSupportDetails != null)
+            'Other Support Details': remediation.otherSupportDetails!,
+          if (remediation.communityAction != null)
+            'Community Action': remediation.communityAction!,
+          if (remediation.communityAction == 'Other' &&
+              remediation.otherCommunityActionDetails != null)
+            'Other Community Action Details':
+                remediation.otherCommunityActionDetails!,
+        },
+      ),
+    ]);
   }
 
   Widget _buildSensitizationContent() {
@@ -1593,7 +1723,7 @@ List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
     }
 
     List<Widget> content = [];
-    
+
     // Sensitization acknowledgment data
     if (sensitization != null) {
       content.add(_buildContentCard(
@@ -1602,9 +1732,12 @@ List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
           'Database ID': sensitization.id?.toString() ?? 'Not set',
           'Cover Page ID': sensitization.coverPageId?.toString() ?? 'Not set',
           'Acknowledged': _boolToYesNo(sensitization.isAcknowledged),
-          'Acknowledged At': _formatDateTime(sensitization.acknowledgedAt) ?? 'Not recorded',
-          'Created At': _formatDateTime(sensitization.createdAt) ?? 'Not available',
-          'Updated At': _formatDateTime(sensitization.updatedAt) ?? 'Not available',
+          'Acknowledged At':
+              _formatDateTime(sensitization.acknowledgedAt) ?? 'Not recorded',
+          'Created At':
+              _formatDateTime(sensitization.createdAt) ?? 'Not available',
+          'Updated At':
+              _formatDateTime(sensitization.updatedAt) ?? 'Not available',
           'Synced': _boolToYesNo(sensitization.isSynced),
         },
       ));
@@ -1615,51 +1748,61 @@ List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
     // Sensitization questions data
     if (questions != null && questions.isNotEmpty) {
       debugPrint('✅ [Viewer] Processing ${questions.length} questions');
-      
+
       for (int i = 0; i < questions.length; i++) {
         final question = questions[i];
-        debugPrint('📝 [Viewer] Processing question ${i + 1}: ID=${question.id}');
-        
+        debugPrint(
+            '📝 [Viewer] Processing question ${i + 1}: ID=${question.id}');
+
         final questionData = <String, String>{};
-        
+
         // Add database info
         questionData['Database ID'] = question.id?.toString() ?? 'Not set';
-        questionData['Cover Page ID'] = question.coverPageId?.toString() ?? 'Not set';
-        
+        questionData['Cover Page ID'] =
+            question.coverPageId?.toString() ?? 'Not set';
+
         // Basic questions
-        questionData['Sensitized Household'] = _boolToYesNo(question.hasSensitizedHousehold);
-        questionData['Sensitized on Protection'] = _boolToYesNo(question.hasSensitizedOnProtection);
-        questionData['Sensitized on Safe Labour'] = _boolToYesNo(question.hasSensitizedOnSafeLabour);
-        
+        questionData['Sensitized Household'] =
+            _boolToYesNo(question.hasSensitizedHousehold);
+        questionData['Sensitized on Protection'] =
+            _boolToYesNo(question.hasSensitizedOnProtection);
+        questionData['Sensitized on Safe Labour'] =
+            _boolToYesNo(question.hasSensitizedOnSafeLabour);
+
         // Adult counts
-        if (question.femaleAdultsCount.isNotEmpty && question.femaleAdultsCount != '0') {
+        if (question.femaleAdultsCount.isNotEmpty &&
+            question.femaleAdultsCount != '0') {
           questionData['Female Adults Present'] = question.femaleAdultsCount;
         } else {
           questionData['Female Adults Present'] = '0 (or not recorded)';
         }
-        
-        if (question.maleAdultsCount.isNotEmpty && question.maleAdultsCount != '0') {
+
+        if (question.maleAdultsCount.isNotEmpty &&
+            question.maleAdultsCount != '0') {
           questionData['Male Adults Present'] = question.maleAdultsCount;
         } else {
           questionData['Male Adults Present'] = '0 (or not recorded)';
         }
-        
+
         // Picture consent
-        questionData['Consent for Picture'] = _boolToYesNo(question.consentForPicture);
-        if (question.consentForPicture == false && question.consentReason.isNotEmpty) {
+        questionData['Consent for Picture'] =
+            _boolToYesNo(question.consentForPicture);
+        if (question.consentForPicture == false &&
+            question.consentReason.isNotEmpty) {
           questionData['Reason for No Consent'] = question.consentReason;
         }
-        
+
         // Parents reaction
         if (question.parentsReaction.isNotEmpty) {
           questionData['Parents Reaction'] = question.parentsReaction;
         } else {
           questionData['Parents Reaction'] = 'Not recorded';
         }
-        
+
         // Submission time
-        questionData['Submitted At'] = _formatDateTime(question.submittedAt) ?? 'Not recorded';
-        
+        questionData['Submitted At'] =
+            _formatDateTime(question.submittedAt) ?? 'Not recorded';
+
         // Sync status
         questionData['Synced'] = _boolToYesNo(question.isSynced ?? false);
 
@@ -1670,17 +1813,20 @@ List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
 
         // Image previews
         if (question.sensitizationImagePath?.isNotEmpty == true) {
-          debugPrint('🖼️ [Viewer] Adding sensitization image: ${question.sensitizationImagePath}');
+          debugPrint(
+              '🖼️ [Viewer] Adding sensitization image: ${question.sensitizationImagePath}');
           content.add(_buildImagePreviewCard(
             title: 'Sensitization Session ${i + 1} - Photo',
             imagePath: question.sensitizationImagePath!,
           ));
         } else {
-          debugPrint('⚠️ [Viewer] No sensitization image for question ${i + 1}');
+          debugPrint(
+              '⚠️ [Viewer] No sensitization image for question ${i + 1}');
         }
 
         if (question.householdWithUserImagePath?.isNotEmpty == true) {
-          debugPrint('🖼️ [Viewer] Adding household image: ${question.householdWithUserImagePath}');
+          debugPrint(
+              '🖼️ [Viewer] Adding household image: ${question.householdWithUserImagePath}');
           content.add(_buildImagePreviewCard(
             title: 'Household with User ${i + 1} - Photo',
             imagePath: question.householdWithUserImagePath!,
@@ -1691,13 +1837,13 @@ List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
       }
     } else {
       debugPrint('⚠️ [Viewer] No sensitization questions found');
-      
+
       // Show info card if we have sensitization but no questions
       if (sensitization != null) {
         content.add(_buildInfoCard(
-          'Sensitization Questions', 
+          'Sensitization Questions',
           'The sensitization was acknowledged but no detailed questions were recorded.\n\n'
-          'This may happen if the questions section was not completed during data collection.',
+              'This may happen if the questions section was not completed during data collection.',
           icon: Icons.info_outline,
           color: Colors.amber,
         ));
@@ -1708,9 +1854,9 @@ List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
     if (content.isEmpty) {
       debugPrint('ℹ️ [Viewer] No sensitization data at all');
       return _buildInfoCard(
-        'Sensitization', 
+        'Sensitization',
         'This section was not completed during the survey.\n\n'
-        'Sensitization data is optional and may not be collected for all surveys.',
+            'Sensitization data is optional and may not be collected for all surveys.',
         icon: Icons.info_outline,
         color: Colors.blue,
       );
@@ -1720,243 +1866,257 @@ List<Widget> _buildChildDetailsCards(ChildDetailsModel child, int childNumber) {
   }
 
 // Helper method for formatting DateTime with null safety
-String? _formatDateTime(DateTime? dateTime) {
-  if (dateTime == null) return null;
-  try {
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
-           '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  } catch (e) {
-    debugPrint('Error formatting date: $e');
-    return 'Invalid date';
-  }
-}
- Widget _buildEndOfCollectionContent() {
-  final endOfCollection = widget.surveyData.endOfCollection;
-  
-  if (endOfCollection == null) {
-    return _buildEmptyState(_sections[7]['color']);
+  String? _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return null;
+    try {
+      return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
+          '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      debugPrint('Error formatting date: $e');
+      return 'Invalid date';
+    }
   }
 
-  return _buildScrollableContent([
-    _buildContentCard(
-      title: 'End of Collection Details',
-      items: {
-        'Database ID': endOfCollection.id?.toString() ?? 'Not set',
-        'Cover Page ID': endOfCollection.coverPageId?.toString() ?? 'Not set',
-        'Respondent Image': endOfCollection.respondentImagePath?.isNotEmpty == true 
-            ? 'Image captured' 
-            : 'No image',
-        'Producer Signature': endOfCollection.producerSignaturePath?.isNotEmpty == true 
-            ? 'Signature captured' 
-            : 'No signature',
-        'GPS Coordinates': endOfCollection.gpsCoordinates?.isNotEmpty == true 
-            ? endOfCollection.gpsCoordinates! 
-            : 'Not captured',
-        'Latitude': endOfCollection.latitude?.toString() ?? 'Not available',
-        'Longitude': endOfCollection.longitude?.toString() ?? 'Not available',
-      'End Time': endOfCollection.endTime != null 
-    ? _formatDateTime(endOfCollection.endTime!) ?? 'Invalid date'
-    : 'Not recorded',
-        'Remarks': endOfCollection.remarks?.isNotEmpty == true 
-            ? endOfCollection.remarks! 
-            : 'No remarks',
-       'Created At': _formatDateTime(endOfCollection.createdAt) ?? 'Not available',
-'Updated At': _formatDateTime(endOfCollection.updatedAt) ?? 'Not available',
-        'Is Synced': _boolToYesNo(endOfCollection.isSynced),
-      },
-    ),
-    
-    // Image previews if available
-    if (endOfCollection.respondentImagePath?.isNotEmpty == true)
-      _buildImagePreviewCard(
-        title: 'Respondent Image',
-        imagePath: endOfCollection.respondentImagePath!,
-      ),
-    
-    if (endOfCollection.producerSignaturePath?.isNotEmpty == true)
-      _buildImagePreviewCard(
-        title: 'Producer Signature',
-        imagePath: endOfCollection.producerSignaturePath,
-      ),
-  ]);
-}
+  Widget _buildEndOfCollectionContent() {
+    final endOfCollection = widget.surveyData.endOfCollection;
 
-Widget _buildImagePreviewCard({
-  required String title,
-  String? imagePath,
-}) {
-  if (imagePath == null) {
-    return Container(); // or return a placeholder widget
-  }
-  return Container(
-    width: double.infinity,
-    margin: const EdgeInsets.only(bottom: 12),
-    decoration: BoxDecoration(
-      color: AppTheme.cardColor,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Colors.grey.shade300,
-        width: 1,
+    if (endOfCollection == null) {
+      return _buildEmptyState(_sections[7]['color']);
+    }
+
+    return _buildScrollableContent([
+      _buildContentCard(
+        title: 'End of Collection Details',
+        items: {
+          'Database ID': endOfCollection.id?.toString() ?? 'Not set',
+          'Cover Page ID': endOfCollection.coverPageId?.toString() ?? 'Not set',
+          'Respondent Image':
+              endOfCollection.respondentImagePath?.isNotEmpty == true
+                  ? 'Image captured'
+                  : 'No image',
+          'Producer Signature':
+              endOfCollection.producerSignaturePath?.isNotEmpty == true
+                  ? 'Signature captured'
+                  : 'No signature',
+          'GPS Coordinates': endOfCollection.gpsCoordinates?.isNotEmpty == true
+              ? endOfCollection.gpsCoordinates!
+              : 'Not captured',
+          'Latitude': endOfCollection.latitude?.toString() ?? 'Not available',
+          'Longitude': endOfCollection.longitude?.toString() ?? 'Not available',
+          'End Time': endOfCollection.endTime != null
+              ? _formatDateTime(endOfCollection.endTime!) ?? 'Invalid date'
+              : 'Not recorded',
+          'Remarks': endOfCollection.remarks?.isNotEmpty == true
+              ? endOfCollection.remarks!
+              : 'No remarks',
+          'Created At':
+              _formatDateTime(endOfCollection.createdAt) ?? 'Not available',
+          'Updated At':
+              _formatDateTime(endOfCollection.updatedAt) ?? 'Not available',
+          'Is Synced': _boolToYesNo(endOfCollection.isSynced),
+        },
       ),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTheme.textTheme.titleLarge,
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            height: 200,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.grey.shade50,
+
+      // Image previews if available
+      if (endOfCollection.respondentImagePath?.isNotEmpty == true)
+        _buildImagePreviewCard(
+          title: 'Respondent Image',
+          imagePath: endOfCollection.respondentImagePath!,
+        ),
+
+      if (endOfCollection.producerSignaturePath?.isNotEmpty == true)
+        _buildImagePreviewCard(
+          title: 'Producer Signature',
+          imagePath: endOfCollection.producerSignaturePath,
+        ),
+    ]);
+  }
+
+  Widget _buildImagePreviewCard({
+    required String title,
+    String? imagePath,
+  }) {
+    if (imagePath == null) {
+      return Container(); // or return a placeholder widget
+    }
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: AppTheme.textTheme.titleLarge,
             ),
-            child: FutureBuilder<File?>(
-              future: _getImageFile(imagePath),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              height: 200,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey.shade50,
+              ),
+              child: FutureBuilder<File?>(
+                future: _getImageFile(imagePath),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.primaryColor),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError ||
+                      !snapshot.hasData ||
+                      snapshot.data == null) {
+                    return _buildErrorState(
+                      'Failed to load image',
+                      'Path: $imagePath\nError: ${snapshot.error}',
+                    );
+                  }
+
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      snapshot.data!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildErrorState(
+                          'Failed to display image',
+                          'Path: ${snapshot.data?.path}\nError: $error',
+                        );
+                      },
                     ),
                   );
-                }
-
-                if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
-                  return _buildErrorState(
-                    'Failed to load image',
-                    'Path: $imagePath\nError: ${snapshot.error}',
-                  );
-                }
-
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    snapshot.data!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildErrorState(
-                        'Failed to display image',
-                        'Path: ${snapshot.data?.path}\nError: $error',
-                      );
-                    },
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Path: $imagePath',
-            style: AppTheme.textTheme.bodySmall?.copyWith(
-              color: Colors.grey.shade600,
-              fontStyle: FontStyle.italic,
+            const SizedBox(height: 8),
+            Text(
+              'Path: $imagePath',
+              style: AppTheme.textTheme.bodySmall?.copyWith(
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildErrorState(String title, String message) {
-  return Center(
-    child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 48),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
+  Widget _buildErrorState(String title, String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-Future<File?> _getImageFile(String path) async {
-  try {
-    debugPrint('🖼️ Attempting to load image from path: $path');
-    
-    // Handle null or empty path
-    if (path.isEmpty) {
-      debugPrint('❌ Empty image path provided');
+  Future<File?> _getImageFile(String path) async {
+    try {
+      debugPrint('🖼️ Attempting to load image from path: $path');
+
+      // Handle null or empty path
+      if (path.isEmpty) {
+        debugPrint('❌ Empty image path provided');
+        return null;
+      }
+
+      // Try direct path first
+      final file = File(path);
+      if (await file.exists()) {
+        debugPrint('✅ Found image at direct path: ${file.path}');
+        return file;
+      }
+      debugPrint('❌ Image not found at direct path: ${file.path}');
+
+      // Try to handle file:// URI
+      if (path.startsWith('file://')) {
+        try {
+          final filePath =
+              Uri.parse(path).toFilePath(windows: Platform.isWindows);
+          final fileFromUri = File(filePath);
+          if (await fileFromUri.exists()) {
+            debugPrint('✅ Found image at file URI path: $filePath');
+            return fileFromUri;
+          }
+          debugPrint('❌ Image not found at file URI path: $filePath');
+        } catch (e) {
+          debugPrint('❌ Error parsing file URI: $e');
+        }
+      }
+
+      // Try to find in app's documents directory
+      try {
+        final appDocDir = await getApplicationDocumentsDirectory();
+        final fileName = path.split(Platform.pathSeparator).last;
+        final localFile =
+            File('${appDocDir.path}${Platform.pathSeparator}$fileName');
+
+        if (await localFile.exists()) {
+          debugPrint(
+              '✅ Found image in app documents directory: ${localFile.path}');
+          return localFile;
+        }
+        debugPrint(
+            '❌ Image not found in app documents directory: ${localFile.path}');
+      } catch (e) {
+        debugPrint('❌ Error checking app documents directory: $e');
+      }
+
+      // If we get here, the file wasn't found in any location
+      debugPrint('❌ Could not find image at any location');
+      return null;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error in _getImageFile: $e\n$stackTrace');
       return null;
     }
-
-    // Try direct path first
-    final file = File(path);
-    if (await file.exists()) {
-      debugPrint('✅ Found image at direct path: ${file.path}');
-      return file;
-    }
-    debugPrint('❌ Image not found at direct path: ${file.path}');
-
-    // Try to handle file:// URI
-    if (path.startsWith('file://')) {
-      try {
-        final filePath = Uri.parse(path).toFilePath(windows: Platform.isWindows);
-        final fileFromUri = File(filePath);
-        if (await fileFromUri.exists()) {
-          debugPrint('✅ Found image at file URI path: $filePath');
-          return fileFromUri;
-        }
-        debugPrint('❌ Image not found at file URI path: $filePath');
-      } catch (e) {
-        debugPrint('❌ Error parsing file URI: $e');
-      }
-    }
-
-    // Try to find in app's documents directory
-    try {
-      final appDocDir = await getApplicationDocumentsDirectory();
-      final fileName = path.split(Platform.pathSeparator).last;
-      final localFile = File('${appDocDir.path}${Platform.pathSeparator}$fileName');
-      
-      if (await localFile.exists()) {
-        debugPrint('✅ Found image in app documents directory: ${localFile.path}');
-        return localFile;
-      }
-      debugPrint('❌ Image not found in app documents directory: ${localFile.path}');
-    } catch (e) {
-      debugPrint('❌ Error checking app documents directory: $e');
-    }
-
-    // If we get here, the file wasn't found in any location
-    debugPrint('❌ Could not find image at any location');
-    return null;
-  } catch (e, stackTrace) {
-    debugPrint('❌ Error in _getImageFile: $e\n$stackTrace');
-    return null;
   }
-}  String _getTownName(String? townCode, List<DropdownItem> towns) {
+
+  String _getTownName(String? townCode, List<DropdownItem> towns) {
     if (townCode == null || townCode.isEmpty) return 'Not selected';
     try {
       final town = towns.firstWhere(
@@ -1988,20 +2148,29 @@ Future<File?> _getImageFile(String path) async {
 
   dynamic _getSectionData(int index) {
     switch (index) {
-      case 0: return widget.surveyData.cover;
-      case 1: return widget.surveyData.consent;
-      case 2: return widget.surveyData.farmer;
-      case 3: return widget.surveyData.combinedFarm;
-      case 4: return widget.surveyData.childrenHousehold;
-      case 5: return widget.surveyData.remediation;
-      case 6: return {
-        'sensitization': widget.surveyData.sensitization,
-        'questions': widget.surveyData.sensitizationQuestions ?? [],
-      };
-      case 7: return widget.surveyData.endOfCollection;
-      default: return null;
+      case 0:
+        return widget.surveyData.cover;
+      case 1:
+        return widget.surveyData.consent;
+      case 2:
+        return widget.surveyData.farmer;
+      case 3:
+        return widget.surveyData.combinedFarm;
+      case 4:
+        return widget.surveyData.childrenHousehold;
+      case 5:
+        return widget.surveyData.remediation;
+      case 6:
+        return {
+          'sensitization': widget.surveyData.sensitization,
+          'questions': widget.surveyData.sensitizationQuestions ?? [],
+        };
+      case 7:
+        return widget.surveyData.endOfCollection;
+      default:
+        return null;
     }
-}
+  }
 
   String _boolToYesNo(bool? value) {
     if (value == null) return 'Not answered';
@@ -2053,67 +2222,69 @@ Future<File?> _getImageFile(String path) async {
             const SizedBox(height: 12),
             if (items != null)
               ...items.entries.map((entry) => _buildInfoRow(
-                    entry.key, 
+                    entry.key,
                     entry.value?.toString() ?? 'N/A',
                   )),
             if (isList && listItems != null && listItems.isNotEmpty)
               ...listItems.map((item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.circle, size: 6, color: AppTheme.primaryColor),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: AppTheme.textTheme.bodyLarge,
-                      ),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.circle,
+                            size: 6, color: AppTheme.primaryColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: AppTheme.textTheme.bodyLarge,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              )),
+                  )),
           ],
         ),
       ),
     );
   }
 
-Widget _buildInfoCard(String title, String message, {IconData icon = Icons.info_outline, Color color = Colors.blue}) {
-  return Padding(
-    padding: const EdgeInsets.all(16),
-    child: Container(
-      width: double.infinity,
+  Widget _buildInfoCard(String title, String message,
+      {IconData icon = Icons.info_outline, Color color = Colors.blue}) {
+    return Padding(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  title,
+                  style: AppTheme.textTheme.titleLarge?.copyWith(color: color),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              message,
+              style: AppTheme.textTheme.bodyLarge,
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              SizedBox(width: 8),
-              Text(
-                title,
-                style: AppTheme.textTheme.titleLarge?.copyWith(color: color),
-              ),
-            ],
-          ),
-          SizedBox(height: 8),
-          Text(
-            message,
-            style: AppTheme.textTheme.bodyLarge,
-          ),
-        ],
-      ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildInfoRow(String label, String value) {
     return Container(

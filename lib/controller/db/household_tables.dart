@@ -1681,12 +1681,12 @@ class ConsentTable {
       consentTimestamp: map[consentTimestamp] != null
           ? DateTime.parse(map[consentTimestamp] as String)
           : null,
-      otherSpecController: TextEditingController(
-          text: map[otherSpecification]?.toString() ?? ''),
-      otherCommunityController: TextEditingController(
-          text: map[otherCommunityName]?.toString() ?? ''),
-      refusalReasonController:
-          TextEditingController(text: map[refusalReason]?.toString() ?? ''),
+      // otherSpecController: TextEditingController(
+      //     text: map[otherSpecification]?.toString() ?? ''),
+      // otherCommunityController: TextEditingController(
+      //     text: map[otherCommunityName]?.toString() ?? ''),
+      // refusalReasonController:
+      //     TextEditingController(text: map[refusalReason]?.toString() ?? ''),
       interviewStartTime: map[interviewStartTime] != null
           ? DateTime.parse(map[interviewStartTime] as String)
           : null,

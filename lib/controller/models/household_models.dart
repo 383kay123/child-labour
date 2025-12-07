@@ -272,9 +272,9 @@ class ConsentData {
   final bool? consentGiven;
   final bool? declinedConsent;
   final DateTime? consentTimestamp;
-  final TextEditingController otherSpecController;
-  final TextEditingController otherCommunityController;
-  final TextEditingController refusalReasonController;
+  // final TextEditingController otherSpecController;
+  // final TextEditingController otherCommunityController;
+  // final TextEditingController refusalReasonController;
 
   // Survey state fields
   final DateTime? interviewStartTime;
@@ -297,9 +297,9 @@ class ConsentData {
     this.declinedConsent,
     this.refusalReason,
     this.consentTimestamp,
-    required this.otherSpecController,
-    required this.otherCommunityController,
-    required this.refusalReasonController,
+    // required this.otherSpecController,
+    // required this.otherCommunityController,
+    // required this.refusalReasonController,
     this.interviewStartTime,
     this.timeStatus,
     this.currentPosition,
@@ -345,9 +345,9 @@ class ConsentData {
       declinedConsent: declinedConsent ?? this.declinedConsent,
       refusalReason: refusalReason ?? this.refusalReason,
       consentTimestamp: consentTimestamp ?? this.consentTimestamp,
-      otherSpecController: otherSpecController ?? this.otherSpecController,
-      otherCommunityController: otherCommunityController ?? this.otherCommunityController,
-      refusalReasonController: refusalReasonController ?? this.refusalReasonController,
+      // otherSpecController: otherSpecController ?? this.otherSpecController,
+      // otherCommunityController: otherCommunityController ?? this.otherCommunityController,
+      // refusalReasonController: refusalReasonController ?? this.refusalReasonController,
       interviewStartTime: interviewStartTime ?? this.interviewStartTime,
       timeStatus: timeStatus ?? this.timeStatus,
       currentPosition: currentPosition ?? this.currentPosition,
@@ -440,15 +440,15 @@ class ConsentData {
         consentTimestamp: map['consent_timestamp'] != null 
             ? DateTime.tryParse(map['consent_timestamp'].toString())
             : null,
-        otherSpecController: TextEditingController(
-          text: map['other_specification']?.toString() ?? '',
-        ),
-        otherCommunityController: TextEditingController(
-          text: map['other_community_name']?.toString() ?? '',
-        ),
-        refusalReasonController: TextEditingController(
-          text: map['refusal_reason']?.toString() ?? '',
-        ),
+        // otherSpecController: TextEditingController(
+        //   text: map['other_specification']?.toString() ?? '',
+        // ),
+        // otherCommunityController: TextEditingController(
+        //   text: map['other_community_name']?.toString() ?? '',
+        // ),
+        // refusalReasonController: TextEditingController(
+        //   text: map['refusal_reason']?.toString() ?? '',
+        // ),
         interviewStartTime: map['interview_start_time'] != null
             ? DateTime.tryParse(map['interview_start_time'].toString())
             : null,
@@ -468,14 +468,14 @@ class ConsentData {
   }
 
   /// Create empty instance
-  factory ConsentData.empty() {
-    return ConsentData(
-      id: null,
-      otherSpecController: TextEditingController(),
-      otherCommunityController: TextEditingController(),
-      refusalReasonController: TextEditingController(),
-    );
-  }
+  // factory ConsentData.empty() {
+  //   return ConsentData(
+  //     id: null,
+  //     otherSpecController: TextEditingController(),
+  //     otherCommunityController: TextEditingController(),
+  //     refusalReasonController: TextEditingController(),
+  //   );
+  // }
 
   /// Update community type
   ConsentData updateCommunityType(String? value) {
@@ -646,11 +646,11 @@ class ConsentData {
   }
 
   /// Dispose controllers
-  void dispose() {
-    otherSpecController.dispose();
-    otherCommunityController.dispose();
-    refusalReasonController.dispose();
-  }
+  // void dispose() {
+  //   otherSpecController.dispose();
+  //   otherCommunityController.dispose();
+  //   refusalReasonController.dispose();
+  // }
 
   @override
   String toString() {
@@ -736,12 +736,12 @@ class FarmerIdentificationData {
   final int syncStatus;
   final List<FarmerChild> children;
   
-  // Controllers
-  final TextEditingController ghanaCardNumberController;
-  final TextEditingController idNumberController;
-  final TextEditingController contactNumberController;
-  final TextEditingController noConsentReasonController;
-  final TextEditingController childrenCountController;
+  // // Controllers
+  // final TextEditingController ghanaCardNumberController;
+  // final TextEditingController idNumberController;
+  // final TextEditingController contactNumberController;
+  // final TextEditingController noConsentReasonController;
+  // final TextEditingController childrenCountController;
 
   FarmerIdentificationData({
     this.id,
@@ -760,20 +760,9 @@ class FarmerIdentificationData {
     this.isSynced = 0,
     this.syncStatus = 0,
     List<FarmerChild>? children,
-    TextEditingController? ghanaCardNumberController,
-    TextEditingController? idNumberController,
-    TextEditingController? contactNumberController,
-    TextEditingController? noConsentReasonController,
-    TextEditingController? childrenCountController,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
-        children = children ?? [],
-        ghanaCardNumberController = ghanaCardNumberController ?? TextEditingController(text: ghanaCardNumber ?? ''),
-        idNumberController = idNumberController ?? TextEditingController(text: idNumber ?? ''),
-        contactNumberController = contactNumberController ?? TextEditingController(text: contactNumber ?? ''),
-        noConsentReasonController = noConsentReasonController ?? TextEditingController(text: noConsentReason ?? ''),
-        childrenCountController = childrenCountController ?? TextEditingController(text: childrenCount.toString());
-
+        children = children ?? [];
 
   /// Convert to Map for storage/API
   Map<String, dynamic> toMap() {
@@ -810,16 +799,16 @@ class FarmerIdentificationData {
       idImagePath: map['id_image_path']?.toString(),
       contactNumber: map['contact_number']?.toString(),
       childrenCount: map['children_count'] as int? ?? 0,
-      childrenCountController: TextEditingController(text: (map['children_count'] ?? '0').toString()),
+      // childrenCountController: TextEditingController(text: (map['children_count'] ?? '0').toString()),
       createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : null,
       updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
       isSynced: map['is_synced'] as int? ?? 0,
       syncStatus: map['sync_status'] as int? ?? 0,
       // Controllers will be initialized with the values from the map
-      ghanaCardNumberController: TextEditingController(text: map['ghana_card_number']?.toString() ?? ''),
-      idNumberController: TextEditingController(text: map['id_number']?.toString() ?? ''),
-      contactNumberController: TextEditingController(text: map['contact_number']?.toString() ?? ''),
-      noConsentReasonController: TextEditingController(text: map['no_consent_reason']?.toString() ?? ''),
+      // ghanaCardNumberController: TextEditingController(text: map['ghana_card_number']?.toString() ?? ''),
+      // idNumberController: TextEditingController(text: map['id_number']?.toString() ?? ''),
+      // contactNumberController: TextEditingController(text: map['contact_number']?.toString() ?? ''),
+      // noConsentReasonController: TextEditingController(text: map['no_consent_reason']?.toString() ?? ''),
     );
   }
 
@@ -1169,20 +1158,20 @@ class FarmerIdentificationData {
     return 'FarmerIdentificationData('
         'hasGhanaCard: $hasGhanaCard, '
         'selectedIdType: $selectedIdType, '
-        'ghanaCardNumber: ${ghanaCardNumberController.text}, '
-        'contactNumber: ${contactNumberController.text}, '
+        // 'ghanaCardNumber: ${ghanaCardNumberController.text}, '
+        // 'contactNumber: ${contactNumberController.text}, '
         'childrenCount: $childrenCount'
         ')';
   }
 
   /// Dispose controllers when done
-  void dispose() {
-    ghanaCardNumberController.dispose();
-    idNumberController.dispose();
-    contactNumberController.dispose();
-    childrenCountController.dispose();
-    noConsentReasonController.dispose();
-  }
+  // void dispose() {
+  //   ghanaCardNumberController.dispose();
+  //   idNumberController.dispose();
+  //   contactNumberController.dispose();
+  //   childrenCountController.dispose();
+  //   noConsentReasonController.dispose();
+  // }
 }
 
 /// Model for storing detailed information about a child in the household
